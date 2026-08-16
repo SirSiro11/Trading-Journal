@@ -881,9 +881,14 @@ const STATE = {
 };
 
 // Demo-Trades nur einfügen, wenn wirklich noch nichts gespeichert ist (erster Start).
+// WICHTIG: bewusst NICHT über saveTrades(), da das markDataChanged() auslösen und damit
+// den "letzte Änderung"-Zeitstempel setzen würde — dann würde ein frisches Gerät beim
+// ersten Öffnen fälschlich wie "gerade neu geändert" aussehen und beim Google-Drive-Sync
+// die eigenen (bedeutungslosen) Demo-Daten für neuer als die echten Cloud-Daten halten und
+// diese überschreiben, statt sie korrekt herunterzuladen.
 if(STATE.trades.length === 0){
   STATE.trades = buildDemoTrades();
-  saveTrades();
+  localStorage.setItem(LS_TRADES, JSON.stringify(STATE.trades));
 }
 
 function currentYM(){

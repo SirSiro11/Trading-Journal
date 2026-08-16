@@ -378,6 +378,7 @@
     <div class="brand">Mein Journal</div>
   </div>
   <nav class="tabs" id="mainNav">
+    <button data-view="start">Start</button>
     <button data-view="live">Live</button>
     <button data-view="eod">EOD</button>
     <button data-view="backtest">Backtest</button>
@@ -826,7 +827,7 @@ function scheduleDriveAutoPush(){
    STATE
    ========================================================================= */
 const STATE = {
-  view: "live",
+  view: "start",
   trades: loadTrades(),
   config: loadConfig(),
   insights: loadInsights(),
@@ -1088,9 +1089,94 @@ function render(){
   updateNavActive();
   updateBackupBadge();
   const app = document.getElementById("app");
-  if(STATE.view === "bericht"){ app.innerHTML = renderBericht(); wireBericht(); renderCharts(); }
-  else if(STATE.view === "erkenntnisse"){ app.innerHTML = renderErkenntnisse(); wireErkenntnisse(); }
-  else{ app.innerHTML = renderAreaView(STATE.view); wireAreaView(STATE.view); }
+  if(STATE.view === "start"){
+    app.innerHTML = renderStart();
+    wireStart();
+    startStartClock();
+  }else{
+    stopStartClock();
+    if(STATE.view === "bericht"){ app.innerHTML = renderBericht(); wireBericht(); renderCharts(); }
+    else if(STATE.view === "erkenntnisse"){ app.innerHTML = renderErkenntnisse(); wireErkenntnisse(); }
+    else{ app.innerHTML = renderAreaView(STATE.view); wireAreaView(STATE.view); }
+  }
+}
+
+/* =========================================================================
+   START (Startseite / Dashboard)
+   Begrüßung, Live-Datum/Uhrzeit und der Cloud-Status auf einen Blick, direkt
+   beim Öffnen des Journals — statt den Drive-Status im Bericht suchen zu müssen.
+   ========================================================================= */
+function todayIso(){ return new Date().toISOString().slice(0,10); }
+
+function formatLiveDateTime(){
+  const d = new Date();
+  const weekday = d.toLocaleDateString("de-DE", { weekday:"long" });
+  const datePart = d.toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" });
+  const timePart = d.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+  return `${weekday}, ${datePart} · ${timePart} Uhr`;
+}
+
+function journaledTodayCount(){
+  const t = todayIso();
+  return STATE.trades.filter(x=>x.date===t).length + STATE.insights.filter(x=>x.date===t).length;
+}
+
+let startClockInterval = null;
+function stopStartClock(){
+  if(startClockInterval){ clearInterval(startClockInterval); startClockInterval = null; }
+}
+function startStartClock(){
+  stopStartClock();
+  startClockInterval = setInterval(()=>{
+    const el = document.getElementById("liveClock");
+    if(el) el.textContent = formatLiveDateTime(); else stopStartClock();
+  }, 1000);
+}
+
+function renderStart(){
+  const count = journaledTodayCount();
+  return `
+    <div class="page-head">
+      <h1>Servus, Meister Clemens — heute schon journaliert?</h1>
+      <p id="liveClock">${formatLiveDateTime()}</p>
+    </div>
+    <div style="margin-bottom:20px; color:${count?"var(--green)":"var(--text-dim)"}; font-size:13.5px;">
+      ${count ? `✓ Heute schon ${count} ${count===1?"Eintrag":"Einträge"} erfasst` : "Heute noch nichts erfasst"}
+    </div>
+
+    <div class="panel">
+      <div class="section-title" style="margin-top:0;">☁ Google Drive Sync</div>
+      ${gdriveIsFileProtocol() ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Funktioniert nur auf der online gehosteten Version dieser App (https://…), nicht bei lokal geöffneten Dateien.</p>
+      ` : STATE.driveStatus === "disconnected" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0 0 12px;">Verbinde dein Google Drive, damit das Journal automatisch auf allen Geräten denselben Stand zeigt — kein manueller Export mehr nötig.</p>
+        <button class="btn" id="gdriveConnectBtn">Mit Google Drive verbinden</button>
+      ` : STATE.driveStatus === "connecting" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Verbinde …</p>
+      ` : STATE.driveStatus === "syncing" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere mit Google Drive …</p>
+      ` : STATE.driveStatus === "error" ? `
+        <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Fehler bei der Synchronisierung: ${STATE.driveError||""}</p>
+        <button class="btn" id="gdriveRetryBtn">Erneut versuchen</button>
+        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
+      ` : `
+        <p style="color:var(--green); font-size:13.5px; margin:0 0 12px;">✓ Verbunden · Zuletzt synchronisiert: ${formatBackupTimestamp(STATE.driveLastSyncAt)}</p>
+        <button class="btn" id="gdriveSyncNowBtn">Jetzt synchronisieren</button>
+        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
+      `}
+    </div>
+  `;
+}
+
+function wireStart(){
+  const gdriveConnectBtn = document.getElementById("gdriveConnectBtn");
+  if(gdriveConnectBtn) gdriveConnectBtn.addEventListener("click", gdriveConnect);
+  const gdriveSyncNowBtn = document.getElementById("gdriveSyncNowBtn");
+  if(gdriveSyncNowBtn) gdriveSyncNowBtn.addEventListener("click", gdrivePull);
+  const gdriveRetryBtn = document.getElementById("gdriveRetryBtn");
+  if(gdriveRetryBtn) gdriveRetryBtn.addEventListener("click", gdrivePull);
+  const gdriveDisconnectBtn = document.getElementById("gdriveDisconnectBtn");
+  if(gdriveDisconnectBtn) gdriveDisconnectBtn.addEventListener("click", gdriveDisconnect);
 }
 
 /* =========================================================================
@@ -2217,28 +2303,6 @@ function renderBericht(){
 
     ${notesSectionHtml(filteredTrades)}
 
-    <div class="panel" style="margin-bottom:16px;">
-      <div class="section-title" style="margin-top:0;">☁ Google Drive Sync</div>
-      ${gdriveIsFileProtocol() ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Funktioniert nur auf der online gehosteten Version dieser App (https://…), nicht bei lokal geöffneten Dateien.</p>
-      ` : STATE.driveStatus === "disconnected" ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0 0 12px;">Verbinde dein Google Drive, damit das Journal automatisch auf allen Geräten denselben Stand zeigt — kein manueller Export mehr nötig.</p>
-        <button class="btn" id="gdriveConnectBtn">Mit Google Drive verbinden</button>
-      ` : STATE.driveStatus === "connecting" ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Verbinde …</p>
-      ` : STATE.driveStatus === "syncing" ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere mit Google Drive …</p>
-      ` : STATE.driveStatus === "error" ? `
-        <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Fehler bei der Synchronisierung: ${STATE.driveError||""}</p>
-        <button class="btn" id="gdriveRetryBtn">Erneut versuchen</button>
-        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
-      ` : `
-        <p style="color:var(--green); font-size:13.5px; margin:0 0 12px;">✓ Verbunden · Zuletzt synchronisiert: ${formatBackupTimestamp(STATE.driveLastSyncAt)}</p>
-        <button class="btn" id="gdriveSyncNowBtn">Jetzt synchronisieren</button>
-        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
-      `}
-    </div>
-
     <div class="export-bar">
       <button class="btn" id="exportCsvBtn">CSV exportieren</button>
       <button class="btn" id="exportXlsxBtn">Excel (.xlsx) exportieren</button>
@@ -2892,15 +2956,6 @@ function wireBericht(){
   if(jsonBtn) jsonBtn.addEventListener("click", exportJson);
   const importInput = document.getElementById("importJsonInput");
   if(importInput) importInput.addEventListener("change", importJson);
-
-  const gdriveConnectBtn = document.getElementById("gdriveConnectBtn");
-  if(gdriveConnectBtn) gdriveConnectBtn.addEventListener("click", gdriveConnect);
-  const gdriveSyncNowBtn = document.getElementById("gdriveSyncNowBtn");
-  if(gdriveSyncNowBtn) gdriveSyncNowBtn.addEventListener("click", gdrivePull);
-  const gdriveRetryBtn = document.getElementById("gdriveRetryBtn");
-  if(gdriveRetryBtn) gdriveRetryBtn.addEventListener("click", gdrivePull);
-  const gdriveDisconnectBtn = document.getElementById("gdriveDisconnectBtn");
-  if(gdriveDisconnectBtn) gdriveDisconnectBtn.addEventListener("click", gdriveDisconnect);
 }
 
 function wireNoteItemClicks(){

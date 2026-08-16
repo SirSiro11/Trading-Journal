@@ -635,22 +635,34 @@ function ensureGdriveTokenClient(){
 
 // Holt ein frisches Access Token. silent=true versucht es ohne Popup/Zustimmungsdialog
 // (klappt nur, wenn schon einmal zugestimmt wurde und die Google-Sitzung noch aktiv ist).
+// Bei silent=true gibt es zusätzlich ein 8-Sekunden-Timeout: In manchen Browsern/Situationen
+// (z. B. blockierte Drittanbieter-Cookies) meldet Google sich bei der stillen Anmeldung nie
+// zurück — weder Erfolg noch Fehler. Ohne dieses Timeout bliebe die Oberfläche dann für immer
+// bei "Verbinde …" hängen, statt auf den manuellen "Verbinden"-Button zurückzufallen.
 function gdriveRequestToken(silent){
   return new Promise((resolve, reject)=>{
     if(gdriveIsFileProtocol()){
       reject(new Error("Google-Login funktioniert nicht bei lokal geöffneten Dateien — nur auf der online gehosteten Version."));
       return;
     }
+    let settled = false;
+    let timeoutId = null;
+    const settleResolve = (v)=>{ if(settled) return; settled = true; if(timeoutId) clearTimeout(timeoutId); resolve(v); };
+    const settleReject = (e)=>{ if(settled) return; settled = true; if(timeoutId) clearTimeout(timeoutId); reject(e); };
+
     loadGdriveScript().then(()=>{
       const client = ensureGdriveTokenClient();
       client.callback = (resp)=>{
-        if(!resp || resp.error){ reject(new Error((resp&&resp.error)||"Login abgebrochen oder fehlgeschlagen.")); return; }
+        if(!resp || resp.error){ settleReject(new Error((resp&&resp.error)||"Login abgebrochen oder fehlgeschlagen.")); return; }
         gdriveAccessToken = resp.access_token;
         gdriveTokenExpiresAt = Date.now() + ((parseInt(resp.expires_in,10)||3600)*1000) - 60000; // 1 Min. Sicherheitspuffer
-        resolve(gdriveAccessToken);
+        settleResolve(gdriveAccessToken);
       };
+      if(silent){
+        timeoutId = setTimeout(()=>{ settleReject(new Error("Stille Anmeldung hat zu lange gedauert (Zeitüberschreitung).")); }, 8000);
+      }
       client.requestAccessToken({ prompt: silent ? "" : "consent" });
-    }).catch(reject);
+    }).catch(settleReject);
   });
 }
 

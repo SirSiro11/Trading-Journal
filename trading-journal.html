@@ -1,0 +1,3370 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mein Journal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0a0d;
+    --bg-panel:#131319;
+    --bg-card:#1a1b22;
+    --bg-card-hover:#20212a;
+    --border:#2a2b34;
+    --border-light:#34353f;
+    --text:#eceef2;
+    --text-dim:#8b8d99;
+    --text-faint:#5c5e6b;
+    --green:#34d399;
+    --green-dim:#1c3c30;
+    --red:#f87171;
+    --red-dim:#3c2222;
+    --amber:#fbbf24;
+    --white:#ffffff;
+    --radius:14px;
+    --radius-sm:9px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font);
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;}
+
+  /* ---------- Layout ---------- */
+  header.topnav{
+    position:sticky; top:0; z-index:50;
+    background:rgba(10,10,13,.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    padding:14px 24px;
+    gap:12px;
+  }
+  .topnav-left{display:flex; align-items:center; gap:12px;}
+  .topnav-right{display:flex; align-items:center; gap:12px; justify-content:flex-end;}
+  .brand{font-weight:700; font-size:17px; letter-spacing:.2px;}
+  nav.tabs{display:flex; gap:4px; background:var(--bg-panel); padding:4px; border-radius:12px; flex-wrap:wrap; justify-content:center;}
+  nav.tabs button{
+    background:transparent; border:none; color:var(--text-dim);
+    padding:8px 16px; border-radius:9px; font-size:14px; font-weight:600;
+    transition:.15s;
+  }
+  nav.tabs button:hover{color:var(--text);}
+  nav.tabs button.active{background:var(--white); color:#0a0a0d;}
+  .backup-badge{
+    display:none; align-items:center; gap:6px;
+    background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.4); color:var(--amber);
+    padding:6px 12px; border-radius:9px; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .backup-badge:hover{background:rgba(251,191,36,.2);}
+  .backup-badge.show{display:flex;}
+
+  main{max-width:1180px; margin:0 auto; padding:28px 24px 80px;}
+
+  .page-head{margin-bottom:20px;}
+  .page-head h1{font-size:26px; margin:0 0 4px;}
+  .page-head p{color:var(--text-dim); margin:0; font-size:14px;}
+
+  .row-between{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:6px;
+    background:var(--bg-card); color:var(--text); border:1px solid var(--border-light);
+    padding:10px 16px; border-radius:10px; font-size:14px; font-weight:600;
+    transition:.15s;
+  }
+  .btn:hover{background:var(--bg-card-hover); border-color:var(--text-faint);}
+  .btn-primary{background:var(--green); color:#06281c; border-color:var(--green);}
+  .btn-primary:hover{background:#2ed198; opacity:.95;}
+  .btn-danger{background:var(--red-dim); color:var(--red); border-color:#5a2b2b;}
+  .btn-ghost{background:transparent; border-color:var(--border);}
+  .btn-sm{padding:6px 11px; font-size:12.5px; border-radius:8px;}
+
+  /* ---------- Chips ---------- */
+  .chip-group{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    background:transparent; border:1px solid var(--border-light); color:var(--text-dim);
+    padding:7px 14px; border-radius:9px; font-size:13.5px; font-weight:500;
+    transition:.13s;
+  }
+  .chip:hover{border-color:var(--text-faint); color:var(--text);}
+  .chip.selected{background:var(--white); color:#0a0a0d; border-color:var(--white); font-weight:700;}
+  .chip.selected.result-TP{background:var(--green); border-color:var(--green); color:#06281c;}
+  .chip.selected.result-SL{background:var(--red); border-color:var(--red); color:#2b0a0a;}
+  .chip.selected.result-BE{background:var(--amber); border-color:var(--amber); color:#2b2205;}
+  .chip-add{border-style:dashed;}
+  .market-chip-wrap{position:relative; display:inline-flex; align-items:center;}
+  .market-chip-label{padding-right:26px;}
+  .market-chip-remove{
+    position:absolute; right:5px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; border-radius:50%; border:none;
+    background:transparent; color:inherit; opacity:.55; font-size:10px;
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .market-chip-remove:hover{opacity:1; background:var(--red); color:#fff;}
+
+  /* ---------- Cards / Filter panel ---------- */
+  .panel{background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px;}
+  .filter-panel{margin-bottom:22px;}
+  .filter-row{display:grid; grid-template-columns:160px 1fr; gap:14px 18px; align-items:start; padding:10px 0; border-bottom:1px solid var(--border);}
+  .filter-row:last-child{border-bottom:none;}
+  .filter-label{color:var(--text-dim); font-size:13px; font-weight:600; padding-top:6px;}
+  .filter-panel-title-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .filter-panel-title-row .filter-panel-title{margin-bottom:0;}
+  .filter-panel-title{font-size:12px; letter-spacing:1px; color:var(--text-faint); font-weight:700; margin-bottom:14px;}
+
+  /* ---------- Stat cards ---------- */
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-bottom:26px;}
+  .stat-card{background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+  .stat-card .label{font-size:11px; letter-spacing:.6px; color:var(--text-faint); font-weight:700; text-transform:uppercase; margin-bottom:10px;}
+  .stat-card .label .label-sub{display:block; text-transform:none; letter-spacing:0; font-weight:500; color:var(--text-faint); font-size:11px; margin-top:2px;}
+  .stat-card .value{font-family:var(--mono); font-size:28px; font-weight:700;}
+  .stat-card .sub{color:var(--text-dim); font-size:12.5px; margin-top:6px;}
+  .pos{color:var(--green);}
+  .neg{color:var(--red);}
+  .ratio-bars{margin-top:12px; display:flex; flex-direction:column; gap:9px;}
+  .ratio-bar-row{display:flex; align-items:center; gap:10px;}
+  .ratio-label{font-family:var(--mono); font-weight:700; font-size:12.5px; min-width:66px; text-align:right;}
+  .ratio-track{flex:1; height:6px; background:var(--border); border-radius:4px; overflow:hidden;}
+  .ratio-fill{height:100%; border-radius:4px;}
+  .ratio-fill.seg-pos{background:var(--green);}
+  .ratio-fill.seg-neg{background:var(--red);}
+  .gauge-wrap{display:flex; align-items:center; gap:14px;}
+  .gauge{width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:700; font-size:14px; flex-shrink:0;}
+  .gauge-outline{background:transparent !important; border:3px solid var(--green); box-sizing:border-box; color:var(--text);}
+  .mini-stat-row{display:flex; gap:22px; flex-wrap:wrap; margin-bottom:28px; padding:14px 18px; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius-sm);}
+  .mini-stat-row > div{display:flex; flex-direction:column; gap:2px;}
+  .mini-stat-label{font-size:10.5px; letter-spacing:.5px; color:var(--text-faint); font-weight:700; text-transform:uppercase;}
+  .mini-stat-value{font-family:var(--mono); font-weight:700; font-size:15px;}
+  .mini-stat-sub{font-size:11.5px; color:var(--text-dim);}
+
+  /* ---------- Trade list ---------- */
+  .trade-list{display:flex; flex-direction:column; gap:10px;}
+  .subtab-row{display:flex; gap:4px; background:var(--bg-panel); padding:4px; border-radius:12px; flex-wrap:wrap;}
+  .subtab{background:transparent; border:none; color:var(--text-dim); padding:8px 15px; border-radius:9px; font-size:13.5px; font-weight:600; white-space:nowrap;}
+  .subtab:hover{color:var(--text);}
+  .subtab.active{background:var(--white); color:#0a0a0d;}
+  .day-detail-list{display:flex; flex-direction:column; gap:8px;}
+  .day-detail-item{
+    display:flex; align-items:center; gap:12px; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:9px; padding:10px 12px; cursor:pointer; transition:.12s;
+  }
+  .day-detail-item:hover{border-color:var(--border-light);}
+  .view-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; margin-bottom:6px;}
+  .view-row{margin-bottom:16px;}
+  .view-label{font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-faint); margin-bottom:5px;}
+  .view-value{font-size:14px; color:var(--text); line-height:1.5;}
+  .lightbox-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:300;
+    display:flex; align-items:center; justify-content:center; padding:30px; cursor:zoom-out;
+  }
+  .lightbox-backdrop img{max-width:100%; max-height:100%; border-radius:10px; cursor:default;}
+  .lightbox-close{position:fixed; top:20px; right:24px; color:#fff; font-size:22px; background:rgba(255,255,255,.1); border:none; width:38px; height:38px; border-radius:50%; cursor:pointer; z-index:301;}
+  .lightbox-close:hover{background:rgba(255,255,255,.2);}
+  .lightbox-backdrop.lb-fullscreen{padding:0; background:#000;}
+  .lightbox-backdrop.lb-fullscreen img{max-width:100vw; max-height:100vh; width:100vw; height:100vh; object-fit:contain; border-radius:0;}
+  .cal-panel{margin-top:14px;}
+  .cal-header{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .cal-month-label{font-weight:700; font-size:14px; text-transform:capitalize;}
+  .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr) 58px; gap:6px; color:var(--text-faint); font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:6px; text-align:center;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr) 58px; gap:6px;}
+  .cal-cell{background:var(--bg-card); border:1px solid var(--border); border-radius:9px; min-height:64px; padding:6px; font-size:11px; cursor:pointer; transition:.12s;}
+  .cal-cell:hover{border-color:var(--border-light);}
+  .cal-empty{background:transparent; border:none; cursor:default;}
+  .cal-daynum{color:var(--text-dim); font-weight:700; font-size:11px;}
+  .cal-r{font-family:var(--mono); font-weight:700; font-size:12px; margin-top:4px;}
+  .cal-count{color:var(--text-faint); font-size:10px; margin-top:2px;}
+  .cal-pos{background:var(--green-dim); border-color:#1c3c30;}
+  .cal-pos .cal-r{color:var(--green);}
+  .cal-neg{background:var(--red-dim); border-color:#3c2222;}
+  .cal-neg .cal-r{color:var(--red);}
+  .cal-neutral .cal-r{color:var(--amber);}
+  .cal-today{box-shadow:inset 0 0 0 1.5px var(--text-dim);}
+  .cal-selected{box-shadow:inset 0 0 0 2px var(--white);}
+  .cal-week-total{
+    background:var(--bg-panel); border:1px dashed var(--border-light); border-radius:9px;
+    min-height:64px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:11.5px; color:var(--text-dim); text-align:center;
+  }
+  .cal-week-total.cal-pos{color:var(--green); border-color:#1c3c30; background:var(--green-dim);}
+  .cal-week-total.cal-neg{color:var(--red); border-color:#3c2222; background:var(--red-dim);}
+  .cal-week-total.cal-neutral{color:var(--amber);}
+  .cal-month-total{
+    display:flex; align-items:center; justify-content:space-between; margin-top:14px; padding-top:14px;
+    border-top:1px solid var(--border); font-size:13px; color:var(--text-dim); font-weight:600;
+  }
+  .cal-month-total span:last-child{font-family:var(--mono); font-weight:700; font-size:16px; color:var(--text);}
+  @media (max-width:640px){
+    .cal-weekdays{grid-template-columns:repeat(7,1fr) 40px; gap:4px;}
+    .cal-grid{grid-template-columns:repeat(7,1fr) 40px; gap:4px;}
+    .cal-cell{min-height:46px; font-size:9.5px; padding:4px;}
+    .cal-r{font-size:10.5px;}
+    .cal-week-total{min-height:46px; font-size:9.5px; padding:2px;}
+  }
+  .trade-card{
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:14px 16px;
+    display:grid;
+    grid-template-columns: 128px minmax(140px,1fr) 100px 92px 78px auto;
+    align-items:center; gap:14px;
+    transition:.12s;
+  }
+  .trade-card:hover{border-color:var(--border-light);}
+  .trade-market-col{display:flex; flex-direction:column; align-items:flex-start; gap:7px;}
+  .trade-market{font-weight:700; font-size:15px;}
+  .eod-inline-btn{font-size:11px; padding:5px 9px; white-space:nowrap;}
+  .trade-tags{display:flex; gap:6px; flex-wrap:wrap;}
+  .trade-date-col{display:flex; justify-content:flex-start;}
+  .trade-status-col{display:flex; justify-content:center;}
+  .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600;}
+  .badge{padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap;}
+  .badge-open{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
+  .badge-closed{background:var(--bg-card); color:var(--text-dim); border:1px solid var(--border);}
+  .badge-eod-copied{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
+  .trade-r{font-family:var(--mono); font-weight:700; font-size:15px; text-align:right;}
+  .trade-actions{display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;}
+  .empty-state{text-align:center; padding:60px 20px; color:var(--text-dim);}
+  .empty-state .big{font-size:40px; margin-bottom:10px;}
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100;
+    display:flex; align-items:flex-start; justify-content:center; padding:30px 16px; overflow-y:auto;
+  }
+  .modal{background:var(--bg-panel); border:1px solid var(--border-light); border-radius:var(--radius); width:100%; max-width:640px; padding:26px; margin-bottom:40px;}
+  .modal h2{margin:0 0 4px; font-size:20px;}
+  .modal .modal-sub{color:var(--text-dim); font-size:13px; margin-bottom:20px;}
+  .field-group{margin-bottom:18px;}
+  .field-group label.fg-label{display:block; font-size:12px; font-weight:700; color:var(--text-faint); letter-spacing:.5px; text-transform:uppercase; margin-bottom:8px;}
+  .field-group input[type=text], .field-group input[type=date], .field-group input[type=number], .field-group textarea{
+    width:100%; background:var(--bg-card); border:1px solid var(--border-light); color:var(--text);
+    padding:10px 12px; border-radius:9px; font-size:14px;
+  }
+  .field-group textarea{min-height:70px; resize:vertical;}
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .modal-footer{display:flex; justify-content:space-between; align-items:center; margin-top:22px; padding-top:18px; border-top:1px solid var(--border);}
+  .modal-close{position:absolute; top:0; right:0;}
+  .modal-header-row{display:flex; justify-content:space-between; align-items:flex-start;}
+  .icon-btn{background:transparent; border:none; color:var(--text-dim); font-size:20px; padding:4px 8px; border-radius:8px;}
+  .icon-btn:hover{background:var(--bg-card); color:var(--text);}
+  .screenshot-preview{max-width:100%; border-radius:9px; margin-top:0; border:1px solid var(--border); display:block;}
+  .shot-dropzone{
+    border:1.5px dashed var(--border-light); border-radius:12px; padding:18px;
+    text-align:center; background:var(--bg-card); transition:.15s; cursor:pointer;
+  }
+  .shot-dropzone:hover, .shot-dropzone:focus, .shot-dropzone.dragover{border-color:var(--green); background:var(--green-dim);}
+  .shot-dropzone-hint{color:var(--text-dim); font-size:13.5px; line-height:1.6;}
+  .shot-dropzone-hint strong{color:var(--text);}
+  .shot-dropzone kbd{
+    background:var(--bg-panel); border:1px solid var(--border-light); border-radius:5px;
+    padding:1px 6px; font-family:var(--mono); font-size:11.5px;
+  }
+  .shot-filelabel{color:var(--green); text-decoration:underline; cursor:pointer;}
+  .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px;}
+  .shot-thumb{position:relative; border-radius:9px; overflow:hidden; border:1px solid var(--border);}
+  .shot-thumb img{display:block; width:100%; height:90px; object-fit:cover;}
+  .shot-remove{
+    position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:50%;
+    background:rgba(0,0,0,.65); color:#fff; border:none; font-size:12px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .shot-remove:hover{background:var(--red);}
+
+  /* ---------- Bericht layout ---------- */
+  .area-toggle{display:flex; gap:8px; margin-bottom:20px;}
+  .area-toggle button{
+    background:var(--bg-panel); border:1px solid var(--border-light); color:var(--text-dim);
+    padding:9px 18px; border-radius:10px; font-weight:700; font-size:13.5px;
+  }
+  .area-toggle button.on{color:#0a0a0d;}
+  .area-toggle button[data-area=live].on{background:var(--green); border-color:var(--green);}
+  .area-toggle button[data-area=backtest].on{background:#60a5fa; border-color:#60a5fa;}
+  .area-toggle button[data-area=eod].on{background:var(--amber); border-color:var(--amber);}
+
+  .equity-card{background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:26px;}
+  .chart-wrap{position:relative; height:190px; width:100%;}
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:7px;}
+
+  .compare-wrap{display:grid; grid-template-columns:1fr 250px; gap:20px; margin-bottom:10px; align-items:start;}
+  .compare-table{width:100%; border-collapse:collapse; font-size:14px; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;}
+  .compare-table th{text-align:left; color:var(--text-dim); font-weight:700; font-size:12px; padding:12px 14px; border-bottom:1px solid var(--border-light); background:var(--bg-card);}
+  .compare-table td{padding:10px 14px; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:13.5px;}
+  .compare-table td:first-child{font-family:var(--font); color:var(--text-dim); font-size:13px;}
+  .compare-table tr:last-child td{border-bottom:none;}
+  .compare-rings{display:flex; flex-direction:column; gap:16px;}
+  .compare-ring-item{background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:16px; text-align:center;}
+  .compare-ring-label{margin-top:10px; font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center; gap:6px;}
+  .compare-ring-sub{color:var(--text-dim); font-size:12px; margin-top:4px;}
+  @media (max-width:800px){
+    .compare-wrap{grid-template-columns:1fr;}
+    .compare-rings{flex-direction:row; flex-wrap:wrap;}
+    .compare-rings > *{flex:1; min-width:140px;}
+  }
+
+  table.breakdown{width:100%; border-collapse:collapse; font-size:13.5px;}
+  table.breakdown th{text-align:left; color:var(--text-faint); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; padding:8px 10px; border-bottom:1px solid var(--border-light);}
+  table.breakdown td{padding:9px 10px; border-bottom:1px solid var(--border);}
+  table.breakdown tr:hover td{background:var(--bg-card);}
+
+  .export-bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:26px; padding-top:20px; border-top:1px solid var(--border);}
+  #notesSearchInput{
+    width:100%; background:var(--bg-card); border:1px solid var(--border-light); color:var(--text);
+    padding:10px 12px; border-radius:9px; font-size:14px;
+  }
+  .word-chip{display:inline-flex; align-items:center; gap:6px;}
+  .word-count{color:var(--text-faint); font-size:10.5px; background:var(--bg-panel); border-radius:5px; padding:1px 6px;}
+  .word-menu-wrap{position:relative; display:inline-block; margin-left:auto;}
+  .word-menu-dropdown{
+    position:absolute; top:calc(100% + 6px); right:0; z-index:60;
+    background:var(--bg-card); border:1px solid var(--border-light); border-radius:10px;
+    padding:6px; min-width:230px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .word-menu-item{
+    background:transparent; border:none; color:var(--text); text-align:left;
+    padding:9px 10px; border-radius:7px; font-size:13.5px; font-weight:500; cursor:pointer; white-space:nowrap;
+  }
+  .word-menu-item:hover{background:var(--bg-panel);}
+  .word-menu-empty{color:var(--text-faint); font-size:12px; padding:9px 10px; white-space:nowrap;}
+  .notes-list{display:flex; flex-direction:column; gap:10px; margin-top:2px;}
+  .note-item{background:var(--bg-card); border:1px solid var(--border); border-radius:9px; padding:12px 14px; cursor:pointer; transition:.12s;}
+  .note-item:hover{border-color:var(--border-light);}
+  .note-item-head{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
+  .note-item-text{color:var(--text); font-size:13.5px; line-height:1.55; white-space:pre-wrap;}
+  .note-item-text mark{background:var(--green); color:#06281c; border-radius:3px; padding:0 2px;}
+
+  .section-title{font-size:12px; letter-spacing:1px; color:var(--text-faint); font-weight:700; text-transform:uppercase; margin:28px 0 12px;}
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--bg-card); border:1px solid var(--border-light); color:var(--text);
+    padding:12px 20px; border-radius:10px; font-size:14px; z-index:200;
+    box-shadow:0 8px 30px rgba(0,0,0,.4);
+    display:flex; align-items:center; gap:14px; white-space:nowrap;
+  }
+  .toast-undo{
+    background:transparent; border:none; color:var(--green); font-weight:700;
+    font-size:13.5px; padding:0; cursor:pointer; text-decoration:underline;
+  }
+
+  @media (max-width:640px){
+    .two-col{grid-template-columns:1fr;}
+    .filter-row{grid-template-columns:1fr;}
+    header.topnav{padding:12px 14px; grid-template-columns:1fr; justify-items:center; row-gap:10px;}
+    .topnav-right{justify-content:center;}
+    main{padding:18px 14px 70px;}
+    .trade-card{grid-template-columns:1fr; row-gap:8px;}
+    .trade-date-col, .trade-status-col{justify-content:flex-start;}
+    .trade-r{text-align:left;}
+    .trade-actions{justify-content:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="topnav-left">
+    <div class="brand">Mein Journal</div>
+  </div>
+  <nav class="tabs" id="mainNav">
+    <button data-view="live">Live</button>
+    <button data-view="eod">EOD</button>
+    <button data-view="backtest">Backtest</button>
+    <button data-view="bericht">Bericht</button>
+    <button data-view="erkenntnisse">Erkenntnisse</button>
+  </nav>
+  <div class="topnav-right">
+    <button class="backup-badge" id="backupBadge" title="Es gibt Änderungen seit dem letzten JSON-Backup. Klicken für den Export-Bereich im Bericht.">⚠ Ungesichert</button>
+    <button class="btn btn-ghost btn-sm" id="btnSettings" title="Kategorien verwalten">⚙ Kategorien</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+/* =========================================================================
+   CONFIG  —  alle Auswahlmöglichkeiten an einer Stelle.
+   Neue Werte hinzufügen = einfach in das jeweilige Array eintragen.
+   ========================================================================= */
+const DEFAULT_CONFIG = {
+  markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
+  directions:   ["Long","Short"],
+  sessions:     ["London","New York","Out of Session"],
+  entryTypes:   ["CE","SE","Continuation","71er","Limit","Counter","Flip","Engulfing"],
+  levels:       ["32","50","71","passiv"],
+  trend:        ["Counter","pro"],
+  kriterien:    ["LQ davor","LQ n. davor"],
+  invalidierung:["50%","v. Zone","kein B/C","Trendline"],
+  timeframes:   ["m1","m2","m5","m15"],
+  struktur:     ["Extern","intern"],
+  results:      ["SL","TP","BE"],
+  // manuell ausgeblendete Begriffe für die Stichwort-Wolken (Notizen im Bericht / Erkenntnisse)
+  hiddenNoteWords:    [],
+  hiddenInsightWords: [],
+  // Gruppen zusammengeführter Begriffe: [{id, label, words:[...]}]
+  noteWordGroups:    [],
+  insightWordGroups: []
+};
+
+const AREA_LABEL  = { live:"Live", backtest:"Backtest", eod:"EOD" };
+const AREA_COLOR  = { live:"#34d399", backtest:"#60a5fa", eod:"#fbbf24" };
+
+// Beschreibt, welche Kategorien im "Kategorien verwalten"-Bereich bearbeitbar sind
+// und in welchem Trade-Feld sie verwendet werden. SL/TP/BE (results) ist bewusst
+// nicht enthalten, da diese Werte fest mit der Statistik-Logik verknüpft sind.
+const CATEGORY_META = [
+  {cfgKey:"markets",       field:"markt",         label:"Markt",              multi:false},
+  {cfgKey:"directions",    field:"richtung",      label:"Richtung",           multi:false},
+  {cfgKey:"sessions",      field:"session",       label:"Session",            multi:false},
+  {cfgKey:"entryTypes",    field:"art",           label:"Entry-Art",          multi:false},
+  {cfgKey:"levels",        field:"level",         label:"Level",              multi:false},
+  {cfgKey:"trend",         field:"trend",         label:"Trend",              multi:false},
+  {cfgKey:"kriterien",     field:"kriterien",     label:"Kriterien",          multi:true},
+  {cfgKey:"invalidierung", field:"invalidierung", label:"Invalidierungskriterien", multi:true},
+  {cfgKey:"timeframes",    field:"zeiteinheit",   label:"Zeiteinheit",        multi:false},
+  {cfgKey:"struktur",      field:"struktur",      label:"Struktur",           multi:false},
+];
+
+/* =========================================================================
+   STORAGE
+   ========================================================================= */
+const LS_TRADES = "tj_trades_v1";
+const LS_CONFIG = "tj_config_v1";
+const LS_INSIGHTS = "tj_insights_v1";
+const LS_LASTCHANGE = "tj_lastchange_v1"; // Zeitstempel (ms) der letzten Datenänderung
+const LS_LASTBACKUP = "tj_lastbackup_v1"; // Zeitstempel (ms) des letzten JSON-Backups (Export oder Import)
+
+// Merkt sich, dass sich Daten geändert haben (wird von allen save*()-Funktionen aufgerufen).
+function markDataChanged(){
+  localStorage.setItem(LS_LASTCHANGE, String(Date.now()));
+  scheduleDriveAutoPush();
+}
+// Merkt sich, dass der aktuelle Stand gerade gesichert wurde (Export) bzw. exakt einem
+// Backup entspricht (Import) — ab hier gilt wieder "nichts Neues seit dem letzten Backup".
+function markBackedUp(){ localStorage.setItem(LS_LASTBACKUP, String(Date.now())); }
+function getLastChangeAt(){ return parseInt(localStorage.getItem(LS_LASTCHANGE), 10) || 0; }
+function getLastBackupAt(){ const v = localStorage.getItem(LS_LASTBACKUP); return v ? (parseInt(v,10)||null) : null; }
+// Gibt es Änderungen, die noch in keinem JSON-Backup stecken?
+function hasUnbackedChanges(){ return getLastChangeAt() > (getLastBackupAt() || 0); }
+
+// Bringt Trades aus älteren Speicherständen (localStorage oder importiertes JSON-Backup)
+// auf die aktuelle Struktur. Wird sowohl von loadTrades() als auch von importJson()
+// aufgerufen, damit beide Wege denselben Stand garantieren.
+function migrateTrades(trades){
+  trades.forEach(t=>{
+    // Ganz altes Einzelbild-Feld "screenshot" (Singular) -> Liste
+    if(t.screenshots === undefined && t.screenshot){
+      t.screenshots = [t.screenshot];
+    }
+    delete t.screenshot;
+
+    // Screenshots in Kategorien (HTF/LTF/Zusätzlich) überführen, falls noch nicht
+    // geschehen. Alte flache Listen landen komplett in "Zusätzlich", damit nichts
+    // verloren geht — die Zuordnung zu HTF/LTF ist im Nachhinein nicht bekannt.
+    if(Array.isArray(t.screenshots)){
+      t.screenshots = { htf: [], ltf: [], sonstige: t.screenshots };
+    }else if(!t.screenshots || typeof t.screenshots !== "object"){
+      t.screenshots = { htf: [], ltf: [], sonstige: [] };
+    }else{
+      if(!Array.isArray(t.screenshots.htf)) t.screenshots.htf = [];
+      if(!Array.isArray(t.screenshots.ltf)) t.screenshots.ltf = [];
+      if(!Array.isArray(t.screenshots.sonstige)) t.screenshots.sonstige = [];
+    }
+  });
+  // Migration: "Counter"/"pro" waren früher Teil von Level, sind jetzt eine eigene
+  // Kategorie "Trend" — bestehende Trades entsprechend überführen, statt Daten zu verlieren.
+  trades.forEach(t=>{
+    if(t.level === "Counter" || t.level === "pro"){
+      if(!t.trend) t.trend = t.level;
+      t.level = null;
+    }
+    if(t.trend === undefined) t.trend = null;
+  });
+  return trades;
+}
+
+function loadTrades(){
+  try{
+    const trades = JSON.parse(localStorage.getItem(LS_TRADES)) || [];
+    return migrateTrades(trades);
+  }
+  catch(e){ return []; }
+}
+function saveTrades(){ localStorage.setItem(LS_TRADES, JSON.stringify(STATE.trades)); markDataChanged(); }
+
+function loadConfig(){
+  try{
+    const stored = JSON.parse(localStorage.getItem(LS_CONFIG));
+    if(!stored) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    // merge: falls neue Default-Keys dazukommen, nicht verlieren
+    return Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), stored);
+  }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+}
+function saveConfig(){ localStorage.setItem(LS_CONFIG, JSON.stringify(STATE.config)); markDataChanged(); }
+
+function loadInsights(){
+  try{ return JSON.parse(localStorage.getItem(LS_INSIGHTS)) || []; }
+  catch(e){ return []; }
+}
+function saveInsights(){ localStorage.setItem(LS_INSIGHTS, JSON.stringify(STATE.insights)); markDataChanged(); }
+
+/* =========================================================================
+   DEMO-DATEN
+   Fiktive Beispiel-Trades zum Beurteilen der Oberfläche. Werden NUR beim
+   allerersten Start eingefügt (kein tj_trades_v1 im localStorage vorhanden) —
+   sobald einmal echte Trades existieren, greift das nie wieder, damit nichts
+   überschrieben wird. Einfach über die normalen Löschen-Buttons entfernbar,
+   oder localStorage-Key tj_trades_v1 leeren.
+   ========================================================================= */
+function buildDemoTrades(){
+  const mk = (o) => Object.assign({
+    id: "demo-" + Math.random().toString(36).slice(2),
+    richtung:null, markt:null, session:null, art:null, level:null, trend:null,
+    kriterien:[], invalidierung:[], zeiteinheit:null, struktur:null,
+    ergebnis:null, r:null, genommen:undefined, grundNichtGenommen:"",
+    notizen:"", screenshots:{ htf:[], ltf:[], sonstige:[] }
+  }, o, {
+    createdAt: new Date(o.date+"T12:00:00").getTime(),
+    updatedAt: new Date(o.date+"T12:00:00").getTime()
+  });
+
+  const liveCeId = "demo-live-ce-0714";
+  const liveSeId = "demo-live-se-0814";
+
+  return [
+    // ---- LIVE ----
+    mk({id:liveCeId, area:"live", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Sauberer CE nach Liquidity-Grab, Ausführung nach Plan.", copiedToEod:true}),
+    mk({area:"live", date:"2026-07-15", richtung:"Short", markt:"GBPUSD", session:"New York", art:"SE", level:"32", trend:"Counter", invalidierung:["v. Zone"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Zu früh eingestiegen, Setup war noch nicht fertig."}),
+    mk({area:"live", date:"2026-07-17", richtung:"Long", markt:"XAUUSD", session:"London", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, notizen:"Bestes Setup der Woche, Geduld hat sich ausgezahlt."}),
+    mk({area:"live", date:"2026-07-21", richtung:"Short", markt:"DAX", session:"New York", art:"Continuation", level:"50", trend:"pro", zeiteinheit:"m15", struktur:"Extern", ergebnis:"BE", r:0, notizen:"Auf BE nachgezogen, solide Entscheidung."}),
+    mk({area:"live", date:"2026-07-24", richtung:"Long", markt:"BTCUSD", session:"Out of Session", art:"Limit", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Gegen den Trend gehandelt, Lehrgeld gezahlt."}),
+    mk({area:"live", date:"2026-07-29", richtung:"Long", markt:"GBPUSD", session:"London", art:"CE", level:"32", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Nach Plan, Einstieg etwas spät aber ok."}),
+    mk({area:"live", date:"2026-08-04", richtung:"Short", markt:"XAUUSD", session:"New York", art:"Flip", level:"50", trend:"Counter", invalidierung:["kein B/C"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"B/C hat gefehlt, trotzdem genommen — Fehler."}),
+    mk({area:"live", date:"2026-08-06", richtung:"Long", markt:"DAX", session:"London", art:"Counter", level:"71", trend:"pro", kriterien:["LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2.5, notizen:"Gutes Reversal-Setup, Timing hat gepasst."}),
+    mk({area:"live", date:"2026-08-12", richtung:"Long", markt:"XAUUSD", session:"New York", art:"CE", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", notizen:"Noch offen, laufe mit Teilgewinn."}),
+    mk({id:liveSeId, area:"live", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"intern", ergebnis:"TP", r:1.5, notizen:"Kleiner sauberer Trade zum Wochenausklang.", copiedToEod:true}),
+
+    // ---- BACKTEST ----
+    mk({area:"backtest", date:"2026-07-16", richtung:"Long", markt:"XAUUSD", session:"London", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, notizen:"Backtest: 71er-Setup funktioniert zuverlässig in London."}),
+    mk({area:"backtest", date:"2026-07-23", richtung:"Short", markt:"DAX", session:"New York", art:"CE", level:"50", trend:"Counter", invalidierung:["v. Zone"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Gegentrend-CE zu riskant ohne zusätzliche Bestätigung."}),
+    mk({area:"backtest", date:"2026-07-30", richtung:"Long", markt:"GBPUSD", session:"London", art:"Continuation", level:"32", trend:"pro", kriterien:["LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Continuation nach Pullback, sauber."}),
+    mk({area:"backtest", date:"2026-08-05", richtung:"Short", markt:"BTCUSD", session:"Out of Session", art:"Flip", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Flip zu früh erkannt, Struktur nicht bestätigt."}),
+    mk({area:"backtest", date:"2026-08-08", richtung:"Long", markt:"XAUUSD", session:"New York", art:"Limit", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Limit-Entry am Level hat gehalten."}),
+    mk({area:"backtest", date:"2026-08-13", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["kein B/C"], zeiteinheit:"m5", struktur:"intern", ergebnis:"BE", r:0, notizen:"Auf BE rausgenommen, B/C hat gefehlt."}),
+
+    // ---- EOD ----
+    mk({area:"eod", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveCeId}),
+    mk({area:"eod", date:"2026-07-18", richtung:"Short", markt:"BTCUSD", session:"Out of Session", art:"Flip", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, genommen:false, grundNichtGenommen:"News-Risiko, Setup bewusst abgewartet."}),
+    mk({area:"eod", date:"2026-07-22", richtung:"Long", markt:"DAX", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["LQ n. davor"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"TP", r:2.5, genommen:false, grundNichtGenommen:"Zu spät gesehen, Zug war schon fast durch."}),
+    mk({area:"eod", date:"2026-07-28", richtung:"Short", markt:"XAUUSD", session:"London", art:"Continuation", level:"50", trend:"Counter", zeiteinheit:"m5", struktur:"Extern", ergebnis:"SL", r:-1, genommen:true, notizen:"Sauber genommen, hat einfach nicht funktioniert."}),
+    mk({area:"eod", date:"2026-08-01", richtung:"Long", markt:"GBPUSD", session:"New York", art:"CE", level:"32", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"intern", ergebnis:"TP", r:1.5, genommen:false, grundNichtGenommen:"Unsicher wegen anstehender News, ausgelassen."}),
+    mk({area:"eod", date:"2026-08-07", richtung:"Short", markt:"DAX", session:"London", art:"SE", level:"71", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"BE", r:0, genommen:true, notizen:"Auf BE rausgenommen."}),
+    mk({area:"eod", date:"2026-08-11", richtung:"Long", markt:"XAUUSD", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, genommen:false, grundNichtGenommen:"Setup kam nachts, verpasst."}),
+    mk({area:"eod", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"intern", ergebnis:"TP", r:1.5, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveSeId}),
+  ];
+}
+
+/* =========================================================================
+   GOOGLE DRIVE SYNC
+   Optionaler automatischer Abgleich über die Google Drive API, damit das
+   Journal auf mehreren Geräten denselben Stand zeigt. Nutzt schlanken
+   REST-Zugriff (fetch) statt der schweren gapi-Client-Bibliothek, und die
+   moderne Google Identity Services (GIS) für den Login — kein eigener
+   Server nötig, alles läuft im Browser.
+   Baut auf dem "letzte Änderung / letztes Backup"-Tracking oben auf: ein
+   erfolgreicher Drive-Push zählt genauso als "gesichert" (markBackedUp())
+   wie ein manueller JSON-Export — das Header-Badge greift also weiterhin.
+   Funktioniert nur über https:// (GitHub Pages o. Ä.), nicht bei lokal
+   geöffneten Dateien (file://) — Google verlangt zwingend eine echte Origin.
+   ========================================================================= */
+const GDRIVE_CLIENT_ID = "1078170007474-m2eemnir27le49jt8kcm009qgeu7dh1c.apps.googleusercontent.com";
+const GDRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const GDRIVE_FILE_NAME = "trading-journal-backup.json";
+const LS_GDRIVE_ENABLED = "tj_gdrive_enabled_v1"; // "1", sobald einmal erfolgreich verbunden
+const LS_GDRIVE_FILEID  = "tj_gdrive_fileid_v1";  // gemerkte Drive-Datei-ID, spart eine Suche pro Sync
+
+let gdriveTokenClient = null;
+let gdriveAccessToken = null;
+let gdriveTokenExpiresAt = 0;
+let gdrivePushTimer = null;
+
+function gdriveIsFileProtocol(){ return typeof location !== "undefined" && location.protocol === "file:"; }
+
+function loadGdriveScript(){
+  return new Promise((resolve, reject)=>{
+    if(window.google && window.google.accounts && window.google.accounts.oauth2){ resolve(); return; }
+    const existing = document.getElementById("gsiScript");
+    if(existing){
+      existing.addEventListener("load", ()=>resolve());
+      existing.addEventListener("error", ()=>reject(new Error("Google-Skript konnte nicht geladen werden.")));
+      return;
+    }
+    const s = document.createElement("script");
+    s.id = "gsiScript";
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = ()=>resolve();
+    s.onerror = ()=>reject(new Error("Google-Skript konnte nicht geladen werden (offline?)."));
+    document.head.appendChild(s);
+  });
+}
+
+function ensureGdriveTokenClient(){
+  if(gdriveTokenClient) return gdriveTokenClient;
+  gdriveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID,
+    scope: GDRIVE_SCOPE,
+    callback: ()=>{} // wird pro Aufruf unten via client.callback überschrieben
+  });
+  return gdriveTokenClient;
+}
+
+// Holt ein frisches Access Token. silent=true versucht es ohne Popup/Zustimmungsdialog
+// (klappt nur, wenn schon einmal zugestimmt wurde und die Google-Sitzung noch aktiv ist).
+function gdriveRequestToken(silent){
+  return new Promise((resolve, reject)=>{
+    if(gdriveIsFileProtocol()){
+      reject(new Error("Google-Login funktioniert nicht bei lokal geöffneten Dateien — nur auf der online gehosteten Version."));
+      return;
+    }
+    loadGdriveScript().then(()=>{
+      const client = ensureGdriveTokenClient();
+      client.callback = (resp)=>{
+        if(!resp || resp.error){ reject(new Error((resp&&resp.error)||"Login abgebrochen oder fehlgeschlagen.")); return; }
+        gdriveAccessToken = resp.access_token;
+        gdriveTokenExpiresAt = Date.now() + ((parseInt(resp.expires_in,10)||3600)*1000) - 60000; // 1 Min. Sicherheitspuffer
+        resolve(gdriveAccessToken);
+      };
+      client.requestAccessToken({ prompt: silent ? "" : "consent" });
+    }).catch(reject);
+  });
+}
+
+function gdriveEnsureToken(){
+  if(gdriveAccessToken && Date.now() < gdriveTokenExpiresAt) return Promise.resolve(gdriveAccessToken);
+  return gdriveRequestToken(true);
+}
+
+async function gdriveApiFetch(url, options){
+  const token = await gdriveEnsureToken();
+  const res = await fetch(url, Object.assign({}, options, {
+    headers: Object.assign({ Authorization: "Bearer " + token }, (options&&options.headers)||{})
+  }));
+  if(!res.ok){
+    const text = await res.text().catch(()=>"");
+    throw new Error("Drive-API-Fehler " + res.status + ": " + text.slice(0,200));
+  }
+  return res;
+}
+
+// Findet die App-eigene Backup-Datei im Drive des Nutzers (dank drive.file-Bereich sieht
+// die App ohnehin nur Dateien, die sie selbst angelegt hat). null, falls noch keine existiert.
+async function gdriveFindFile(){
+  const cached = localStorage.getItem(LS_GDRIVE_FILEID);
+  if(cached) return cached;
+  const q = encodeURIComponent(`name='${GDRIVE_FILE_NAME}' and trashed=false`);
+  const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&spaces=drive`);
+  const data = await res.json();
+  if(data.files && data.files.length){
+    localStorage.setItem(LS_GDRIVE_FILEID, data.files[0].id);
+    return data.files[0].id;
+  }
+  return null;
+}
+
+function buildBackupPayload(){
+  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, savedAt: Date.now(), exportedAt: new Date().toISOString() };
+}
+
+async function gdriveCreateFile(payload){
+  const boundary = "tjboundary" + Date.now();
+  const metadata = { name: GDRIVE_FILE_NAME, mimeType: "application/json" };
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(payload)}\r\n` +
+    `--${boundary}--`;
+  const res = await gdriveApiFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+    method: "POST",
+    headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
+    body
+  });
+  const data = await res.json();
+  localStorage.setItem(LS_GDRIVE_FILEID, data.id);
+  return data.id;
+}
+
+async function gdriveUpdateFile(fileId, payload){
+  await gdriveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+async function gdriveReadFile(fileId){
+  const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  return res.json();
+}
+
+// Schreibt den aktuellen lokalen Stand in die Drive-Datei (legt sie beim ersten Mal an).
+async function gdrivePush(){
+  STATE.driveStatus = "syncing"; render();
+  try{
+    let fileId = await gdriveFindFile();
+    const payload = buildBackupPayload();
+    if(fileId){ await gdriveUpdateFile(fileId, payload); }
+    else{ fileId = await gdriveCreateFile(payload); }
+    markBackedUp();
+    STATE.driveLastSyncAt = Date.now();
+    STATE.driveStatus = "connected";
+    STATE.driveError = "";
+  }catch(err){
+    STATE.driveStatus = "error";
+    STATE.driveError = err.message || String(err);
+  }
+  render();
+}
+
+// Gleicht lokal und Drive ab: neuerer Stand gewinnt (Vergleich über "savedAt" im Backup
+// bzw. den lokalen "letzte Änderung"-Zeitstempel) — dieselbe Logik wie beim JSON-Backup,
+// nur automatisch statt manuell.
+async function gdrivePull(){
+  STATE.driveStatus = "syncing"; render();
+  try{
+    const fileId = await gdriveFindFile();
+    if(!fileId){
+      await gdrivePush(); // noch keine Cloud-Datei -> aktuellen Stand als erste Version anlegen
+      return;
+    }
+    const remote = await gdriveReadFile(fileId);
+    const remoteSavedAt = remote.savedAt || 0;
+    const localChangedAt = getLastChangeAt();
+    if(remoteSavedAt > localChangedAt){
+      STATE.trades = migrateTrades(Array.isArray(remote.trades) ? remote.trades : []);
+      if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
+      if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
+      saveTrades(); saveConfig(); saveInsights();
+      markBackedUp();
+      toast("Neuester Stand aus Google Drive geladen.");
+    }else if(localChangedAt > remoteSavedAt){
+      await gdriveUpdateFile(fileId, buildBackupPayload());
+      markBackedUp();
+    }
+    STATE.driveLastSyncAt = Date.now();
+    STATE.driveStatus = "connected";
+    STATE.driveError = "";
+  }catch(err){
+    STATE.driveStatus = "error";
+    STATE.driveError = err.message || String(err);
+  }
+  render();
+}
+
+async function gdriveConnect(){
+  STATE.driveStatus = "connecting"; render();
+  try{
+    await gdriveRequestToken(false); // erster Login: mit sichtbarem Zustimmungsdialog
+    localStorage.setItem(LS_GDRIVE_ENABLED, "1");
+    await gdrivePull();
+  }catch(err){
+    STATE.driveStatus = "error";
+    STATE.driveError = err.message || String(err);
+    render();
+  }
+}
+
+function gdriveDisconnect(){
+  if(gdriveAccessToken && window.google && google.accounts && google.accounts.oauth2){
+    google.accounts.oauth2.revoke(gdriveAccessToken, ()=>{});
+  }
+  gdriveAccessToken = null; gdriveTokenExpiresAt = 0;
+  if(gdrivePushTimer){ clearTimeout(gdrivePushTimer); gdrivePushTimer = null; }
+  localStorage.removeItem(LS_GDRIVE_ENABLED);
+  localStorage.removeItem(LS_GDRIVE_FILEID);
+  STATE.driveStatus = "disconnected";
+  STATE.driveLastSyncAt = null;
+  STATE.driveError = "";
+  toast("Von Google Drive getrennt.");
+  render();
+}
+
+// Wird nach jeder lokalen Änderung aufgerufen (siehe markDataChanged unten), stößt einen
+// verzögerten Push an, statt bei jeder einzelnen Änderung sofort zu synchronisieren.
+function scheduleDriveAutoPush(){
+  if(localStorage.getItem(LS_GDRIVE_ENABLED) !== "1") return;
+  if(gdrivePushTimer) clearTimeout(gdrivePushTimer);
+  gdrivePushTimer = setTimeout(()=>{ gdrivePush(); }, 4000);
+}
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const STATE = {
+  view: "live",
+  trades: loadTrades(),
+  config: loadConfig(),
+  insights: loadInsights(),
+  editingId: null,
+  editingArea: "live",
+  draft: null,
+  modalFreshOpen: false,
+  viewingTrade: null,
+  insightDraft: null,
+  insightEditingId: null,
+  insightSearchQuery: "",
+  berichtAreas: { live:true, backtest:true, eod:true },
+  berichtFilters: {}, // { markets:[], directions:[], ... }
+  berichtDateFrom: "",
+  berichtDateTo: "",
+  breakdownDim: "markt",
+  berichtFiltersExpanded: true,
+  berichtCompareMode: "gesamt", // "gesamt" | "vergleich" (nur bei Live+EOD gleichzeitig aktiv)
+  notesSearchQuery: "",
+  charts: {},
+  // Datums-Unterkategorien pro Bereich: "alles" | "monat" | "woche" | "heute"
+  areaDateFilter: { live:"alles", backtest:"alles", eod:"alles" },
+  // per Kalender-Klick ausgewählter Einzeltag pro Bereich (überschreibt areaDateFilter)
+  areaSelectedDay: { live:null, backtest:null, eod:null },
+  // welcher Monat im Kalender pro Bereich gerade angezeigt wird
+  areaCalendarMonth: { live: currentYM(), backtest: currentYM(), eod: currentYM() },
+  eodReasonsExpanded: false,
+  eodReasonsQuery: "",
+  hiddenNoteWordsExpanded: false,
+  hiddenInsightWordsExpanded: false,
+  noteWordMenuOpen: false,
+  insightWordMenuOpen: false,
+  noteMergeMode: false,
+  noteMergeSelection: [],
+  insightMergeMode: false,
+  insightMergeSelection: [],
+  driveStatus: localStorage.getItem(LS_GDRIVE_ENABLED)==="1" ? "connecting" : "disconnected", // disconnected|connecting|connected|syncing|error
+  driveLastSyncAt: null,
+  driveError: ""
+};
+
+// Demo-Trades nur einfügen, wenn wirklich noch nichts gespeichert ist (erster Start).
+if(STATE.trades.length === 0){
+  STATE.trades = buildDemoTrades();
+  saveTrades();
+}
+
+function currentYM(){
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+
+function startOfWeek(d){
+  // Woche startet Montag
+  const day = (d.getDay()+6)%7; // Mo=0 ... So=6
+  const monday = new Date(d);
+  monday.setDate(d.getDate()-day);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+function dateMatchesFilter(dateStr, filter){
+  if(filter==="alles" || !filter) return true;
+  if(!dateStr) return false;
+  if(filter==="heute") return dateStr === todayISO();
+  const d = new Date(dateStr+"T00:00:00");
+  const today = new Date(); today.setHours(0,0,0,0);
+  if(filter==="woche"){
+    const mon = startOfWeek(today);
+    const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+    return d >= mon && d <= sun;
+  }
+  if(filter==="monat"){
+    return d.getFullYear()===today.getFullYear() && d.getMonth()===today.getMonth();
+  }
+  return true;
+}
+
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).slice(2) + Date.now();
+}
+
+function toast(msg, undoLabel, undoFn){
+  const root = document.getElementById("toastRoot");
+  const el = document.createElement("div");
+  el.className = "toast";
+  const text = document.createElement("span");
+  text.textContent = msg;
+  el.appendChild(text);
+  if(undoLabel && undoFn){
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "toast-undo";
+    btn.textContent = undoLabel;
+    btn.addEventListener("click", ()=>{ undoFn(); el.remove(); });
+    el.appendChild(btn);
+  }
+  root.innerHTML = "";
+  root.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, undoFn ? 5000 : 2400);
+}
+
+/* =========================================================================
+   NAV
+   ========================================================================= */
+document.getElementById("mainNav").addEventListener("click", (e)=>{
+  const btn = e.target.closest("button[data-view]");
+  if(!btn) return;
+  STATE.view = btn.dataset.view;
+  render();
+});
+
+document.getElementById("btnSettings").addEventListener("click", openSettingsModal);
+
+document.getElementById("backupBadge").addEventListener("click", ()=>{
+  STATE.view = "bericht";
+  render();
+});
+
+function updateNavActive(){
+  document.querySelectorAll("#mainNav button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.view === STATE.view);
+  });
+}
+
+// Badge im Header ein-/ausblenden — läuft bei jedem render(), damit er auf allen
+// Reitern aktuell ist, nicht nur im Bericht (wo die Export-Buttons selbst liegen).
+function updateBackupBadge(){
+  const badge = document.getElementById("backupBadge");
+  if(!badge) return;
+  badge.classList.toggle("show", hasUnbackedChanges());
+}
+
+/* =========================================================================
+   KATEGORIEN VERWALTEN  —  Werte für alle Auswahl-Kategorien
+   zentral hinzufügen / entfernen (wirkt auf CONFIG, sofort gespeichert).
+   ========================================================================= */
+function openSettingsModal(){
+  renderSettingsModal();
+}
+
+function renderSettingsModal(){
+  const cfg = STATE.config;
+  const sections = CATEGORY_META.map(meta=>{
+    const items = cfg[meta.cfgKey] || [];
+    const chips = items.map(v=>`
+      <span class="market-chip-wrap">
+        <span class="chip market-chip-label" style="cursor:default;">${escHtml(v)}</span>
+        <button type="button" class="market-chip-remove" data-cat="${meta.cfgKey}" data-catfield="${meta.field}" data-catmulti="${meta.multi}" data-value="${escAttr(v)}" title="Entfernen">✕</button>
+      </span>`).join("");
+    return `<div class="field-group">
+      <label class="fg-label">${meta.label}</label>
+      <div class="chip-group">
+        ${chips}
+        <button type="button" class="chip chip-add" data-addcat="${meta.cfgKey}" data-catlabel="${escAttr(meta.label)}">+ hinzufügen</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("modalRoot").innerHTML = `
+  <div class="modal-backdrop" id="settingsBackdrop">
+    <div class="modal">
+      <div class="modal-header-row">
+        <div>
+          <h2>Kategorien verwalten</h2>
+          <div class="modal-sub">Werte hinzufügen oder entfernen — wirkt sich sofort auf alle Formulare und Filter aus.</div>
+        </div>
+        <button class="icon-btn" id="settingsCloseBtn">✕</button>
+      </div>
+      ${sections}
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn btn-primary" id="settingsDoneBtn">Fertig</button>
+      </div>
+    </div>
+  </div>`;
+
+  wireSettingsModal();
+}
+
+function wireSettingsModal(){
+  const backdrop = document.getElementById("settingsBackdrop");
+  backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeSettingsModal(); });
+  document.getElementById("settingsCloseBtn").addEventListener("click", closeSettingsModal);
+  document.getElementById("settingsDoneBtn").addEventListener("click", closeSettingsModal);
+
+  document.querySelectorAll("[data-addcat]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const cfgKey = btn.dataset.addcat;
+      const label = btn.dataset.catlabel;
+      const val = prompt(`Neuen Wert für "${label}" hinzufügen:`);
+      if(!val) return;
+      const v = val.trim();
+      if(!v) return;
+      if(!STATE.config[cfgKey].includes(v)){
+        STATE.config[cfgKey].push(v);
+        saveConfig();
+      }
+      renderSettingsModal();
+    });
+  });
+
+  document.querySelectorAll("[data-cat][data-value]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const cfgKey = btn.dataset.cat;
+      const field = btn.dataset.catfield;
+      const multi = btn.dataset.catmulti === "true";
+      const val = btn.dataset.value;
+      const inUse = STATE.trades.some(t=>{
+        if(multi) return (t[field]||[]).includes(val);
+        return t[field] === val;
+      });
+      const msg = inUse
+        ? `"${val}" wird noch in bestehenden Trades verwendet. Trotzdem aus der Auswahlliste entfernen? (Bestehende Trades behalten den Wert, er ist danach nur nicht mehr neu auswählbar.)`
+        : `"${val}" aus der Auswahlliste entfernen?`;
+      if(!confirm(msg)) return;
+      STATE.config[cfgKey] = STATE.config[cfgKey].filter(x=>x!==val);
+      saveConfig();
+      renderSettingsModal();
+    });
+  });
+}
+
+function closeSettingsModal(){
+  document.getElementById("modalRoot").innerHTML = "";
+  render();
+}
+
+/* =========================================================================
+   HELPERS: chips
+   ========================================================================= */
+function chipGroupHtml(groupName, options, selected, opts){
+  opts = opts || {};
+  const multi = !!opts.multi;
+  const resultStyle = !!opts.resultStyle;
+  const labels = opts.labels || {};
+  const sel = multi ? (selected||[]) : selected;
+  const chips = options.map(o=>{
+    const isSel = multi ? sel.includes(o) : sel === o;
+    const cls = "chip" + (isSel?" selected":"") + (resultStyle && isSel ? " result-"+o : "");
+    const label = labels[o] || o;
+    return `<button type="button" class="${cls}" data-group="${groupName}" data-value="${escAttr(o)}" data-multi="${multi}">${escHtml(label)}</button>`;
+  }).join("");
+  return `<div class="chip-group" data-chipgroup="${groupName}">${chips}</div>`;
+}
+
+function escHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escAttr(s){ return escHtml(s); }
+
+/* =========================================================================
+   RENDER ROOT
+   ========================================================================= */
+function render(){
+  updateNavActive();
+  updateBackupBadge();
+  const app = document.getElementById("app");
+  if(STATE.view === "bericht"){ app.innerHTML = renderBericht(); wireBericht(); renderCharts(); }
+  else if(STATE.view === "erkenntnisse"){ app.innerHTML = renderErkenntnisse(); wireErkenntnisse(); }
+  else{ app.innerHTML = renderAreaView(STATE.view); wireAreaView(STATE.view); }
+}
+
+/* =========================================================================
+   LIVE / BACKTEST / EOD VIEW
+   ========================================================================= */
+const AREA_INTRO = {
+  live: "Deine tatsächlich gehandelten Live-Trades.",
+  backtest: "Deine Backtesting-Trades — gleiche Kategorien wie Live.",
+  eod: "Alle Setups, die du im Markt gesehen hast — genommen oder nicht."
+};
+
+function getAreaFilteredTrades(area){
+  let trades = STATE.trades.filter(t=>t.area===area);
+  const filter = STATE.areaDateFilter[area] || "alles";
+  trades = trades.filter(t=> dateMatchesFilter(t.date, filter));
+  return trades.sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+}
+
+function renderAreaView(area){
+  const trades = getAreaFilteredTrades(area);
+  const list = trades.length ? trades.map(t=>tradeCardHtml(t)).join("") : emptyStateHtml(area);
+  const filterVal = STATE.areaDateFilter[area] || "alles";
+
+  const subtabs = ["alles","monat","woche","heute"].map(f=>{
+    const lbl = {alles:"Alles", monat:"Dieser Monat", woche:"Diese Woche", heute:"Heute"}[f];
+    return `<button data-datefilter="${f}" class="subtab ${filterVal===f?"active":""}">${lbl}</button>`;
+  }).join("");
+
+  return `
+    <div class="page-head">
+      <h1>${AREA_LABEL[area]}</h1>
+      <p>${AREA_INTRO[area]}</p>
+    </div>
+    <div class="row-between" style="align-items:flex-start;">
+      <div class="subtab-row" id="subtabRow">${subtabs}</div>
+      <button class="btn btn-primary" id="btnAddTrade">+ Trade hinzufügen</button>
+    </div>
+    <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:14px;">${trades.length} Trade${trades.length===1?"":"s"}</div>
+    <div class="trade-list">${list}</div>
+    ${area==="eod" ? eodReasonsSectionHtml() : ""}
+    ${calendarHtml(area)}
+    ${dayDetailHtml(area)}
+  `;
+}
+
+function emptyStateHtml(area){
+  return `<div class="empty-state panel">
+    <div class="big">◇</div>
+    <div>Keine Einträge für diesen Zeitraum in ${AREA_LABEL[area]}.</div>
+  </div>`;
+}
+
+// Reine Ansicht (nicht bearbeitbar) der Trades eines per Kalender ausgewählten Tages
+function dayDetailHtml(area){
+  const date = STATE.areaSelectedDay[area];
+  if(!date) return "";
+  const trades = STATE.trades.filter(t=>t.area===area && t.date===date)
+    .sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+  return `
+    <div class="row-between" style="margin-top:26px; margin-bottom:0;">
+      <div class="section-title" style="margin:0;">Trades am ${date}</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="closeDayDetail">✕ schließen</button>
+    </div>
+    <div class="panel">
+      ${trades.length ? `<div class="day-detail-list">${trades.map(t=>dayDetailItemHtml(t)).join("")}</div>` : `<div style="color:var(--text-dim); font-size:13.5px;">Keine Trades an diesem Tag.</div>`}
+    </div>
+  `;
+}
+
+function dayDetailItemHtml(t){
+  const rDisplay = (t.r===null || t.r===undefined) ? "—" : formatR(t.r);
+  const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
+
+  if(t.area==="eod"){
+    const genommenTag = t.genommen===true ? `<span class="tag" style="color:var(--green);">genommen</span>`
+      : t.genommen===false ? `<span class="tag" style="color:var(--red);">nicht genommen</span>`
+      : `<span class="tag">—</span>`;
+    return `<div class="day-detail-item" data-viewtrade="${t.id}">
+      <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
+      <div class="trade-tags" style="flex:1;">${genommenTag}</div>
+      <span class="badge ${t.ergebnis?"badge-closed":"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
+      <span class="trade-r ${rClass}">${rDisplay}</span>
+    </div>`;
+  }
+
+  const subtags = [t.richtung, t.session, t.art].filter(Boolean);
+  return `<div class="day-detail-item" data-viewtrade="${t.id}">
+    <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
+    <div class="trade-tags" style="flex:1;">${subtags.map(x=>`<span class="tag">${escHtml(x)}</span>`).join("")}</div>
+    <span class="badge ${t.ergebnis?"badge-closed":"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
+    <span class="trade-r ${rClass}">${rDisplay}</span>
+  </div>`;
+}
+
+/* ---------- Gründe für "nicht genommen" (nur EOD) — Sammelübersicht mit Stichwort-Wolke,
+   damit sich wiederkehrende Zögerlichkeits-Muster erkennen lassen. Zeigt zu jedem Grund
+   auch das (falls eingetragene) Ergebnis, um zu sehen ob die Zurückhaltung im Nachhinein
+   gut oder schlecht war. ---------- */
+function eodReasonsSectionHtml(){
+  const items = STATE.trades.filter(t=>t.area==="eod" && t.genommen===false && t.grundNichtGenommen && t.grundNichtGenommen.trim());
+  const count = items.length;
+  const expanded = STATE.eodReasonsExpanded;
+
+  const header = `
+    <div class="row-between" style="margin-top:26px; margin-bottom:${expanded?"14px":"0"};">
+      <div class="section-title" style="margin:0;">Gründe für „nicht genommen“${count?` (${count})`:""}</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="toggleEodReasons">${expanded?"✕ ausblenden":"anzeigen"}</button>
+    </div>
+  `;
+
+  if(!expanded) return header;
+
+  if(!count){
+    return header + `<div class="panel" style="color:var(--text-dim); font-size:13.5px;">Noch keine „nicht genommen“-Trades mit eingetragenem Grund.</div>`;
+  }
+
+  const cloud = wordFrequency(items, t=>t.grundNichtGenommen);
+  const cloudHtml = cloud.length
+    ? `<div class="chip-group" style="margin-bottom:14px;">${cloud.map(([w,c])=>`<button type="button" class="chip word-chip" data-eodreasonword="${escAttr(w)}">${escHtml(w)}<span class="word-count">${c}</span></button>`).join("")}</div>`
+    : `<div style="color:var(--text-faint); font-size:12.5px; margin-bottom:14px;">Noch nicht genug Einträge für wiederkehrende Themen (ein Begriff muss in mind. 2 Gründen vorkommen).</div>`;
+
+  return header + `
+    <div class="panel">
+      <input type="text" id="eodReasonsSearchInput" placeholder="Gründe durchsuchen…" value="${escAttr(STATE.eodReasonsQuery||"")}">
+      <div style="color:var(--text-faint); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 8px;">Häufige Themen</div>
+      ${cloudHtml}
+      <div id="eodReasonsListContainer">${eodReasonsListHtml(items, STATE.eodReasonsQuery)}</div>
+    </div>
+  `;
+}
+
+function eodReasonsListHtml(items, query){
+  const q = (query||"").trim().toLowerCase();
+  const filtered = q ? items.filter(t=> t.grundNichtGenommen.toLowerCase().includes(q)) : items;
+  const sorted = filtered.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+  if(!sorted.length){
+    return `<div style="color:var(--text-dim); padding:14px 0; font-size:13.5px;">Keine Einträge gefunden${q?` für „${escHtml(query)}“`:""}.</div>`;
+  }
+  return `<div class="notes-list">${sorted.map(t=>{
+    const rDisplay = (t.r===null || t.r===undefined) ? "" : formatR(t.r);
+    const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
+    return `<div class="note-item" data-viewtrade="${t.id}">
+      <div class="note-item-head">
+        <span class="tag">${t.date||""}</span>
+        <span class="tag">${escHtml(t.markt||"—")}</span>
+        ${t.ergebnis ? `<span class="badge badge-closed">${t.ergebnis}</span>` : `<span class="badge badge-open">kein Ergebnis</span>`}
+        ${rDisplay ? `<span class="trade-r ${rClass}" style="margin-left:auto;">${rDisplay}</span>` : ""}
+      </div>
+      <div class="note-item-text">${highlightQuery(t.grundNichtGenommen, q)}</div>
+    </div>`;
+  }).join("")}</div>`;
+}
+
+/* ---------- Kalender (à la FXReplay) ---------- */
+function calendarHtml(area){
+  const cal = STATE.areaCalendarMonth[area];
+  const year = cal.year, month = cal.month;
+  const firstOfMonth = new Date(year, month, 1);
+  const startWeekday = (firstOfMonth.getDay()+6)%7; // Mo=0
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const monthLabel = firstOfMonth.toLocaleDateString("de-DE", {month:"long", year:"numeric"});
+
+  const byDate = {};
+  STATE.trades.filter(t=>t.area===area && t.r!==null && t.r!==undefined).forEach(t=>{
+    (byDate[t.date] = byDate[t.date] || []).push(t.r);
+  });
+
+  // Zellen als flache Liste aufbauen (null = leere Füllzelle), dann in 7er-Wochenzeilen aufteilen
+  const cellDefs = [];
+  for(let i=0;i<startWeekday;i++) cellDefs.push(null);
+  for(let day=1; day<=daysInMonth; day++) cellDefs.push(day);
+  while(cellDefs.length % 7 !== 0) cellDefs.push(null);
+
+  let rowsHtml = "";
+  let monthTotal = 0;
+  let monthHasData = false;
+
+  for(let r=0; r<cellDefs.length; r+=7){
+    const rowDefs = cellDefs.slice(r, r+7);
+    let rowCells = "";
+    let weekSum = 0;
+    let weekHasData = false;
+
+    rowDefs.forEach(day=>{
+      if(day===null){
+        rowCells += `<div class="cal-cell cal-empty"></div>`;
+        return;
+      }
+      const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+      const rs = byDate[dateStr];
+      let cls = "cal-cell";
+      let inner = `<div class="cal-daynum">${day}</div>`;
+      if(rs && rs.length){
+        const sum = rs.reduce((a,b)=>a+b,0);
+        cls += sum>0 ? " cal-pos" : (sum<0 ? " cal-neg" : " cal-neutral");
+        inner += `<div class="cal-r">${formatR(sum)}</div><div class="cal-count">${rs.length} Trade${rs.length===1?"":"s"}</div>`;
+        weekSum += sum; weekHasData = true;
+        monthTotal += sum; monthHasData = true;
+      }
+      if(dateStr === todayISO()) cls += " cal-today";
+      if(STATE.areaSelectedDay[area] === dateStr) cls += " cal-selected";
+      rowCells += `<div class="${cls}" data-caldate="${dateStr}">${inner}</div>`;
+    });
+
+    const weekCls = "cal-week-total" + (weekHasData ? (weekSum>0?" cal-pos":(weekSum<0?" cal-neg":" cal-neutral")) : "");
+    rowCells += `<div class="${weekCls}">${weekHasData ? formatR(weekSum) : "—"}</div>`;
+    rowsHtml += rowCells;
+  }
+
+  const monthCls = monthHasData ? (monthTotal>0?"pos":(monthTotal<0?"neg":"")) : "";
+
+  return `
+    <div class="section-title">Kalender</div>
+    <div class="panel cal-panel">
+      <div class="cal-header">
+        <button type="button" class="btn btn-sm btn-ghost" data-calnav="-1">‹</button>
+        <div class="cal-month-label">${monthLabel}</div>
+        <button type="button" class="btn btn-sm btn-ghost" data-calnav="1">›</button>
+      </div>
+      <div class="cal-weekdays"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div><div>Σ Woche</div></div>
+      <div class="cal-grid">${rowsHtml}</div>
+      <div class="cal-month-total">
+        <span>Monat gesamt</span>
+        <span class="${monthCls}">${monthHasData ? formatR(monthTotal) : "—"}</span>
+      </div>
+    </div>
+  `;
+}
+
+function tradeCardHtml(t){
+  const isOpen = !t.ergebnis;
+  const rDisplay = (t.r===null || t.r===undefined || t.r==="") ? "—" : formatR(t.r);
+  const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
+  const tags = [];
+  if(t.richtung) tags.push(t.richtung);
+  if(t.session) tags.push(t.session);
+  if(t.art) tags.push(t.art);
+  if(t.zeiteinheit) tags.push(t.zeiteinheit);
+  if(t.struktur) tags.push(t.struktur);
+  if(t.level) tags.push("Lvl " + t.level);
+  if(t.trend) tags.push(t.trend);
+  (t.kriterien||[]).forEach(k=>tags.push(k));
+  (t.invalidierung||[]).forEach(k=>tags.push(k));
+  if(t.area==="eod" && t.genommen!=null) tags.push(t.genommen ? "genommen" : "nicht genommen");
+  return `
+  <div class="trade-card" data-id="${t.id}">
+    <div class="trade-market-col">
+      <div class="trade-market">${escHtml(t.markt||"—")}</div>
+      ${(t.area==="live" && !t.copiedToEod) ? `<button class="btn btn-sm eod-inline-btn" data-copy-eod="${t.id}">→ EOD kopieren</button>` : ""}
+      ${t.copiedToEod ? `<span class="badge badge-eod-copied">✓ in EOD</span>` : ""}
+    </div>
+    <div class="trade-tags">
+      ${tags.map(tag=>`<span class="tag">${escHtml(tag)}</span>`).join("")}
+    </div>
+    <div class="trade-date-col">${t.date ? `<span class="tag">${t.date}</span>` : ""}</div>
+    <div class="trade-status-col"><div class="badge ${isOpen?"badge-open":"badge-closed"}">${isOpen?"offen":(t.ergebnis)}</div></div>
+    <div class="trade-r ${rClass}">${rDisplay}</div>
+    <div class="trade-actions">
+      <button class="btn btn-sm" data-edit="${t.id}">Bearbeiten</button>
+      <button class="btn btn-sm btn-danger" data-del="${t.id}">Löschen</button>
+    </div>
+  </div>`;
+}
+
+function formatR(r){
+  const n = Number(r);
+  const s = n.toFixed(2).replace(".", ",");
+  return (n>0?"+":"") + s + "R";
+}
+
+function formatBackupTimestamp(ts){
+  if(!ts) return "noch nie";
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())} Uhr`;
+}
+
+function wireAreaView(area){
+  document.getElementById("btnAddTrade").addEventListener("click", ()=> openTradeModal(area, null));
+  document.querySelectorAll("[data-edit]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const t = STATE.trades.find(x=>x.id===b.dataset.edit);
+      openTradeModal(area, t);
+    });
+  });
+  document.querySelectorAll("[data-del]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      if(!confirm("Diesen Trade wirklich löschen?")) return;
+      const deleted = STATE.trades.find(x=>x.id===b.dataset.del);
+      STATE.trades = STATE.trades.filter(x=>x.id!==b.dataset.del);
+      // War das ein EOD-Trade, der aus einem Live-Trade kopiert wurde? Dann den
+      // Live-Trade wieder freigeben, damit "→ EOD kopieren" dort erneut möglich ist.
+      if(deleted && deleted.copiedFromLiveId){
+        const source = STATE.trades.find(x=>x.id===deleted.copiedFromLiveId);
+        if(source) source.copiedToEod = false;
+      }
+      saveTrades();
+      render();
+      toast("Trade gelöscht.");
+    });
+  });
+
+  document.querySelectorAll("[data-copy-eod]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const t = STATE.trades.find(x=>x.id===b.dataset.copyEod);
+      if(!t) return;
+      const copy = copyTradeToEod(t);
+      render();
+      toast("In EOD kopiert.");
+      openTradeModal("eod", copy);
+    });
+  });
+
+  const subtabRow = document.getElementById("subtabRow");
+  if(subtabRow) subtabRow.addEventListener("click",(e)=>{
+    const btn = e.target.closest("[data-datefilter]");
+    if(!btn) return;
+    STATE.areaDateFilter[area] = btn.dataset.datefilter;
+    render();
+  });
+
+  document.querySelectorAll("[data-calnav]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const delta = parseInt(b.dataset.calnav,10);
+      let {year, month} = STATE.areaCalendarMonth[area];
+      month += delta;
+      if(month<0){ month=11; year--; }
+      if(month>11){ month=0; year++; }
+      STATE.areaCalendarMonth[area] = {year, month};
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-caldate]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const date = b.dataset.caldate;
+      STATE.areaSelectedDay[area] = (STATE.areaSelectedDay[area]===date) ? null : date;
+      render();
+    });
+  });
+
+  const closeDayBtn = document.getElementById("closeDayDetail");
+  if(closeDayBtn) closeDayBtn.addEventListener("click", ()=>{
+    STATE.areaSelectedDay[area] = null;
+    render();
+  });
+
+  document.querySelectorAll("[data-viewtrade]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
+      if(t) openTradeViewModal(t);
+    });
+  });
+
+  const toggleReasonsBtn = document.getElementById("toggleEodReasons");
+  if(toggleReasonsBtn) toggleReasonsBtn.addEventListener("click", ()=>{
+    STATE.eodReasonsExpanded = !STATE.eodReasonsExpanded;
+    render();
+  });
+
+  const reasonsSearch = document.getElementById("eodReasonsSearchInput");
+  if(reasonsSearch){
+    reasonsSearch.addEventListener("input",(e)=>{
+      STATE.eodReasonsQuery = e.target.value;
+      const items = STATE.trades.filter(t=>t.area==="eod" && t.genommen===false && t.grundNichtGenommen && t.grundNichtGenommen.trim());
+      const container = document.getElementById("eodReasonsListContainer");
+      if(container) container.innerHTML = eodReasonsListHtml(items, STATE.eodReasonsQuery);
+      document.querySelectorAll("[data-viewtrade]").forEach(el=>{
+        el.addEventListener("click", ()=>{
+          const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
+          if(t) openTradeViewModal(t);
+        });
+      });
+    });
+  }
+  document.querySelectorAll("[data-eodreasonword]").forEach(chip=>{
+    chip.addEventListener("click", ()=>{
+      STATE.eodReasonsQuery = chip.dataset.eodreasonword;
+      render();
+    });
+  });
+}
+
+/* =========================================================================
+   TRADE MODAL (Add / Edit)
+   ========================================================================= */
+// Screenshot-Kategorien pro Trade. "key" ist der Feldname in t.screenshots,
+// "label" der Anzeigetext in Formular und Detailansicht.
+const SHOT_CATEGORIES = [
+  { key:"htf",      label:"HTF (Higher Time Frame)" },
+  { key:"ltf",      label:"LTF (Lower Time Frame)" },
+  { key:"sonstige", label:"Zusätzlich" }
+];
+
+function emptyTrade(area){
+  return {
+    id: uid(),
+    area,
+    date: new Date().toISOString().slice(0,10),
+    richtung: null,
+    markt: null,
+    session: null,
+    art: null,
+    level: null,
+    trend: null,
+    kriterien: [],
+    invalidierung: [],
+    zeiteinheit: null,
+    struktur: null,
+    ergebnis: null,
+    r: null,
+    genommen: area==="eod" ? null : undefined,
+    grundNichtGenommen: "",
+    notizen: "",
+    screenshots: { htf: [], ltf: [], sonstige: [] },
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+}
+
+// Kopiert einen Live-Trade 1:1 als eigenständigen neuen Eintrag nach EOD (unabhängiger
+// Schnappschuss — spätere Änderungen an einem der beiden Trades wirken sich nicht auf
+// den anderen aus). Das Datum bleibt das des ursprünglichen Trades, damit EOD ihn
+// automatisch dem richtigen Tag zuordnet.
+function copyTradeToEod(liveTrade){
+  const copy = {
+    id: uid(),
+    area: "eod",
+    date: liveTrade.date,
+    richtung: liveTrade.richtung,
+    markt: liveTrade.markt,
+    session: liveTrade.session,
+    art: liveTrade.art,
+    level: liveTrade.level,
+    kriterien: [...(liveTrade.kriterien||[])],
+    invalidierung: [...(liveTrade.invalidierung||[])],
+    zeiteinheit: liveTrade.zeiteinheit,
+    struktur: liveTrade.struktur,
+    ergebnis: liveTrade.ergebnis,
+    r: liveTrade.r,
+    genommen: true, // war ein echter Live-Trade, wurde also genommen
+    notizen: liveTrade.notizen || "",
+    screenshots: {
+      htf: [...((liveTrade.screenshots&&liveTrade.screenshots.htf)||[])],
+      ltf: [...((liveTrade.screenshots&&liveTrade.screenshots.ltf)||[])],
+      sonstige: [...((liveTrade.screenshots&&liveTrade.screenshots.sonstige)||[])]
+    },
+    copiedFromLiveId: liveTrade.id,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+  STATE.trades.push(copy);
+  liveTrade.copiedToEod = true;
+  saveTrades();
+  return copy;
+}
+
+function openTradeModal(area, existing){
+  STATE.editingArea = area;
+  STATE.editingId = existing ? existing.id : null;
+  STATE.draft = existing ? JSON.parse(JSON.stringify(existing)) : emptyTrade(area);
+  STATE.modalFreshOpen = true;
+  const d = STATE.draft;
+  d._rMagnitudeInput = (d.r !== null && d.r !== undefined) ? String(Math.abs(d.r)).replace(".", ",") : "";
+  renderModal();
+}
+
+function closeModal(){
+  document.removeEventListener("paste", handlePasteEvent);
+  document.getElementById("modalRoot").innerHTML = "";
+  STATE.draft = null;
+  STATE.editingId = null;
+}
+
+/* =========================================================================
+   SCHREIBGESCHÜTZTE TRADE-ANSICHT (z.B. aus dem Kalender-Tagesdetail)
+   Zeigt alle Felder + Screenshots an, ohne jede Bearbeitungsmöglichkeit.
+   ========================================================================= */
+function openTradeViewModal(t){
+  STATE.viewingTrade = t;
+  const fieldRow = (label, value) => value ? `<div class="view-row"><div class="view-label">${label}</div><div class="view-value">${escHtml(value)}</div></div>` : "";
+  const tagsRow = (label, arr) => (arr && arr.length) ? `<div class="view-row"><div class="view-label">${label}</div><div class="view-value">${arr.map(v=>`<span class="tag">${escHtml(v)}</span>`).join(" ")}</div></div>` : "";
+  const rDisplay = (t.r===null || t.r===undefined) ? "" : formatR(t.r);
+  const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
+  const shotSections = SHOT_CATEGORIES.map(c=>{
+    const arr = (t.screenshots && t.screenshots[c.key]) || [];
+    if(!arr.length) return "";
+    return `<div class="view-row">
+      <div class="view-label">${c.label}</div>
+      <div class="shot-gallery">
+        ${arr.map((src,i)=>`<div class="shot-thumb" data-viewshotref="${c.key}:${i}"><img src="${src}"></div>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+  <div class="modal-backdrop" id="viewBackdrop">
+    <div class="modal">
+      <div class="modal-header-row">
+        <div>
+          <h2>${escHtml(t.markt||"Trade")}</h2>
+          <div class="modal-sub">${AREA_LABEL[t.area]} · ${t.date||""} · Nur Ansicht</div>
+        </div>
+        <button class="icon-btn" id="viewCloseBtn">✕</button>
+      </div>
+
+      <div class="view-grid">
+        ${fieldRow("Richtung", t.richtung)}
+        ${fieldRow("Session", t.session)}
+        ${fieldRow("Entry-Art", t.art)}
+        ${fieldRow("Level", t.level)}
+        ${fieldRow("Trend", t.trend)}
+        ${fieldRow("Zeiteinheit", t.zeiteinheit)}
+        ${fieldRow("Struktur", t.struktur)}
+        ${(t.area==="eod" && t.genommen!=null) ? fieldRow("Setup genommen", t.genommen?"Ja":"Nein") : ""}
+      </div>
+      ${tagsRow("Kriterien", t.kriterien)}
+      ${tagsRow("Invalidierungskriterien", t.invalidierung)}
+
+      <div class="view-row">
+        <div class="view-label">Ergebnis</div>
+        <div class="view-value">
+          ${t.ergebnis ? `<span class="badge badge-closed">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
+          ${rDisplay ? `<span class="trade-r ${rClass}" style="margin-left:10px;">${rDisplay}</span>` : ""}
+        </div>
+      </div>
+
+      ${t.grundNichtGenommen ? `<div class="view-row"><div class="view-label">Warum nicht genommen?</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.grundNichtGenommen)}</div></div>` : ""}
+      ${t.notizen ? `<div class="view-row"><div class="view-label">Notizen</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.notizen)}</div></div>` : ""}
+
+      ${shotSections}
+
+      <div class="modal-footer" style="justify-content:flex-end;">
+        <button class="btn btn-primary" id="viewCloseBtn2">Schließen</button>
+      </div>
+    </div>
+  </div>`;
+
+  const backdrop = document.getElementById("viewBackdrop");
+  backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeViewModal(); });
+  document.getElementById("viewCloseBtn").addEventListener("click", closeViewModal);
+  document.getElementById("viewCloseBtn2").addEventListener("click", closeViewModal);
+  document.querySelectorAll("[data-viewshotref]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const [cat, idxStr] = el.dataset.viewshotref.split(":");
+      const arr = (STATE.viewingTrade.screenshots && STATE.viewingTrade.screenshots[cat]) || [];
+      openLightbox(arr[parseInt(idxStr, 10)]);
+    });
+  });
+}
+
+function closeViewModal(){
+  document.getElementById("modalRoot").innerHTML = "";
+  STATE.viewingTrade = null;
+}
+
+function openLightbox(src){
+  const lb = document.createElement("div");
+  lb.className = "lightbox-backdrop";
+  lb.innerHTML = `
+    <button type="button" class="lightbox-close" title="Schließen">✕</button>
+    <img src="${src}">
+  `;
+  document.body.appendChild(lb);
+
+  const img = lb.querySelector("img");
+
+  // Klick auf den dunklen Hintergrund schließt; Klick aufs Bild selbst nicht (sonst würde
+  // die erste Hälfte eines Doppelklicks das Fenster schon wieder zumachen).
+  lb.addEventListener("click", (e)=>{ if(e.target === lb) lb.remove(); });
+  lb.querySelector(".lightbox-close").addEventListener("click", ()=> lb.remove());
+  img.addEventListener("click", (e)=> e.stopPropagation());
+
+  // Doppelklick aufs Bild schaltet auf echtes Vollbild um (nochmal doppelklicken schaltet zurück)
+  img.addEventListener("dblclick", (e)=>{
+    e.stopPropagation();
+    lb.classList.toggle("lb-fullscreen");
+    if(lb.classList.contains("lb-fullscreen")){
+      if(lb.requestFullscreen) lb.requestFullscreen().catch(()=>{});
+    }else if(document.fullscreenElement){
+      document.exitFullscreen().catch(()=>{});
+    }
+  });
+}
+
+function renderModal(){
+  const cfg = STATE.config;
+  const d = STATE.draft;
+  const isEdit = !!STATE.editingId;
+  const root = document.getElementById("modalRoot");
+  const prevBackdrop = document.getElementById("modalBackdrop");
+  const prevScroll = prevBackdrop ? prevBackdrop.scrollTop : 0;
+  root.innerHTML = `
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-header-row">
+        <div>
+          <h2>${isEdit?"Trade bearbeiten":"Trade hinzufügen"}</h2>
+          <div class="modal-sub">${AREA_LABEL[d.area]}</div>
+        </div>
+        <button class="icon-btn" id="modalCloseBtn">✕</button>
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="fg-label">Datum</label>
+          <input type="date" id="f_date" value="${d.date||""}">
+        </div>
+        <div class="field-group">
+          <label class="fg-label">Richtung</label>
+          ${chipGroupHtml("richtung", cfg.directions, d.richtung)}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Markt</label>
+        <div id="marktChipWrap">${chipGroupHtml("markt", cfg.markets, d.markt)}</div>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Entry-Art</label>
+        ${chipGroupHtml("art", cfg.entryTypes, d.art)}
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Struktur</label>
+        ${chipGroupHtml("struktur", cfg.struktur, d.struktur)}
+      </div>
+
+      <div class="two-col">
+        <div class="field-group">
+          <label class="fg-label">Zeiteinheit</label>
+          ${chipGroupHtml("zeiteinheit", cfg.timeframes, d.zeiteinheit)}
+        </div>
+        <div class="field-group">
+          <label class="fg-label">Session</label>
+          ${chipGroupHtml("session", cfg.sessions, d.session)}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Level</label>
+        ${chipGroupHtml("level", cfg.levels, d.level)}
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Trend</label>
+        ${chipGroupHtml("trend", cfg.trend, d.trend)}
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Kriterien</label>
+        ${chipGroupHtml("kriterien", cfg.kriterien, d.kriterien, {multi:true})}
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Invalidierungskriterien</label>
+        ${chipGroupHtml("invalidierung", cfg.invalidierung, d.invalidierung, {multi:true})}
+      </div>
+
+      ${d.area==="eod" ? `
+      <div class="field-group">
+        <label class="fg-label">Setup genommen?</label>
+        ${chipGroupHtml("genommen", ["Ja","Nein"], d.genommen===true?"Ja":(d.genommen===false?"Nein":null))}
+      </div>` : ""}
+
+      ${(d.area==="eod" && d.genommen===false) ? `
+      <div class="field-group">
+        <label class="fg-label">Warum nicht genommen?</label>
+        <textarea id="f_grundNichtGenommen" placeholder="z.B. zu spät gesehen, kein sauberes B/C, News im Weg…">${escHtml(d.grundNichtGenommen||"")}</textarea>
+      </div>` : ""}
+
+      <div class="section-title" style="margin-top:22px;">Ergebnis (optional — kann offen bleiben)</div>
+      <div class="field-group">
+        <label class="fg-label">SL / TP / BE</label>
+        ${chipGroupHtml("ergebnis", cfg.results, d.ergebnis, {resultStyle:true})}
+      </div>
+      ${d.ergebnis === "BE" ? `
+      <div class="field-group">
+        <label class="fg-label">R-Ergebnis</label>
+        <div style="color:var(--text-dim); font-size:13.5px; background:var(--bg-card); border:1px solid var(--border-light); border-radius:9px; padding:10px 12px;">
+          Break-Even wird automatisch als <strong style="color:var(--amber)">0R</strong> gewertet — keine Eingabe nötig.
+        </div>
+      </div>` : (d.ergebnis === "TP" || d.ergebnis === "SL") ? `
+      <div class="field-group">
+        <label class="fg-label">R-Ergebnis (Betrag, z.B. 2 oder 1,5)</label>
+        <input type="text" id="f_r" inputmode="decimal" placeholder="z.B. 2,3" value="${escAttr(d._rMagnitudeInput||"")}">
+        <div style="color:var(--text-dim); font-size:12px; margin-top:6px;">
+          Wird automatisch als ${d.ergebnis==="TP" ? '<span class="pos">+R</span>' : '<span class="neg">-R</span>'} verbucht — Vorzeichen musst du nicht eintippen.
+        </div>
+      </div>` : `
+      <div class="field-group">
+        <label class="fg-label">R-Ergebnis</label>
+        <div style="color:var(--text-faint); font-size:13px;">Wähle oben SL, TP oder BE, um das R-Ergebnis einzutragen.</div>
+      </div>`}
+
+      <div class="field-group">
+        <label class="fg-label">Notizen</label>
+        <textarea id="f_notes" placeholder="Beobachtungen, Kontext, Lessons Learned…">${escHtml(d.notizen||"")}</textarea>
+      </div>
+
+      ${SHOT_CATEGORIES.map(c=>{
+        const arr = (d.screenshots && d.screenshots[c.key]) || [];
+        return `
+      <div class="field-group">
+        <label class="fg-label">${c.label} ${arr.length?`(${arr.length})`:""}</label>
+        <div class="shot-dropzone" id="shotDropzone_${c.key}" data-shotcat="${c.key}" tabindex="0">
+          <div class="shot-dropzone-hint">
+            <div style="font-size:22px; margin-bottom:6px;">⎘</div>
+            <div><strong>Screenshot(s) einfügen</strong> — hier klicken und <kbd>Strg</kbd>+<kbd>V</kbd> (Mac: <kbd>⌘</kbd>+<kbd>V</kbd>)</div>
+            <div style="margin-top:4px;">oder Bilder hierher ziehen, oder <label class="shot-filelabel" for="f_shot_${c.key}">Dateien auswählen</label></div>
+            <div style="margin-top:2px;">— beliebig oft wiederholbar, es werden weitere hinzugefügt</div>
+          </div>
+        </div>
+        <input type="file" id="f_shot_${c.key}" accept="image/*" multiple style="display:none;">
+        ${arr.length ? `
+        <div class="shot-gallery">
+          ${arr.map((src,i)=>`
+            <div class="shot-thumb">
+              <img src="${src}">
+              <button type="button" class="shot-remove" data-remove-shot-cat="${c.key}" data-remove-shot="${i}" title="Entfernen">✕</button>
+            </div>
+          `).join("")}
+        </div>` : ""}
+      </div>`;
+      }).join("")}
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="modalCancelBtn">Abbrechen</button>
+        <button class="btn btn-primary" id="modalSaveBtn">${isEdit?"Speichern":"Trade speichern"}</button>
+      </div>
+    </div>
+  </div>`;
+
+  const newBackdrop = document.getElementById("modalBackdrop");
+  if(newBackdrop) newBackdrop.scrollTop = prevScroll;
+
+  wireModal();
+}
+
+function wireModal(){
+  const backdrop = document.getElementById("modalBackdrop");
+  backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) closeModal(); });
+  document.getElementById("modalCloseBtn").addEventListener("click", closeModal);
+  document.getElementById("modalCancelBtn").addEventListener("click", closeModal);
+
+  // chip clicks (single + multi select)
+  document.querySelectorAll("[data-chipgroup]").forEach(group=>{
+    group.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-group]");
+      if(!btn) return;
+      const g = btn.dataset.group;
+      const val = btn.dataset.value;
+      const multi = btn.dataset.multi === "true";
+      const d = STATE.draft;
+      if(g==="genommen"){
+        d.genommen = (val==="Ja");
+        renderModal();
+        return;
+      }
+      if(multi){
+        const arr = d[g] || (d[g]=[]);
+        const i = arr.indexOf(val);
+        if(i>-1) arr.splice(i,1); else arr.push(val);
+      }else{
+        d[g] = (d[g]===val) ? null : val;
+      }
+      if(g === "ergebnis"){
+        if(d.ergebnis === "BE"){
+          d.r = 0;
+          d._rMagnitudeInput = "";
+        }else if(d.ergebnis === "TP" || d.ergebnis === "SL"){
+          // Vorzeichen an neues Ergebnis anpassen, falls bereits ein Betrag eingetragen war
+          if(d.r !== null && d.r !== undefined){
+            const mag = Math.abs(d.r);
+            d.r = d.ergebnis === "TP" ? mag : -mag;
+            d._rMagnitudeInput = String(mag).replace(".", ",");
+          }
+        }else{
+          // Ergebnis abgewählt -> R zurücksetzen (Trade gilt wieder als offen)
+          d.r = null;
+          d._rMagnitudeInput = "";
+        }
+      }
+      renderModal();
+    });
+  });
+
+  // Drei Dropzones (HTF/LTF/Zusätzlich). Bei Klick/Fokus/Dragover einer Zone merkt sich
+  // das Draft, welche Kategorie gerade "aktiv" ist — dahin geht dann auch ein Strg+V-Paste,
+  // weil das Paste-Event global auf document hängt und sonst nicht wüsste, welche Zone gemeint ist.
+  let firstDropzoneEl = null;
+  SHOT_CATEGORIES.forEach(c=>{
+    const input = document.getElementById("f_shot_"+c.key);
+    if(input){
+      input.addEventListener("change", (e)=>{
+        const files = Array.from(e.target.files || []);
+        if(files.length) handleImageFiles(files, c.key);
+        input.value = ""; // erlaubt erneutes Auswählen derselben Datei später
+      });
+    }
+
+    const dropzone = document.getElementById("shotDropzone_"+c.key);
+    if(!dropzone) return;
+    if(!firstDropzoneEl) firstDropzoneEl = dropzone;
+    dropzone.addEventListener("click", (e)=>{
+      if(e.target.closest(".shot-filelabel")) return;
+      STATE.draft._activeShotCategory = c.key;
+      dropzone.focus({preventScroll:true});
+    });
+    dropzone.addEventListener("focus", ()=>{ STATE.draft._activeShotCategory = c.key; });
+    dropzone.addEventListener("dragover", (e)=>{ e.preventDefault(); dropzone.classList.add("dragover"); STATE.draft._activeShotCategory = c.key; });
+    dropzone.addEventListener("dragleave", ()=> dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      const files = Array.from(e.dataTransfer.files || []).filter(f=>f.type.startsWith("image/"));
+      if(files.length) handleImageFiles(files, c.key);
+    });
+  });
+  // Nur beim allerersten Öffnen des Formulars die erste Dropzone (HTF) fokussieren
+  // (nicht bei jedem Re-Render durch Chip-Klicks — das verursachte den Sprung ans Formularende).
+  if(STATE.modalFreshOpen){
+    STATE.draft._activeShotCategory = STATE.draft._activeShotCategory || SHOT_CATEGORIES[0].key;
+    if(firstDropzoneEl) setTimeout(()=> firstDropzoneEl.focus({preventScroll:true}), 50);
+    STATE.modalFreshOpen = false;
+  }
+
+  // Einfügen per Strg+V funktioniert überall im Modal (das Paste-Event bubbelt zu document),
+  // landet in der zuletzt aktiven Kategorie (siehe oben).
+  document.addEventListener("paste", handlePasteEvent);
+
+  document.querySelectorAll("[data-remove-shot]").forEach(btn=>{
+    btn.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const cat = btn.dataset.removeShotCat;
+      const i = parseInt(btn.dataset.removeShot, 10);
+      STATE.draft.screenshots[cat].splice(i, 1);
+      renderModal();
+    });
+  });
+
+  // Datum, Notizen und R-Betrag sofort ins Draft-Objekt übernehmen, statt erst beim
+  // Speichern zu lesen — sonst gingen Eingaben beim nächsten Chip-Klick (voller Re-Render) verloren.
+  const dateInput = document.getElementById("f_date");
+  if(dateInput) dateInput.addEventListener("input", (e)=>{ STATE.draft.date = e.target.value; });
+
+  const notesInput = document.getElementById("f_notes");
+  if(notesInput) notesInput.addEventListener("input", (e)=>{ STATE.draft.notizen = e.target.value; });
+
+  const grundInput = document.getElementById("f_grundNichtGenommen");
+  if(grundInput) grundInput.addEventListener("input", (e)=>{ STATE.draft.grundNichtGenommen = e.target.value; });
+
+  const rInput = document.getElementById("f_r");
+  if(rInput) rInput.addEventListener("input", (e)=>{ STATE.draft._rMagnitudeInput = e.target.value; });
+
+  document.getElementById("modalSaveBtn").addEventListener("click", saveDraft);
+}
+
+function handlePasteEvent(e){
+  if(!STATE.draft) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const files = [];
+  for(const item of items){
+    if(item.type && item.type.startsWith("image/")){
+      const file = item.getAsFile();
+      if(file) files.push(file);
+    }
+  }
+  if(files.length){
+    e.preventDefault();
+    handleImageFiles(files, STATE.draft._activeShotCategory || SHOT_CATEGORIES[0].key);
+  }
+}
+
+// Verarbeitet mehrere Bilder (Datei-Auswahl, Drag&Drop oder Paste) und hängt sie an die
+// Screenshot-Liste der übergebenen Kategorie (htf/ltf/sonstige) an.
+function handleImageFiles(files, category){
+  const cat = category || SHOT_CATEGORIES[0].key;
+  if(!STATE.draft.screenshots) STATE.draft.screenshots = { htf:[], ltf:[], sonstige:[] };
+  if(!Array.isArray(STATE.draft.screenshots[cat])) STATE.draft.screenshots[cat] = [];
+  let remaining = files.length;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 900;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width*scale;
+        canvas.height = img.height*scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        STATE.draft.screenshots[cat].push(canvas.toDataURL("image/jpeg", 0.72));
+        remaining--;
+        if(remaining===0) renderModal();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveDraft(){
+  const d = STATE.draft;
+  d.date = document.getElementById("f_date").value || d.date;
+  d.notizen = document.getElementById("f_notes").value;
+  const grundInput = document.getElementById("f_grundNichtGenommen");
+  if(grundInput) d.grundNichtGenommen = grundInput.value;
+  if(d.genommen !== false) d.grundNichtGenommen = ""; // nur relevant, wenn nicht genommen
+
+  if(d.ergebnis === "BE"){
+    d.r = 0;
+  }else if(d.ergebnis === "TP" || d.ergebnis === "SL"){
+    const rInput = document.getElementById("f_r");
+    const rRaw = rInput ? rInput.value.trim() : "";
+    if(rRaw===""){
+      d.r = null;
+    }else{
+      const magnitude = Math.abs(parseFloat(rRaw.replace(",", ".")));
+      d.r = isNaN(magnitude) ? null : (d.ergebnis === "TP" ? magnitude : -magnitude);
+    }
+  }else{
+    d.r = null;
+  }
+  delete d._rMagnitudeInput; // nur ein UI-Hilfsfeld, nicht mit abspeichern
+  d.updatedAt = Date.now();
+
+  const idx = STATE.trades.findIndex(t=>t.id===d.id);
+  if(idx>-1) STATE.trades[idx] = d; else STATE.trades.push(d);
+  saveTrades();
+  closeModal();
+  render();
+  toast("Trade gespeichert.");
+}
+
+/* =========================================================================
+   BERICHT
+   ========================================================================= */
+const FILTER_DIMENSIONS = [
+  {key:"markt", label:"Markt", cfgKey:"markets", field:"markt"},
+  {key:"richtung", label:"Richtung", cfgKey:"directions", field:"richtung"},
+  {key:"session", label:"Session", cfgKey:"sessions", field:"session"},
+  {key:"art", label:"Entry-Art", cfgKey:"entryTypes", field:"art"},
+  {key:"level", label:"Level", cfgKey:"levels", field:"level"},
+  {key:"trend", label:"Trend", cfgKey:"trend", field:"trend"},
+  {key:"zeiteinheit", label:"Zeiteinheit", cfgKey:"timeframes", field:"zeiteinheit"},
+  {key:"struktur", label:"Struktur", cfgKey:"struktur", field:"struktur"},
+  {key:"kriterien", label:"Kriterien", cfgKey:"kriterien", field:"kriterien", multi:true},
+  {key:"invalidierung", label:"Invalidierung", cfgKey:"invalidierung", field:"invalidierung", multi:true},
+];
+
+function activeFilterCountLabel(){
+  let count = 0;
+  if(STATE.berichtDateFrom || STATE.berichtDateTo) count++;
+  FILTER_DIMENSIONS.forEach(dim=>{
+    const sel = STATE.berichtFilters[dim.key];
+    if(sel && sel.length) count++;
+  });
+  return count ? ` · ${count} aktiv` : "";
+}
+
+function compareRingHtml(label, color, stats){
+  const pct = stats.winrate===null ? 0 : Math.round(stats.winrate*100);
+  return `<div class="compare-ring-item">
+    <div class="gauge" style="background:${donutBg(pct)}; margin:0 auto;">${stats.winrate===null?"—":pct+"%"}</div>
+    <div class="compare-ring-label"><span class="dot" style="background:${color}"></span>${label}</div>
+    <div class="compare-ring-sub">${formatR(stats.totalR)} · ${stats.be}× BE</div>
+  </div>`;
+}
+
+function compareSectionHtml(){
+  const liveTrades = getBerichtFilteredTradesForArea("live");
+  const eodTrades = getBerichtFilteredTradesForArea("eod");
+  const liveStats = computeStats(liveTrades);
+  const eodStats = computeStats(eodTrades);
+
+  const fmt = (v, kind, suffix)=>{
+    if(v===null || v===undefined) return `<span style="color:var(--text-faint);">—</span>`;
+    if(kind==="r") return `<span class="${v>0?"pos":(v<0?"neg":"")}">${formatR(v)}</span>`;
+    if(kind==="pct") return `${Math.round(v*100)}%`;
+    if(kind==="factor") return (v===Infinity ? "–" : v.toFixed(2));
+    return `${v}${suffix||""}`;
+  };
+
+  const rows = [
+    { label:"Trades", live: liveStats.count, eod: eodStats.count, kind:"n" },
+    { label:"Erwartungswert je Trade", live: liveStats.avgR, eod: eodStats.avgR, kind:"r" },
+    { label:"Summe", live: liveStats.totalR, eod: eodStats.totalR, kind:"r" },
+    { label:"Trefferquote", live: liveStats.winrate, eod: eodStats.winrate, kind:"pct" },
+    { label:"Profit-Faktor", live: liveStats.profitFactor, eod: eodStats.profitFactor, kind:"factor" },
+    { label:"Ø Gewinn", live: liveStats.avgWin, eod: eodStats.avgWin, kind:"r" },
+    { label:"Ø Verlust", live: liveStats.avgLoss!==null?-liveStats.avgLoss:null, eod: eodStats.avgLoss!==null?-eodStats.avgLoss:null, kind:"r" },
+    { label:"Größter Gewinner", live: liveStats.best, eod: eodStats.best, kind:"r" },
+    { label:"Größter Verlierer", live: liveStats.worst, eod: eodStats.worst, kind:"r" },
+    { label:"Größter Rückgang", live: liveStats.maxDrawdown!==null?-Math.abs(liveStats.maxDrawdown):null, eod: eodStats.maxDrawdown!==null?-Math.abs(eodStats.maxDrawdown):null, kind:"r" },
+    { label:"Längste Verlustserie", live: liveStats.longestSlStreak, eod: eodStats.longestSlStreak, kind:"n", suffix:" in Folge" }
+  ];
+
+  const rowsHtml = rows.map(r=>{
+    const liveVal = r.label==="Trades" ? `${liveStats.count} <span style="color:var(--text-faint); font-size:11.5px;">(${liveStats.open} offen)</span>` : fmt(r.live, r.kind, r.suffix);
+    const eodVal = r.label==="Trades" ? `${eodStats.count} <span style="color:var(--text-faint); font-size:11.5px;">(${eodStats.open} offen)</span>` : fmt(r.eod, r.kind, r.suffix);
+    return `<tr><td>${r.label}</td><td>${liveVal}</td><td>${eodVal}</td></tr>`;
+  }).join("");
+
+  return `
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead><tr>
+          <th></th>
+          <th><span style="display:inline-flex; align-items:center; gap:6px;"><span class="dot" style="background:${AREA_COLOR.live}"></span>Live</span></th>
+          <th><span style="display:inline-flex; align-items:center; gap:6px;"><span class="dot" style="background:${AREA_COLOR.eod}"></span>EOD</span></th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="compare-rings">
+        ${compareRingHtml("Live", AREA_COLOR.live, liveStats)}
+        ${compareRingHtml("EOD", AREA_COLOR.eod, eodStats)}
+      </div>
+    </div>
+    <div style="color:var(--text-faint); font-size:12px; margin:-16px 0 20px;">
+      Alles in R. Ein Break-Even-Trade (0R) zählt in die Anzahl, nicht in die Trefferquote. Beide Spalten berücksichtigen die aktuellen Filter oben, aber jeweils nur ihre eigenen Trades.
+    </div>
+  `;
+}
+
+function renderBericht(){
+  const cfg = STATE.config;
+  const filteredTrades = getBerichtFilteredTrades();
+  const stats = computeStats(filteredTrades);
+
+  const areaBtns = ["live","eod","backtest"].map(a=>{
+    const on = STATE.berichtAreas[a];
+    return `<button data-area="${a}" class="${on?"on":""}">${AREA_LABEL[a]}</button>`;
+  }).join("");
+
+  const filterRows = FILTER_DIMENSIONS.map(dim=>{
+    const opts = cfg[dim.cfgKey];
+    const sel = STATE.berichtFilters[dim.key] || [];
+    return `<div class="filter-row">
+      <div class="filter-label">${dim.label}</div>
+      <div>${chipGroupHtml("f_"+dim.key, opts, sel, {multi:true})}</div>
+    </div>`;
+  }).join("");
+
+  const canCompare = STATE.berichtAreas.live && STATE.berichtAreas.eod;
+  const compareActive = canCompare && STATE.berichtCompareMode === "vergleich";
+
+  return `
+    <div class="page-head">
+      <h1>Bericht</h1>
+      <p>Statistik & Performance über Live, Backtest und EOD.</p>
+    </div>
+
+    <div class="row-between" style="align-items:flex-start;">
+      <div class="area-toggle" id="areaToggle">${areaBtns}</div>
+      ${canCompare ? `
+      <div class="subtab-row" id="compareToggle">
+        <button type="button" data-mode="gesamt" class="subtab ${!compareActive?"active":""}">Gesamt</button>
+        <button type="button" data-mode="vergleich" class="subtab ${compareActive?"active":""}">Gegenüberstellung</button>
+      </div>` : ""}
+    </div>
+
+    <div class="panel filter-panel">
+      <div class="filter-panel-title-row">
+        <div class="filter-panel-title">FILTER${!STATE.berichtFiltersExpanded ? activeFilterCountLabel() : ""}</div>
+        <button type="button" class="btn btn-sm btn-ghost" id="toggleFiltersBtn">${STATE.berichtFiltersExpanded ? "Filter ausblenden" : "Filter einblenden"}</button>
+      </div>
+      ${STATE.berichtFiltersExpanded ? `
+      <div class="filter-row">
+        <div class="filter-label">Zeitraum</div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <input type="date" id="f_dateFrom" value="${STATE.berichtDateFrom}" style="background:var(--bg-card); border:1px solid var(--border-light); color:var(--text); padding:8px 10px; border-radius:8px;">
+          <span style="color:var(--text-dim);">bis</span>
+          <input type="date" id="f_dateTo" value="${STATE.berichtDateTo}" style="background:var(--bg-card); border:1px solid var(--border-light); color:var(--text); padding:8px 10px; border-radius:8px;">
+          <button class="btn btn-sm btn-ghost" id="clearFiltersBtn">Filter zurücksetzen</button>
+        </div>
+      </div>
+      ${filterRows}` : ""}
+    </div>
+
+    ${compareActive ? compareSectionHtml() : `
+    <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:16px;">
+      Alle Zahlen unten rechnen über <strong style="color:var(--text)">${filteredTrades.length} Trade${filteredTrades.length===1?"":"s"}</strong>.
+    </div>
+
+    <div class="stat-grid">
+      ${nettoCardHtml(stats)}
+      ${winrateCardHtml(stats)}
+      ${profitFactorCardHtml(stats)}
+      ${daysPlusCardHtml(stats)}
+      ${avgRatioCardHtml(stats)}
+    </div>
+    <div style="color:var(--text-faint); font-size:12px; margin:-14px 0 20px;">
+      Alles in R. Ein Break-Even-Trade (0R) zählt in die Anzahl, nicht in die Trefferquote. <strong style="color:var(--text-dim)">Tage im Plus</strong> zählt Kalendertage, nicht Trades — nur Tage mit mindestens einem Ergebnis.
+    </div>
+
+    <div class="mini-stat-row">
+      <div><span class="mini-stat-label">Trades gesamt</span><span class="mini-stat-value">${stats.count}</span><span class="mini-stat-sub">${stats.open} offen</span></div>
+      <div><span class="mini-stat-label">Größter Gewinner</span><span class="mini-stat-value pos">${stats.best===null?"—":formatR(stats.best)}</span></div>
+      <div><span class="mini-stat-label">Größter Verlierer</span><span class="mini-stat-value neg">${stats.worst===null?"—":formatR(stats.worst)}</span></div>
+      <div><span class="mini-stat-label">Längste Verlustserie</span><span class="mini-stat-value neg">${stats.longestSlStreak}</span><span class="mini-stat-sub">SL in Folge</span></div>
+    </div>
+    `}
+
+    <div class="section-title">Equity-Kurve</div>
+    <div class="panel equity-card">
+      <div class="chart-wrap" style="height:260px;"><canvas id="chart_equity"></canvas></div>
+    </div>
+
+    <div class="section-title">Auswertung nach Kategorie</div>
+
+    <div class="panel">
+      <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span style="color:var(--text-dim); font-size:13px;">Gruppieren nach:</span>
+        <div class="chip-group" id="breakdownDimSelector">
+          ${FILTER_DIMENSIONS.filter(d=>!d.multi).map(d=>`<button type="button" class="chip ${STATE.breakdownDim===d.key?"selected":""}" data-dim="${d.key}">${d.label}</button>`).join("")}
+        </div>
+      </div>
+      ${breakdownTableHtml(filteredTrades)}
+    </div>
+
+    ${notesSectionHtml(filteredTrades)}
+
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="section-title" style="margin-top:0;">☁ Google Drive Sync</div>
+      ${gdriveIsFileProtocol() ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Funktioniert nur auf der online gehosteten Version dieser App (https://…), nicht bei lokal geöffneten Dateien.</p>
+      ` : STATE.driveStatus === "disconnected" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0 0 12px;">Verbinde dein Google Drive, damit das Journal automatisch auf allen Geräten denselben Stand zeigt — kein manueller Export mehr nötig.</p>
+        <button class="btn" id="gdriveConnectBtn">Mit Google Drive verbinden</button>
+      ` : STATE.driveStatus === "connecting" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Verbinde …</p>
+      ` : STATE.driveStatus === "syncing" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere mit Google Drive …</p>
+      ` : STATE.driveStatus === "error" ? `
+        <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Fehler bei der Synchronisierung: ${STATE.driveError||""}</p>
+        <button class="btn" id="gdriveRetryBtn">Erneut versuchen</button>
+        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
+      ` : `
+        <p style="color:var(--green); font-size:13.5px; margin:0 0 12px;">✓ Verbunden · Zuletzt synchronisiert: ${formatBackupTimestamp(STATE.driveLastSyncAt)}</p>
+        <button class="btn" id="gdriveSyncNowBtn">Jetzt synchronisieren</button>
+        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
+      `}
+    </div>
+
+    <div class="export-bar">
+      <button class="btn" id="exportCsvBtn">CSV exportieren</button>
+      <button class="btn" id="exportXlsxBtn">Excel (.xlsx) exportieren</button>
+      <button class="btn" id="exportJsonBtn">Backup exportieren (JSON)</button>
+      <label class="btn" style="margin:0;">
+        Backup importieren
+        <input type="file" id="importJsonInput" accept="application/json" style="display:none;">
+      </label>
+    </div>
+    <div style="margin-top:8px; font-size:12.5px; color:${hasUnbackedChanges() ? "var(--amber)" : "var(--text-faint)"};">
+      ${hasUnbackedChanges() ? "⚠ " : "✓ "}Zuletzt gesichert: ${formatBackupTimestamp(getLastBackupAt())}${(hasUnbackedChanges() && getLastBackupAt()) ? " — es gibt Änderungen seitdem" : ""}
+    </div>
+  `;
+}
+
+function donutBg(pct){
+  return `radial-gradient(closest-side, var(--bg-panel) 68%, transparent 69% 100%), conic-gradient(var(--green) ${pct*3.6}deg, var(--border) 0deg)`;
+}
+
+function statCardHtml(label, cls, value, sub){
+  return `<div class="stat-card">
+    <div class="label">${label}</div>
+    <div class="value ${cls}">${value}</div>
+    ${sub?`<div class="sub">${sub}</div>`:""}
+  </div>`;
+}
+
+function nettoCardHtml(stats){
+  const maxMag = Math.max(stats.sumPos, Math.abs(stats.sumNeg), 0.0001);
+  const posPct = Math.round((stats.sumPos/maxMag)*100);
+  const negPct = Math.round((Math.abs(stats.sumNeg)/maxMag)*100);
+  return `<div class="stat-card">
+    <div class="label">Netto-Ergebnis in R</div>
+    <div class="value ${stats.totalR>=0?"pos":"neg"}">${formatR(stats.totalR)}</div>
+    <div class="sub">${formatR(stats.avgR)} je Trade · ${stats.closed} Trade${stats.closed===1?"":"s"}</div>
+    <div class="ratio-bars">
+      <div class="ratio-bar-row"><span class="ratio-label pos">${formatR(stats.sumPos)}</span><div class="ratio-track"><div class="ratio-fill seg-pos" style="width:${posPct}%"></div></div></div>
+      <div class="ratio-bar-row"><span class="ratio-label neg">${formatR(stats.sumNeg)}</span><div class="ratio-track"><div class="ratio-fill seg-neg" style="width:${negPct}%"></div></div></div>
+    </div>
+    <div class="sub" style="margin-top:12px;">größter Rückgang ${stats.maxDrawdown===null?"—":formatR(-Math.abs(stats.maxDrawdown))}</div>
+  </div>`;
+}
+
+function winrateCardHtml(stats){
+  const pct = stats.winrate===null ? 0 : Math.round(stats.winrate*100);
+  return `<div class="stat-card">
+    <div class="label">Trefferquote ohne Break-Even</div>
+    <div class="gauge-wrap">
+      <div class="gauge" style="background:${donutBg(pct)};">${stats.winrate===null?"—":pct+"%"}</div>
+      <div class="sub" style="margin-top:0;">
+        ${stats.winners} Gewinner<br>${stats.be} Break-Even<br>${stats.losers} Verlierer
+      </div>
+    </div>
+  </div>`;
+}
+
+function profitFactorCardHtml(stats){
+  const pf = stats.profitFactor;
+  const display = (pf===null || pf===Infinity) ? "–" : pf.toFixed(2);
+  return `<div class="stat-card">
+    <div class="label">Profit-Faktor <span class="label-sub">Gewinn + Verlust</span></div>
+    <div class="gauge-wrap">
+      <div class="gauge gauge-outline">${display}</div>
+      <div class="sub" style="margin-top:0;">
+        <span class="pos">${formatR(stats.sumPos)}</span> gewonnen<br>
+        <span class="neg">${formatR(stats.sumNeg)}</span> verloren
+      </div>
+    </div>
+    <div class="sub" style="margin-top:12px;">1,0 = die Gewinne decken die Verluste</div>
+  </div>`;
+}
+
+function daysPlusCardHtml(stats){
+  const d = stats.days;
+  const pct = d.pct===null ? 0 : d.pct;
+  return `<div class="stat-card">
+    <div class="label">Tage im Plus <span class="label-sub">Tag = Summe R &gt; 0</span></div>
+    <div class="gauge-wrap">
+      <div class="gauge" style="background:${donutBg(pct)};">${d.pct===null?"—":d.pct+"%"}</div>
+      <div class="sub" style="margin-top:0;">
+        ${d.greenDays} Gewinntage<br>${d.redDays} Verlusttage
+      </div>
+    </div>
+    <div class="sub" style="margin-top:12px;">bester ${d.bestDay===null?"—":formatR(d.bestDay)} · schlechtester ${d.worstDay===null?"—":formatR(d.worstDay)}</div>
+  </div>`;
+}
+
+function avgRatioCardHtml(stats){
+  const hasBoth = stats.winners>0 && stats.losers>0;
+  const maxMag = Math.max(stats.avgWin||0, stats.avgLoss||0, 0.0001);
+  const winPct = stats.avgWin ? Math.round((stats.avgWin/maxMag)*100) : 0;
+  const lossPct = stats.avgLoss ? Math.round((stats.avgLoss/maxMag)*100) : 0;
+  return `<div class="stat-card">
+    <div class="label">Ø Gewinn / Ø Verlust <span class="label-sub">Verhältnis in R</span></div>
+    <div class="ratio-bars" style="margin-top:16px;">
+      <div class="ratio-bar-row"><span class="ratio-label pos">${stats.avgWin===null?"—":formatR(stats.avgWin)}</span><div class="ratio-track"><div class="ratio-fill seg-pos" style="width:${winPct}%"></div></div></div>
+      <div class="ratio-bar-row"><span class="ratio-label neg">${stats.avgLoss===null?"—":formatR(-stats.avgLoss)}</span><div class="ratio-track"><div class="ratio-fill seg-neg" style="width:${lossPct}%"></div></div></div>
+    </div>
+    ${!hasBoth ? `<div class="sub" style="margin-top:12px;">erst mit Gewinnen und Verlusten</div>` : ""}
+  </div>`;
+}
+
+const NOTE_STOPWORDS = new Set([
+  "und","der","die","das","den","dem","des","ein","eine","einen","einem","einer","ich","habe","hab",
+  "war","bin","ist","sind","nicht","mit","auf","für","von","bei","als","aber","auch","noch","nur",
+  "sehr","mal","wie","was","wenn","dann","hier","da","zu","im","in","am","an","es","sie","er","wir",
+  "mein","meine","meinen","zum","zur","so","aus","nach","vor","über","unter","schon","doch","mehr",
+  "kein","keine","gut","gute","guter","hat","hatte","wurde","werden","wird","gewesen","sein","seine",
+  "seiner","the","and","was","for","with","this","that"
+]);
+
+function tokenizeNotes(text){
+  return (text||"").toLowerCase().replace(/[.,!?;:()"'„"]/g," ").split(/\s+/).filter(w=>w.length>=3);
+}
+
+// Generische Stichwort-Häufigkeit: je Item nur einmal gezählt, damit ein langer Text
+// die Statistik nicht verzerrt. Reine Text-Häufigkeit, keine KI-Analyse.
+function wordFrequency(items, getText){
+  const freq = {};
+  items.forEach(item=>{
+    const text = getText(item);
+    if(!text) return;
+    const seen = new Set();
+    tokenizeNotes(text).forEach(w=>{
+      if(NOTE_STOPWORDS.has(w) || /^\d+$/.test(w)) return;
+      seen.add(w);
+    });
+    seen.forEach(w=> freq[w] = (freq[w]||0)+1);
+  });
+  return Object.entries(freq).filter(([,c])=>c>=2).sort((a,b)=>b[1]-a[1]).slice(0,24);
+}
+
+function noteWordFrequency(trades){
+  return wordFrequency(trades, t=>t.notizen);
+}
+
+// Wie wordFrequency, berücksichtigt aber zusammengeführte Begriffsgruppen: alle Wörter
+// einer Gruppe zählen als ein gemeinsamer Eintrag (einmal pro Item, wie gehabt).
+function groupedWordFrequency(items, getText, groups){
+  const wordToGroupId = {};
+  (groups||[]).forEach(g=> g.words.forEach(w=> wordToGroupId[w]=g.id));
+
+  const freq = {};
+  items.forEach(item=>{
+    const text = getText(item);
+    if(!text) return;
+    const seenKeys = new Set();
+    tokenizeNotes(text).forEach(w=>{
+      if(NOTE_STOPWORDS.has(w) || /^\d+$/.test(w)) return;
+      const gid = wordToGroupId[w];
+      seenKeys.add(gid ? ("g:"+gid) : w);
+    });
+    seenKeys.forEach(k=> freq[k] = (freq[k]||0)+1);
+  });
+
+  return Object.entries(freq).filter(([,c])=>c>=2).map(([key,count])=>{
+    if(key.startsWith("g:")){
+      const gid = key.slice(2);
+      const g = (groups||[]).find(x=>x.id===gid);
+      return { key, count, label: (g && g.label) || (g ? g.words.join(" / ") : key), words: g ? g.words : [key], isGroup:true, groupId: gid };
+    }
+    return { key, count, label: key, words: [key], isGroup:false };
+  }).sort((a,b)=>b.count-a.count).slice(0,24);
+}
+
+// Baut die Stichwort-Wolke: Chips mit "✕" (ausblenden / Gruppe auflösen), "+" zum
+// Wiederherstellen ausgeblendeter Begriffe, und einen Merge-Modus zum Zusammenführen
+// mehrerer Begriffe (z.B. "71er" + "fibo") zu einem gemeinsam gezählten Eintrag.
+function wordCloudBlockHtml(opts){
+  const {
+    items, getText, hidden, groups,
+    chipAttr, hideAttr, restoreAttr, dissolveAttr,
+    mergeToggleAttr, mergeSelectAttr, mergeConfirmAttr, mergeCancelAttr,
+    scope, expanded, mergeMode, mergeSelection, wordMenuOpen, emptyMsg
+  } = opts;
+
+  const entries = groupedWordFrequency(items, getText, groups).filter(e=> !hidden.includes(e.key));
+
+  const chips = entries.map(e=>{
+    const prefix = e.isGroup ? "🔗 " : "";
+    if(mergeMode){
+      const selected = mergeSelection.includes(e.key);
+      return `<button type="button" class="chip word-chip${selected?" selected":""}" data-${mergeSelectAttr}="${escAttr(e.key)}">${prefix}${escHtml(e.label)}<span class="word-count">${e.count}</span></button>`;
+    }
+    const removeAttr = e.isGroup ? dissolveAttr : hideAttr;
+    const removeVal = e.isGroup ? e.groupId : e.key;
+    const removeTitle = e.isGroup ? "Gruppe auflösen" : "Begriff ausblenden";
+    return `
+      <span class="market-chip-wrap">
+        <button type="button" class="chip market-chip-label word-chip-label" data-${chipAttr}="${escAttr(e.words.join(" / "))}">${prefix}${escHtml(e.label)}<span class="word-count">${e.count}</span></button>
+        <button type="button" class="market-chip-remove" data-${removeAttr}="${escAttr(removeVal)}" title="${removeTitle}">✕</button>
+      </span>`;
+  }).join("");
+
+  // "+" am Zeilenende öffnet ein kleines Menü statt fest sichtbarer Zeilen darüber
+  const plusMenu = !mergeMode ? `
+    <span class="word-menu-wrap">
+      <button type="button" class="chip chip-add" data-togglewordmenu="${scope}" title="Weitere Optionen">+</button>
+      ${wordMenuOpen ? `
+      <div class="word-menu-dropdown">
+        <button type="button" class="word-menu-item" data-${mergeToggleAttr}="1">🔗 Begriffe zusammenführen</button>
+        ${hidden.length
+          ? `<button type="button" class="word-menu-item" data-togglehiddenwords="${scope}">${expanded ? "Ausgeblendete Begriffe verbergen" : `Ausgeblendete Begriffe anzeigen (${hidden.length})`}</button>`
+          : `<div class="word-menu-empty">Keine ausgeblendeten Begriffe</div>`}
+      </div>` : ""}
+    </span>` : "";
+
+  const cloudHtml = (entries.length || plusMenu)
+    ? `<div class="chip-group" style="margin-bottom:10px;">${chips}${plusMenu}</div>`
+    : `<div style="color:var(--text-faint); font-size:12.5px; margin-bottom:10px;">${emptyMsg}</div>`;
+
+  const restoreRowHtml = (expanded && hidden.length && !mergeMode) ? `
+    <div style="color:var(--text-faint); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:2px 0 8px;">Ausgeblendete Begriffe</div>
+    <div class="chip-group" style="margin-bottom:14px;">
+      ${hidden.map(w=>`<button type="button" class="chip" style="opacity:.75;" data-${restoreAttr}="${escAttr(w)}" title="Wiederherstellen">↺ ${escHtml(w)}</button>`).join("")}
+    </div>` : "";
+
+  const mergeBarHtml = mergeMode ? `
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+      <span style="color:var(--text-dim); font-size:12.5px;">${mergeSelection.length} ausgewählt — Begriffe anklicken, die zusammengehören</span>
+      <button type="button" class="btn btn-sm btn-primary" data-${mergeConfirmAttr}="1" ${mergeSelection.length<2?"disabled":""}>Zusammenführen</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-${mergeCancelAttr}="1">Abbrechen</button>
+    </div>` : "";
+
+  return mergeBarHtml + cloudHtml + restoreRowHtml;
+}
+
+function wireWordCloudEvents(opts){
+  const {
+    hideAttr, restoreAttr, dissolveAttr,
+    mergeToggleAttr, mergeSelectAttr, mergeConfirmAttr, mergeCancelAttr,
+    scope, hiddenArrayKey, groupsArrayKey, onChange
+  } = opts;
+  const isNotes = scope === "notes";
+
+  document.querySelectorAll(`[data-${hideAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const w = btn.dataset[hideAttr];
+      if(!STATE.config[hiddenArrayKey].includes(w)) STATE.config[hiddenArrayKey].push(w);
+      saveConfig();
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-${restoreAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const w = btn.dataset[restoreAttr];
+      STATE.config[hiddenArrayKey] = STATE.config[hiddenArrayKey].filter(x=>x!==w);
+      saveConfig();
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-${dissolveAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const gid = btn.dataset[dissolveAttr];
+      const removed = STATE.config[groupsArrayKey].find(g=>g.id===gid);
+      if(!removed) return;
+      STATE.config[groupsArrayKey] = STATE.config[groupsArrayKey].filter(g=>g.id!==gid);
+      saveConfig();
+      onChange();
+      toast(`Gruppe „${removed.label}“ aufgelöst.`, "Rückgängig", ()=>{
+        STATE.config[groupsArrayKey].push(removed);
+        saveConfig();
+        onChange();
+      });
+    });
+  });
+  document.querySelectorAll(`[data-togglehiddenwords="${scope}"]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(isNotes){ STATE.hiddenNoteWordsExpanded = !STATE.hiddenNoteWordsExpanded; STATE.noteWordMenuOpen = false; }
+      else{ STATE.hiddenInsightWordsExpanded = !STATE.hiddenInsightWordsExpanded; STATE.insightWordMenuOpen = false; }
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-togglewordmenu="${scope}"]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(isNotes) STATE.noteWordMenuOpen = !STATE.noteWordMenuOpen;
+      else STATE.insightWordMenuOpen = !STATE.insightWordMenuOpen;
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-${mergeToggleAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(isNotes){ STATE.noteMergeMode = true; STATE.noteMergeSelection = []; STATE.noteWordMenuOpen = false; }
+      else{ STATE.insightMergeMode = true; STATE.insightMergeSelection = []; STATE.insightWordMenuOpen = false; }
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-${mergeSelectAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset[mergeSelectAttr];
+      const sel = isNotes ? STATE.noteMergeSelection : STATE.insightMergeSelection;
+      const i = sel.indexOf(key);
+      if(i>-1) sel.splice(i,1); else sel.push(key);
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-${mergeConfirmAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const sel = isNotes ? STATE.noteMergeSelection : STATE.insightMergeSelection;
+      if(sel.length<2) return;
+      let words = [];
+      sel.forEach(key=>{
+        if(key.startsWith("g:")){
+          const gid = key.slice(2);
+          const g = STATE.config[groupsArrayKey].find(x=>x.id===gid);
+          if(g) words.push(...g.words);
+          STATE.config[groupsArrayKey] = STATE.config[groupsArrayKey].filter(x=>x.id!==gid);
+        }else{
+          words.push(key);
+        }
+      });
+      words = [...new Set(words)];
+      const defaultLabel = words.join(" / ");
+      const label = prompt("Name für die zusammengeführten Begriffe:", defaultLabel) || defaultLabel;
+      STATE.config[groupsArrayKey].push({ id: uid(), label, words });
+      saveConfig();
+      if(isNotes){ STATE.noteMergeMode=false; STATE.noteMergeSelection=[]; }
+      else{ STATE.insightMergeMode=false; STATE.insightMergeSelection=[]; }
+      onChange();
+    });
+  });
+  document.querySelectorAll(`[data-${mergeCancelAttr}]`).forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(isNotes){ STATE.noteMergeMode=false; STATE.noteMergeSelection=[]; }
+      else{ STATE.insightMergeMode=false; STATE.insightMergeSelection=[]; }
+      onChange();
+    });
+  });
+}
+
+function highlightQuery(text, q){
+  const esc = escHtml(text);
+  if(!q) return esc;
+  const parts = q.split(" / ").map(s=>s.trim()).filter(Boolean);
+  let result = esc;
+  parts.forEach(p=>{
+    const escP = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp("("+escP+")","ig"), "<mark>$1</mark>");
+  });
+  return result;
+}
+
+
+// Prüft, ob text mindestens einen der (per " / " getrennten) Suchbegriffe enthält —
+// so treffen auch zusammengeführte Begriffsgruppen alle ihre Synonyme.
+function matchesQuery(text, q){
+  if(!q) return true;
+  const t = (text||"").toLowerCase();
+  const parts = q.split(" / ").map(s=>s.trim()).filter(Boolean);
+  return parts.some(p=> t.includes(p));
+}
+
+function notesListHtml(trades, query){
+  const q = (query||"").trim().toLowerCase();
+  if(!q){
+    return `<div style="color:var(--text-faint); padding:14px 0; font-size:13.5px;">
+      Klicke oben auf einen Begriff oder tippe ins Suchfeld, um passende Notizen anzuzeigen.
+    </div>`;
+  }
+  const withNotes = trades.filter(t=>t.notizen && t.notizen.trim());
+  const filtered = withNotes.filter(t=> matchesQuery(t.notizen, q));
+  const sorted = filtered.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+  if(!sorted.length){
+    return `<div style="color:var(--text-dim); padding:14px 0; font-size:13.5px;">
+      Keine Notizen gefunden für „${escHtml(query)}“.
+    </div>`;
+  }
+  return `<div class="notes-list">${sorted.map(t=>`
+    <div class="note-item" data-noteedit="${t.id}">
+      <div class="note-item-head">
+        <span class="tag">${AREA_LABEL[t.area]}</span>
+        <span class="tag">${t.date||""}</span>
+        <span class="tag">${escHtml(t.markt||"—")}</span>
+        ${t.ergebnis ? `<span class="badge badge-closed">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
+        ${t.r!==null && t.r!==undefined ? `<span class="trade-r ${t.r>0?"pos":(t.r<0?"neg":"")}" style="margin-left:auto;">${formatR(t.r)}</span>` : ""}
+      </div>
+      <div class="note-item-text">${highlightQuery(t.notizen, q)}</div>
+    </div>
+  `).join("")}</div>`;
+}
+
+function notesSectionHtml(trades){
+  const cloudBlock = wordCloudBlockHtml({
+    items: trades,
+    getText: t=>t.notizen,
+    hidden: STATE.config.hiddenNoteWords || [],
+    groups: STATE.config.noteWordGroups || [],
+    chipAttr: "noteword",
+    hideAttr: "hidenoteword",
+    restoreAttr: "restorenoteword",
+    dissolveAttr: "dissolvenotegroup",
+    mergeToggleAttr: "togglenotemerge",
+    mergeSelectAttr: "selectnoteword",
+    mergeConfirmAttr: "confirmnotemerge",
+    mergeCancelAttr: "cancelnotemerge",
+    scope: "notes",
+    expanded: STATE.hiddenNoteWordsExpanded,
+    mergeMode: STATE.noteMergeMode,
+    mergeSelection: STATE.noteMergeSelection,
+    wordMenuOpen: STATE.noteWordMenuOpen,
+    emptyMsg: "Noch nicht genug Notizen für häufige Begriffe (ein Begriff muss in mind. 2 Trades vorkommen)."
+  });
+
+  return `
+    <div class="section-title">Notizen durchsuchen</div>
+    <div class="panel">
+      <input type="text" id="notesSearchInput" placeholder="Notizen durchsuchen… (z.B. „FOMO“, „zu früh“, „News“)" value="${escAttr(STATE.notesSearchQuery||"")}">
+      <div style="color:var(--text-faint); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 8px;">Häufige Begriffe</div>
+      ${cloudBlock}
+      <div id="notesResultsContainer">${notesListHtml(trades, STATE.notesSearchQuery)}</div>
+    </div>
+  `;
+}
+
+function breakdownTableHtml(trades){
+  const dimDef = FILTER_DIMENSIONS.find(d=>d.key===STATE.breakdownDim) || FILTER_DIMENSIONS[0];
+  const groups = {};
+  trades.forEach(t=>{
+    const val = t[dimDef.field];
+    if(val===null || val===undefined || val==="") return;
+    if(t.r===null || t.r===undefined) return; // nur geschlossene Trades fließen in R-Auswertung ein
+    (groups[val] = groups[val] || []).push(t.r);
+  });
+  const rows = Object.keys(groups).map(k=>{
+    const arr = groups[k];
+    const n = arr.length;
+    const sum = arr.reduce((a,b)=>a+b,0);
+    const avg = sum/n;
+    const wins = arr.filter(r=>r>0).length;
+    const losses = arr.filter(r=>r<0).length;
+    const winrate = (wins+losses)>0 ? wins/(wins+losses) : null;
+    return {k, n, sum, avg, winrate};
+  }).sort((a,b)=>b.avg-a.avg);
+
+  if(!rows.length) return `<div style="color:var(--text-dim); padding:20px 0;">Noch keine geschlossenen Trades mit Ergebnis in diesem Filter.</div>`;
+
+  return `<table class="breakdown">
+    <thead><tr><th>${dimDef.label}</th><th>Trades</th><th>Winrate</th><th>Ø R</th><th>Gesamt-R</th></tr></thead>
+    <tbody>
+      ${rows.map(r=>`<tr>
+        <td>${escHtml(r.k)}</td>
+        <td>${r.n}</td>
+        <td>${r.winrate===null?"—":Math.round(r.winrate*100)+"%"}</td>
+        <td class="${r.avg>0?"pos":(r.avg<0?"neg":"")}">${formatR(r.avg)}</td>
+        <td class="${r.sum>0?"pos":(r.sum<0?"neg":"")}">${formatR(r.sum)}</td>
+      </tr>`).join("")}
+    </tbody>
+  </table>`;
+}
+
+function matchesBerichtFilters(t){
+  if(STATE.berichtDateFrom && t.date && t.date < STATE.berichtDateFrom) return false;
+  if(STATE.berichtDateTo && t.date && t.date > STATE.berichtDateTo) return false;
+  for(const dim of FILTER_DIMENSIONS){
+    const sel = STATE.berichtFilters[dim.key];
+    if(!sel || !sel.length) continue;
+    if(dim.multi){
+      const val = t[dim.field] || [];
+      if(!sel.some(s=>val.includes(s))) return false;
+    }else{
+      if(!sel.includes(t[dim.field])) return false;
+    }
+  }
+  return true;
+}
+
+function getBerichtFilteredTrades(){
+  const activeAreas = Object.keys(STATE.berichtAreas).filter(a=>STATE.berichtAreas[a]);
+  return STATE.trades.filter(t=> activeAreas.includes(t.area) && matchesBerichtFilters(t));
+}
+
+// Wie getBerichtFilteredTrades, aber auf genau einen Bereich beschränkt — unabhängig vom
+// Live/Backtest/EOD-Umschalter. Wird für die Gegenüberstellung und die mehrfarbige
+// Equity-Kurve gebraucht, damit jede Linie/Spalte nur "ihre eigenen" Trades zeigt.
+function getBerichtFilteredTradesForArea(area){
+  return STATE.trades.filter(t=> t.area===area && matchesBerichtFilters(t));
+}
+
+function computeStats(trades){
+  const closed = trades.filter(t=>t.r!==null && t.r!==undefined);
+  const open = trades.length - closed.length;
+  const winners = closed.filter(t=>t.r>0).length;
+  const losers = closed.filter(t=>t.r<0).length;
+  const be = closed.filter(t=>t.r===0).length;
+  const totalR = closed.reduce((a,t)=>a+t.r,0);
+  const avgR = closed.length ? totalR/closed.length : 0;
+  const sumPos = closed.filter(t=>t.r>0).reduce((a,t)=>a+t.r,0);
+  const sumNeg = closed.filter(t=>t.r<0).reduce((a,t)=>a+t.r,0);
+  const profitFactor = sumNeg!==0 ? (sumPos/Math.abs(sumNeg)) : (sumPos>0 ? Infinity : null);
+  const winrate = (winners+losers)>0 ? winners/(winners+losers) : null;
+  const rVals = closed.map(t=>t.r);
+  const best = rVals.length ? Math.max(...rVals) : null;
+  const worst = rVals.length ? Math.min(...rVals) : null;
+  const avgWin = winners>0 ? sumPos/winners : null;
+  const avgLoss = losers>0 ? Math.abs(sumNeg)/losers : null;
+
+  // max drawdown on equity curve (sorted by date/createdAt)
+  const sorted = closed.slice().sort((a,b)=> (a.date||"").localeCompare(b.date||"") || (a.createdAt||0)-(b.createdAt||0));
+  let equity = 0, peak = 0, maxDD = 0;
+  sorted.forEach(t=>{
+    equity += t.r;
+    if(equity>peak) peak = equity;
+    const dd = peak - equity;
+    if(dd>maxDD) maxDD = dd;
+  });
+
+  // Tages-Auswertung: Kalendertage mit mindestens einem Ergebnis, gruppiert nach Trade-Datum
+  const byDate = {};
+  closed.filter(t=>t.date).forEach(t=>{ byDate[t.date] = (byDate[t.date]||0) + t.r; });
+  const daySums = Object.values(byDate);
+  const greenDays = daySums.filter(s=>s>0).length;
+  const redDays = daySums.filter(s=>s<0).length;
+  const flatDays = daySums.filter(s=>s===0).length;
+  const totalDays = daySums.length;
+  const days = {
+    totalDays, greenDays, redDays, flatDays,
+    pct: totalDays ? Math.round((greenDays/totalDays)*100) : null,
+    bestDay: daySums.length ? Math.max(...daySums) : null,
+    worstDay: daySums.length ? Math.min(...daySums) : null
+  };
+
+  // Längste Verlustserie: meiste SL-Trades in Folge (chronologisch, jeder TP/BE unterbricht die Serie)
+  let longestSlStreak = 0, currentSlStreak = 0;
+  sorted.forEach(t=>{
+    if(t.r < 0){ currentSlStreak++; longestSlStreak = Math.max(longestSlStreak, currentSlStreak); }
+    else currentSlStreak = 0;
+  });
+
+  return {
+    count: trades.length, open, closed: closed.length,
+    winners, losers, be, totalR, avgR, sumPos, sumNeg,
+    profitFactor, winrate, best, worst, avgWin, avgLoss,
+    maxDrawdown: closed.length?maxDD:null, days, longestSlStreak
+  };
+}
+
+// Fortlaufende Kalendertage-Liste (inklusive) über die min./max. Datums aller übergebenen
+// Datums-Arrays hinweg — bildet die gemeinsame X-Achse für alle Linien im Equity-Chart.
+function calendarDayRange(dateArrays){
+  let all = [];
+  dateArrays.forEach(arr=> all.push(...arr));
+  all = all.filter(Boolean);
+  if(!all.length) return [];
+  const min = all.reduce((a,b)=> a<b?a:b);
+  const max = all.reduce((a,b)=> a>b?a:b);
+  const days = [];
+  let d = new Date(min+"T00:00:00");
+  const end = new Date(max+"T00:00:00");
+  while(d<=end){
+    days.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));
+    d.setDate(d.getDate()+1);
+  }
+  return days;
+}
+
+// Kumulierter R-Verlauf entlang der übergebenen Kalendertage — an Tagen ohne Ergebnis
+// bleibt die Linie auf dem letzten Stand stehen (waagerecht), statt zu springen.
+function equityCalendarData(trades, days){
+  const byDate = {};
+  trades.forEach(t=>{
+    if(t.r===null || t.r===undefined || !t.date) return;
+    byDate[t.date] = (byDate[t.date]||0) + t.r;
+  });
+  let running = 0;
+  return days.map(d=>{
+    if(byDate[d]!==undefined) running += byDate[d];
+    return running;
+  });
+}
+
+function wireBericht(){
+  document.getElementById("areaToggle").addEventListener("click",(e)=>{
+    const btn = e.target.closest("button[data-area]");
+    if(!btn) return;
+    const a = btn.dataset.area;
+    STATE.berichtAreas[a] = !STATE.berichtAreas[a];
+    render();
+  });
+
+  const compareToggle = document.getElementById("compareToggle");
+  if(compareToggle) compareToggle.addEventListener("click",(e)=>{
+    const btn = e.target.closest("button[data-mode]");
+    if(!btn) return;
+    STATE.berichtCompareMode = btn.dataset.mode;
+    render();
+  });
+
+  document.querySelectorAll('[data-chipgroup^="f_"]').forEach(group=>{
+    group.addEventListener("click",(e)=>{
+      const btn = e.target.closest("button[data-group]");
+      if(!btn) return;
+      const key = btn.dataset.group.replace(/^f_/,"");
+      const val = btn.dataset.value;
+      const arr = STATE.berichtFilters[key] || (STATE.berichtFilters[key]=[]);
+      const i = arr.indexOf(val);
+      if(i>-1) arr.splice(i,1); else arr.push(val);
+      render();
+    });
+  });
+
+  const dateFromInput = document.getElementById("f_dateFrom");
+  if(dateFromInput) dateFromInput.addEventListener("change",(e)=>{ STATE.berichtDateFrom = e.target.value; render(); });
+  const dateToInput = document.getElementById("f_dateTo");
+  if(dateToInput) dateToInput.addEventListener("change",(e)=>{ STATE.berichtDateTo = e.target.value; render(); });
+  const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+  if(clearFiltersBtn) clearFiltersBtn.addEventListener("click",()=>{
+    STATE.berichtFilters = {}; STATE.berichtDateFrom=""; STATE.berichtDateTo=""; render();
+  });
+  document.getElementById("toggleFiltersBtn").addEventListener("click",()=>{
+    STATE.berichtFiltersExpanded = !STATE.berichtFiltersExpanded;
+    render();
+  });
+
+  const dimSel = document.getElementById("breakdownDimSelector");
+  if(dimSel) dimSel.addEventListener("click",(e)=>{
+    const btn = e.target.closest("button[data-dim]");
+    if(!btn) return;
+    STATE.breakdownDim = btn.dataset.dim;
+    render();
+  });
+
+  // Notizen-Suche: nur die Ergebnisliste live aktualisieren, damit der Suchfokus beim Tippen erhalten bleibt
+  const notesInput = document.getElementById("notesSearchInput");
+  if(notesInput){
+    notesInput.addEventListener("input",(e)=>{
+      STATE.notesSearchQuery = e.target.value;
+      const container = document.getElementById("notesResultsContainer");
+      if(container) container.innerHTML = notesListHtml(getBerichtFilteredTrades(), STATE.notesSearchQuery);
+      wireNoteItemClicks();
+    });
+  }
+  document.querySelectorAll("[data-noteword]").forEach(chip=>{
+    chip.addEventListener("click", ()=>{
+      STATE.notesSearchQuery = chip.dataset.noteword;
+      render();
+    });
+  });
+  wireWordCloudEvents({
+    hideAttr: "hidenoteword", restoreAttr: "restorenoteword", dissolveAttr: "dissolvenotegroup",
+    mergeToggleAttr: "togglenotemerge", mergeSelectAttr: "selectnoteword",
+    mergeConfirmAttr: "confirmnotemerge", mergeCancelAttr: "cancelnotemerge",
+    scope: "notes", hiddenArrayKey: "hiddenNoteWords", groupsArrayKey: "noteWordGroups", onChange: render
+  });
+  wireNoteItemClicks();
+
+  const csvBtn = document.getElementById("exportCsvBtn");
+  if(csvBtn) csvBtn.addEventListener("click", exportCsv);
+  const xlsxBtn = document.getElementById("exportXlsxBtn");
+  if(xlsxBtn) xlsxBtn.addEventListener("click", exportXlsx);
+  const jsonBtn = document.getElementById("exportJsonBtn");
+  if(jsonBtn) jsonBtn.addEventListener("click", exportJson);
+  const importInput = document.getElementById("importJsonInput");
+  if(importInput) importInput.addEventListener("change", importJson);
+
+  const gdriveConnectBtn = document.getElementById("gdriveConnectBtn");
+  if(gdriveConnectBtn) gdriveConnectBtn.addEventListener("click", gdriveConnect);
+  const gdriveSyncNowBtn = document.getElementById("gdriveSyncNowBtn");
+  if(gdriveSyncNowBtn) gdriveSyncNowBtn.addEventListener("click", gdrivePull);
+  const gdriveRetryBtn = document.getElementById("gdriveRetryBtn");
+  if(gdriveRetryBtn) gdriveRetryBtn.addEventListener("click", gdrivePull);
+  const gdriveDisconnectBtn = document.getElementById("gdriveDisconnectBtn");
+  if(gdriveDisconnectBtn) gdriveDisconnectBtn.addEventListener("click", gdriveDisconnect);
+}
+
+function wireNoteItemClicks(){
+  document.querySelectorAll("[data-noteedit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const t = STATE.trades.find(x=>x.id===el.dataset.noteedit);
+      if(t) openTradeModal(t.area, t);
+    });
+  });
+}
+
+function renderCharts(){
+  if(STATE.charts.equity){ STATE.charts.equity.destroy(); STATE.charts.equity = null; }
+
+  const canvas = document.getElementById("chart_equity");
+  if(!canvas) return;
+  const wrap = canvas.closest(".chart-wrap");
+  const activeAreas = ["live","eod","backtest"].filter(a=>STATE.berichtAreas[a]);
+
+  if(!activeAreas.length){
+    if(wrap) wrap.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint); font-size:12.5px;">Wähle mindestens einen Bereich oben aus.</div>`;
+    return;
+  }
+  if(typeof Chart === "undefined"){
+    if(wrap) wrap.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint); font-size:12.5px; text-align:center; padding:0 10px;">Chart-Bibliothek konnte nicht geladen werden (kein Internetzugriff auf cdnjs.cloudflare.com).</div>`;
+    return;
+  }
+
+  // Jede Linie nutzt ihre eigenen Trades (respektiert die aktuellen Bericht-Filter), aber
+  // alle Linien teilen sich dieselbe Kalendertage-Achse, damit sie direkt vergleichbar sind.
+  const tradesByArea = {};
+  activeAreas.forEach(a=> tradesByArea[a] = getBerichtFilteredTradesForArea(a).filter(t=>t.r!==null && t.r!==undefined));
+
+  const days = calendarDayRange(activeAreas.map(a=> tradesByArea[a].map(t=>t.date)));
+
+  if(!days.length){
+    if(wrap) wrap.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint); font-size:12.5px;">Noch keine geschlossenen Trades in der aktuellen Auswahl.</div>`;
+    return;
+  }
+
+  const datasets = activeAreas.map(a=>({
+    label: AREA_LABEL[a],
+    data: equityCalendarData(tradesByArea[a], days),
+    borderColor: AREA_COLOR[a],
+    backgroundColor: AREA_COLOR[a]+"18",
+    fill:false, tension:.2, pointRadius:0, borderWidth:2
+  }));
+
+  STATE.charts.equity = new Chart(canvas, {
+    type:"line",
+    data:{
+      labels: days.map(d=> d.slice(8,10)+"."+d.slice(5,7)+"."),
+      datasets
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ display:true, labels:{ color:"#8b8d99", boxWidth:12, usePointStyle:true, pointStyle:"circle" } } },
+      scales:{
+        x:{ ticks:{ color:"#8b8d99", maxTicksLimit:8, autoSkip:true }, grid:{ color:"#2a2b34" } },
+        y:{ ticks:{ color:"#8b8d99" }, grid:{ color:"#2a2b34" } }
+      }
+    }
+  });
+}
+
+/* =========================================================================
+   EXPORT / IMPORT
+   ========================================================================= */
+function tradesToRows(trades){
+  return trades.map(t=>({
+    Bereich: AREA_LABEL[t.area] || t.area,
+    Datum: t.date || "",
+    Markt: t.markt || "",
+    Richtung: t.richtung || "",
+    Session: t.session || "",
+    "Entry-Art": t.art || "",
+    Level: t.level || "",
+    Trend: t.trend || "",
+    Kriterien: (t.kriterien||[]).join(" | "),
+    Invalidierung: (t.invalidierung||[]).join(" | "),
+    Zeiteinheit: t.zeiteinheit || "",
+    Struktur: t.struktur || "",
+    Ergebnis: t.ergebnis || "",
+    R: t.r===null||t.r===undefined ? "" : t.r,
+    Status: t.ergebnis ? "geschlossen" : "offen",
+    "Setup genommen": t.genommen===true ? "Ja" : (t.genommen===false ? "Nein" : ""),
+    "Warum nicht genommen": t.grundNichtGenommen || "",
+    Notizen: t.notizen || ""
+  }));
+}
+
+function exportCsv(){
+  const rows = tradesToRows(getBerichtFilteredTrades());
+  if(!rows.length){ toast("Keine Daten zum Exportieren."); return; }
+  const headers = Object.keys(rows[0]);
+  const csvLines = [headers.join(";")].concat(
+    rows.map(r=>headers.map(h=>`"${String(r[h]).replace(/"/g,'""')}"`).join(";"))
+  );
+  downloadBlob(csvLines.join("\n"), "trading-journal-export.csv", "text/csv;charset=utf-8;");
+  toast("CSV exportiert.");
+}
+
+function exportXlsx(){
+  if(typeof XLSX === "undefined"){ toast("Excel-Export nicht verfügbar (kein Internet)."); return; }
+  const rows = tradesToRows(getBerichtFilteredTrades());
+  if(!rows.length){ toast("Keine Daten zum Exportieren."); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Trades");
+  XLSX.writeFile(wb, "trading-journal-export.xlsx");
+  toast("Excel-Datei exportiert.");
+}
+
+function exportJson(){
+  const payload = { trades: STATE.trades, config: STATE.config, insights: STATE.insights, exportedAt: new Date().toISOString() };
+  downloadBlob(JSON.stringify(payload, null, 2), "trading-journal-backup.json", "application/json");
+  markBackedUp();
+  render();
+  toast("Backup exportiert.");
+}
+
+function importJson(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data.trades)) throw new Error("Ungültiges Format");
+      const insightCount = Array.isArray(data.insights) ? data.insights.length : 0;
+      if(!confirm(`${data.trades.length} Trades${insightCount?` und ${insightCount} Erkenntnisse`:""} importieren? Das ersetzt deine aktuellen Daten.`)) return;
+      STATE.trades = migrateTrades(data.trades);
+      if(data.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), data.config);
+      if(Array.isArray(data.insights)) STATE.insights = data.insights;
+      saveTrades(); saveConfig(); saveInsights();
+      markBackedUp();
+      render();
+      toast("Backup importiert.");
+    }catch(err){
+      alert("Import fehlgeschlagen: Datei ist kein gültiges Backup.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function downloadBlob(content, filename, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================================
+   ERKENNTNISSE — freie Learnings aus dem Markt, unabhängig von einzelnen
+   Trades. Mit Notiz + optionalen Screenshots, plus Stichwort-Wolke wie bei
+   der Notizen-Suche im Bericht, um wiederkehrende Themen zu erkennen.
+   ========================================================================= */
+function emptyInsight(){
+  return { id: uid(), date: new Date().toISOString().slice(0,10), text: "", screenshots: [], createdAt: Date.now(), updatedAt: Date.now() };
+}
+
+function renderErkenntnisse(){
+  const cloudBlock = wordCloudBlockHtml({
+    items: STATE.insights,
+    getText: i=>i.text,
+    hidden: STATE.config.hiddenInsightWords || [],
+    groups: STATE.config.insightWordGroups || [],
+    chipAttr: "insightword",
+    hideAttr: "hideinsightword",
+    restoreAttr: "restoreinsightword",
+    dissolveAttr: "dissolveinsightgroup",
+    mergeToggleAttr: "toggleinsightmerge",
+    mergeSelectAttr: "selectinsightword",
+    mergeConfirmAttr: "confirminsightmerge",
+    mergeCancelAttr: "cancelinsightmerge",
+    scope: "insights",
+    expanded: STATE.hiddenInsightWordsExpanded,
+    mergeMode: STATE.insightMergeMode,
+    mergeSelection: STATE.insightMergeSelection,
+    wordMenuOpen: STATE.insightWordMenuOpen,
+    emptyMsg: "Noch nicht genug Erkenntnisse für wiederkehrende Themen (ein Begriff muss in mind. 2 Erkenntnissen vorkommen)."
+  });
+
+  return `
+    <div class="page-head">
+      <h1>Erkenntnisse</h1>
+      <p>Learnings aus dem Markt — mit eigener Notiz und optionalem Screenshot festhalten.</p>
+    </div>
+    <div class="row-between">
+      <div style="color:var(--text-dim); font-size:13.5px;">${STATE.insights.length} Erkenntnis${STATE.insights.length===1?"":"se"}</div>
+      <button class="btn btn-primary" id="btnAddInsight">+ Erkenntnis hinzufügen</button>
+    </div>
+
+    <div class="panel" style="margin-bottom:22px;">
+      <input type="text" id="insightSearchInput" placeholder="Erkenntnisse durchsuchen…" value="${escAttr(STATE.insightSearchQuery||"")}">
+      <div style="color:var(--text-faint); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 8px;">Wiederkehrende Themen</div>
+      ${cloudBlock}
+    </div>
+
+    <div id="insightListContainer">${insightListHtml(STATE.insights, STATE.insightSearchQuery)}</div>
+  `;
+}
+
+function insightListHtml(insights, query){
+  const q = (query||"").trim().toLowerCase();
+  const filtered = q ? insights.filter(i=> matchesQuery(i.text, q)) : insights;
+  const sorted = filtered.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+
+  if(!sorted.length){
+    return `<div class="empty-state panel">
+      <div class="big">◇</div>
+      <div>${q ? `Keine Erkenntnisse gefunden für „${escHtml(query)}“.` : "Noch keine Erkenntnisse eingetragen."}</div>
+    </div>`;
+  }
+
+  return `<div class="notes-list">${sorted.map(i=>`
+    <div class="note-item" data-insightedit="${i.id}">
+      <div class="note-item-head">
+        <span class="tag">${i.date||""}</span>
+        ${(i.screenshots&&i.screenshots.length) ? `<span class="tag">${i.screenshots.length} Screenshot${i.screenshots.length===1?"":"s"}</span>` : ""}
+        <button type="button" class="btn btn-sm btn-danger" data-insightdel="${i.id}" style="margin-left:auto;">Löschen</button>
+      </div>
+      <div class="note-item-text">${highlightQuery(i.text, q)}</div>
+      ${(i.screenshots&&i.screenshots.length) ? `
+      <div class="shot-gallery" style="margin-top:10px;">
+        ${i.screenshots.map((src,si)=>`<div class="shot-thumb" data-insightshotref="${i.id}:${si}"><img src="${src}"></div>`).join("")}
+      </div>` : ""}
+    </div>
+  `).join("")}</div>`;
+}
+
+function wireErkenntnisse(){
+  document.getElementById("btnAddInsight").addEventListener("click", ()=> openInsightModal(null));
+
+  const searchInput = document.getElementById("insightSearchInput");
+  if(searchInput){
+    searchInput.addEventListener("input",(e)=>{
+      STATE.insightSearchQuery = e.target.value;
+      const container = document.getElementById("insightListContainer");
+      if(container) container.innerHTML = insightListHtml(STATE.insights, STATE.insightSearchQuery);
+      wireInsightListClicks();
+    });
+  }
+  document.querySelectorAll("[data-insightword]").forEach(chip=>{
+    chip.addEventListener("click", ()=>{
+      STATE.insightSearchQuery = chip.dataset.insightword;
+      render();
+    });
+  });
+  wireWordCloudEvents({
+    hideAttr: "hideinsightword", restoreAttr: "restoreinsightword", dissolveAttr: "dissolveinsightgroup",
+    mergeToggleAttr: "toggleinsightmerge", mergeSelectAttr: "selectinsightword",
+    mergeConfirmAttr: "confirminsightmerge", mergeCancelAttr: "cancelinsightmerge",
+    scope: "insights", hiddenArrayKey: "hiddenInsightWords", groupsArrayKey: "insightWordGroups", onChange: render
+  });
+  wireInsightListClicks();
+}
+
+function wireInsightListClicks(){
+  document.querySelectorAll("[data-insightedit]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const ins = STATE.insights.find(x=>x.id===el.dataset.insightedit);
+      if(ins) openInsightModal(ins);
+    });
+  });
+  document.querySelectorAll("[data-insightdel]").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      if(!confirm("Diese Erkenntnis wirklich löschen?")) return;
+      STATE.insights = STATE.insights.filter(x=>x.id!==btn.dataset.insightdel);
+      saveInsights();
+      render();
+      toast("Erkenntnis gelöscht.");
+    });
+  });
+  document.querySelectorAll("[data-insightshotref]").forEach(el=>{
+    el.addEventListener("click",(e)=>{
+      e.stopPropagation(); // verhindert, dass der Klick zusätzlich die Erkenntnis zum Bearbeiten öffnet
+      const [insId, idx] = el.dataset.insightshotref.split(":");
+      const ins = STATE.insights.find(x=>x.id===insId);
+      if(ins) openLightbox(ins.screenshots[parseInt(idx,10)]);
+    });
+  });
+}
+
+/* ---------- Erkenntnis-Modal (Hinzufügen/Bearbeiten) ---------- */
+function openInsightModal(existing){
+  STATE.insightEditingId = existing ? existing.id : null;
+  STATE.insightDraft = existing ? JSON.parse(JSON.stringify(existing)) : emptyInsight();
+  renderInsightModal();
+}
+
+function closeInsightModal(){
+  document.removeEventListener("paste", handleInsightPasteEvent);
+  document.getElementById("modalRoot").innerHTML = "";
+  STATE.insightDraft = null;
+  STATE.insightEditingId = null;
+}
+
+function renderInsightModal(){
+  const d = STATE.insightDraft;
+  const isEdit = !!STATE.insightEditingId;
+  const root = document.getElementById("modalRoot");
+  root.innerHTML = `
+  <div class="modal-backdrop" id="insightBackdrop">
+    <div class="modal">
+      <div class="modal-header-row">
+        <div>
+          <h2>${isEdit?"Erkenntnis bearbeiten":"Erkenntnis hinzufügen"}</h2>
+          <div class="modal-sub">Learning aus dem Markt festhalten</div>
+        </div>
+        <button class="icon-btn" id="insightCloseBtn">✕</button>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Datum</label>
+        <input type="date" id="i_date" value="${d.date||""}">
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Erkenntnis</label>
+        <textarea id="i_text" placeholder="Was hast du über den Markt oder dein System gelernt?" style="min-height:110px;">${escHtml(d.text||"")}</textarea>
+      </div>
+
+      <div class="field-group">
+        <label class="fg-label">Screenshots ${(d.screenshots&&d.screenshots.length)?`(${d.screenshots.length})`:""}</label>
+        <div class="shot-dropzone" id="insightDropzone" tabindex="0">
+          <div class="shot-dropzone-hint">
+            <div style="font-size:22px; margin-bottom:6px;">⎘</div>
+            <div><strong>Screenshot(s) einfügen</strong> — hier klicken und <kbd>Strg</kbd>+<kbd>V</kbd> (Mac: <kbd>⌘</kbd>+<kbd>V</kbd>)</div>
+            <div style="margin-top:4px;">oder Bilder hierher ziehen, oder <label class="shot-filelabel" for="i_shot">Dateien auswählen</label></div>
+          </div>
+        </div>
+        <input type="file" id="i_shot" accept="image/*" multiple style="display:none;">
+        ${(d.screenshots&&d.screenshots.length) ? `
+        <div class="shot-gallery">
+          ${d.screenshots.map((src,i)=>`
+            <div class="shot-thumb">
+              <img src="${src}">
+              <button type="button" class="shot-remove" data-insightremoveshot="${i}" title="Entfernen">✕</button>
+            </div>
+          `).join("")}
+        </div>` : ""}
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="insightCancelBtn">Abbrechen</button>
+        <button class="btn btn-primary" id="insightSaveBtn">${isEdit?"Speichern":"Erkenntnis speichern"}</button>
+      </div>
+    </div>
+  </div>`;
+  wireInsightModal();
+}
+
+function wireInsightModal(){
+  const backdrop = document.getElementById("insightBackdrop");
+  backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeInsightModal(); });
+  document.getElementById("insightCloseBtn").addEventListener("click", closeInsightModal);
+  document.getElementById("insightCancelBtn").addEventListener("click", closeInsightModal);
+
+  document.getElementById("i_date").addEventListener("input",(e)=>{ STATE.insightDraft.date = e.target.value; });
+  document.getElementById("i_text").addEventListener("input",(e)=>{ STATE.insightDraft.text = e.target.value; });
+
+  const shotInput = document.getElementById("i_shot");
+  shotInput.addEventListener("change",(e)=>{
+    const files = Array.from(e.target.files || []);
+    if(files.length) handleInsightImageFiles(files);
+    shotInput.value = "";
+  });
+
+  const dropzone = document.getElementById("insightDropzone");
+  if(dropzone){
+    dropzone.addEventListener("click",(e)=>{
+      if(e.target.closest(".shot-filelabel")) return;
+      dropzone.focus({preventScroll:true});
+    });
+    dropzone.addEventListener("dragover",(e)=>{ e.preventDefault(); dropzone.classList.add("dragover"); });
+    dropzone.addEventListener("dragleave",()=> dropzone.classList.remove("dragover"));
+    dropzone.addEventListener("drop",(e)=>{
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      const files = Array.from(e.dataTransfer.files || []).filter(f=>f.type.startsWith("image/"));
+      if(files.length) handleInsightImageFiles(files);
+    });
+  }
+  document.addEventListener("paste", handleInsightPasteEvent);
+
+  document.querySelectorAll("[data-insightremoveshot]").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      e.stopPropagation();
+      const i = parseInt(btn.dataset.insightremoveshot, 10);
+      STATE.insightDraft.screenshots.splice(i,1);
+      renderInsightModal();
+    });
+  });
+
+  document.getElementById("insightSaveBtn").addEventListener("click", saveInsightDraft);
+}
+
+function handleInsightPasteEvent(e){
+  if(!STATE.insightDraft) return;
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  const files = [];
+  for(const item of items){
+    if(item.type && item.type.startsWith("image/")){
+      const file = item.getAsFile();
+      if(file) files.push(file);
+    }
+  }
+  if(files.length){ e.preventDefault(); handleInsightImageFiles(files); }
+}
+
+function handleInsightImageFiles(files){
+  if(!STATE.insightDraft.screenshots) STATE.insightDraft.screenshots = [];
+  let remaining = files.length;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const maxW = 900;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width*scale;
+        canvas.height = img.height*scale;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        STATE.insightDraft.screenshots.push(canvas.toDataURL("image/jpeg", 0.72));
+        remaining--;
+        if(remaining===0) renderInsightModal();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveInsightDraft(){
+  const d = STATE.insightDraft;
+  d.date = document.getElementById("i_date").value || d.date;
+  d.text = document.getElementById("i_text").value;
+  d.updatedAt = Date.now();
+  const idx = STATE.insights.findIndex(x=>x.id===d.id);
+  if(idx>-1) STATE.insights[idx] = d; else STATE.insights.push(d);
+  saveInsights();
+  closeInsightModal();
+  render();
+  toast("Erkenntnis gespeichert.");
+}
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+// Warnt beim Schließen/Verlassen der Seite, falls es Änderungen gibt, die noch in
+// keinem JSON-Backup stecken (Browser zeigt dafür seinen eigenen Standard-Dialog,
+// der Text lässt sich aus Sicherheitsgründen nicht anpassen).
+window.addEventListener("beforeunload", (e)=>{
+  if(hasUnbackedChanges()){
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+render();
+
+// Falls schon einmal mit Google Drive verbunden: beim Start still (ohne Zustimmungsdialog)
+// versuchen, ein neues Token zu bekommen und den neuesten Stand zu laden. Klappt das nicht
+// (z. B. Google-Sitzung im Browser abgelaufen), zeigt der Bericht-Tab einfach "Nicht
+// verbunden" — der Nutzer kann dann jederzeit manuell erneut auf "Verbinden" klicken.
+if(!gdriveIsFileProtocol() && localStorage.getItem(LS_GDRIVE_ENABLED) === "1"){
+  gdriveRequestToken(true)
+    .then(()=>{ gdrivePull(); })
+    .catch(()=>{ STATE.driveStatus = "disconnected"; render(); });
+}
+</script>
+</body>
+</html>

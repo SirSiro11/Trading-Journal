@@ -457,6 +457,7 @@ const CATEGORY_META = [
 const LS_TRADES = "tj_trades_v1";
 const LS_CONFIG = "tj_config_v1";
 const LS_INSIGHTS = "tj_insights_v1";
+const LS_DAYCONFIRM = "tj_dayconfirm_v1"; // Liste von ISO-Daten, an denen der Tag ohne Trades manuell bestätigt wurde
 const LS_LASTCHANGE = "tj_lastchange_v1"; // Zeitstempel (ms) der letzten Datenänderung
 const LS_LASTBACKUP = "tj_lastbackup_v1"; // Zeitstempel (ms) des letzten JSON-Backups (Export oder Import)
 
@@ -533,6 +534,16 @@ function loadInsights(){
   catch(e){ return []; }
 }
 function saveInsights(){ localStorage.setItem(LS_INSIGHTS, JSON.stringify(STATE.insights)); markDataChanged(); }
+
+// Tage, die manuell als "journaliert" bestätigt wurden, obwohl kein Trade/keine Erkenntnis
+// eingetragen wurde (z. B. "kein Setup heute, aber bewusst geprüft"). Liste von ISO-Daten.
+function loadDayConfirmations(){
+  try{
+    const v = JSON.parse(localStorage.getItem(LS_DAYCONFIRM));
+    return Array.isArray(v) ? v : [];
+  }catch(e){ return []; }
+}
+function saveDayConfirmations(){ localStorage.setItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations)); markDataChanged(); }
 
 /* =========================================================================
    DEMO-DATEN
@@ -711,7 +722,7 @@ async function gdriveFindFile(){
 }
 
 function buildBackupPayload(){
-  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, savedAt: Date.now(), exportedAt: new Date().toISOString() };
+  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, savedAt: Date.now(), exportedAt: new Date().toISOString() };
 }
 
 async function gdriveCreateFile(payload){
@@ -781,7 +792,8 @@ async function gdrivePull(){
       STATE.trades = migrateTrades(Array.isArray(remote.trades) ? remote.trades : []);
       if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
       if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
-      saveTrades(); saveConfig(); saveInsights();
+      STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
+      saveTrades(); saveConfig(); saveInsights(); saveDayConfirmations();
       markBackedUp();
       toast("Neuester Stand aus Google Drive geladen.");
     }else if(localChangedAt > remoteSavedAt){
@@ -842,6 +854,7 @@ const STATE = {
   trades: loadTrades(),
   config: loadConfig(),
   insights: loadInsights(),
+  dayConfirmations: loadDayConfirmations(),
   editingId: null,
   editingArea: "live",
   draft: null,
@@ -1122,8 +1135,6 @@ function render(){
    Begrüßung, Live-Datum/Uhrzeit und der Cloud-Status auf einen Blick, direkt
    beim Öffnen des Journals — statt den Drive-Status im Bericht suchen zu müssen.
    ========================================================================= */
-function todayIso(){ return new Date().toISOString().slice(0,10); }
-
 function formatLiveDateTime(){
   const d = new Date();
   const weekday = d.toLocaleDateString("de-DE", { weekday:"long" });
@@ -1133,8 +1144,23 @@ function formatLiveDateTime(){
 }
 
 function journaledTodayCount(){
-  const t = todayIso();
+  const t = todayISO();
   return STATE.trades.filter(x=>x.date===t).length + STATE.insights.filter(x=>x.date===t).length;
+}
+
+function isTodayConfirmed(){
+  return STATE.dayConfirmations.includes(todayISO());
+}
+
+// Bestätigt (bzw. macht rückgängig), dass der heutige Tag journaliert wurde, auch ohne
+// Trades/Erkenntnisse — z. B. "kein Setup heute, aber bewusst geprüft".
+function toggleTodayConfirmed(){
+  const t = todayISO();
+  const idx = STATE.dayConfirmations.indexOf(t);
+  if(idx > -1) STATE.dayConfirmations.splice(idx,1);
+  else STATE.dayConfirmations.push(t);
+  saveDayConfirmations();
+  render();
 }
 
 let startClockInterval = null;
@@ -1151,15 +1177,26 @@ function startStartClock(){
 
 function renderStart(){
   const count = journaledTodayCount();
+  const confirmed = isTodayConfirmed();
+  const statusLine = count ? `
+      <div style="color:var(--green); font-size:13.5px;">
+        ✓ Heute schon ${count} ${count===1?"Eintrag":"Einträge"} erfasst
+      </div>` : confirmed ? `
+      <div style="color:var(--green); font-size:13.5px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span>✓ Heute journaliert — kein Trade, bewusst bestätigt</span>
+        <button type="button" class="btn btn-sm btn-ghost" id="dayConfirmToggleBtn">Rückgängig</button>
+      </div>` : `
+      <div style="color:var(--text); opacity:.85; font-size:13.5px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span>Heute noch nichts erfasst</span>
+        <button type="button" class="btn btn-sm" id="dayConfirmToggleBtn">Kein Trade heute — trotzdem bestätigen</button>
+      </div>`;
   return `
     <div class="start-hero">
       <div class="page-head">
         <h1>Servus, Meister Clemens — heute schon journaliert?</h1>
         <p id="liveClock">${formatLiveDateTime()}</p>
       </div>
-      <div style="color:${count?"var(--green)":"var(--text)"}; font-size:13.5px; opacity:${count?1:.85};">
-        ${count ? `✓ Heute schon ${count} ${count===1?"Eintrag":"Einträge"} erfasst` : "Heute noch nichts erfasst"}
-      </div>
+      ${statusLine}
     </div>
 
     <div class="panel">
@@ -1187,6 +1224,9 @@ function renderStart(){
 }
 
 function wireStart(){
+  const dayConfirmBtn = document.getElementById("dayConfirmToggleBtn");
+  if(dayConfirmBtn) dayConfirmBtn.addEventListener("click", toggleTodayConfirmed);
+
   const gdriveConnectBtn = document.getElementById("gdriveConnectBtn");
   if(gdriveConnectBtn) gdriveConnectBtn.addEventListener("click", gdriveConnect);
   const gdriveSyncNowBtn = document.getElementById("gdriveSyncNowBtn");
@@ -1593,7 +1633,7 @@ function emptyTrade(area){
   return {
     id: uid(),
     area,
-    date: new Date().toISOString().slice(0,10),
+    date: todayISO(),
     richtung: null,
     markt: null,
     session: null,
@@ -1629,6 +1669,7 @@ function copyTradeToEod(liveTrade){
     session: liveTrade.session,
     art: liveTrade.art,
     level: liveTrade.level,
+    trend: liveTrade.trend,
     kriterien: [...(liveTrade.kriterien||[])],
     invalidierung: [...(liveTrade.invalidierung||[])],
     zeiteinheit: liveTrade.zeiteinheit,
@@ -3089,7 +3130,7 @@ function exportXlsx(){
 }
 
 function exportJson(){
-  const payload = { trades: STATE.trades, config: STATE.config, insights: STATE.insights, exportedAt: new Date().toISOString() };
+  const payload = { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, exportedAt: new Date().toISOString() };
   downloadBlob(JSON.stringify(payload, null, 2), "trading-journal-backup.json", "application/json");
   markBackedUp();
   render();
@@ -3109,7 +3150,8 @@ function importJson(e){
       STATE.trades = migrateTrades(data.trades);
       if(data.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), data.config);
       if(Array.isArray(data.insights)) STATE.insights = data.insights;
-      saveTrades(); saveConfig(); saveInsights();
+      STATE.dayConfirmations = Array.isArray(data.dayConfirmations) ? data.dayConfirmations : [];
+      saveTrades(); saveConfig(); saveInsights(); saveDayConfirmations();
       markBackedUp();
       render();
       toast("Backup importiert.");
@@ -3135,7 +3177,7 @@ function downloadBlob(content, filename, mime){
    der Notizen-Suche im Bericht, um wiederkehrende Themen zu erkennen.
    ========================================================================= */
 function emptyInsight(){
-  return { id: uid(), date: new Date().toISOString().slice(0,10), text: "", screenshots: [], createdAt: Date.now(), updatedAt: Date.now() };
+  return { id: uid(), date: todayISO(), text: "", screenshots: [], createdAt: Date.now(), updatedAt: Date.now() };
 }
 
 function renderErkenntnisse(){

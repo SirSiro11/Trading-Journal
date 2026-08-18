@@ -388,7 +388,7 @@
   @media (max-width:640px){
     .two-col{grid-template-columns:1fr;}
     .filter-row{grid-template-columns:1fr;}
-    header.topnav{padding:12px 14px; grid-template-columns:1fr; justify-items:center; row-gap:10px;}
+    header.topnav{padding:12px 14px; padding-top:calc(12px + env(safe-area-inset-top)); grid-template-columns:1fr; justify-items:center; row-gap:10px;}
     .topnav-right{justify-content:center;}
     main{padding:18px 14px 70px;}
     .trade-card{grid-template-columns:1fr; row-gap:8px;}

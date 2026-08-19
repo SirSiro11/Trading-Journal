@@ -428,6 +428,10 @@
    CONFIG  —  alle Auswahlmöglichkeiten an einer Stelle.
    Neue Werte hinzufügen = einfach in das jeweilige Array eintragen.
    ========================================================================= */
+// Versionsstand, wird auf der Startseite klein angezeigt. Format: Datum der letzten
+// inhaltlichen Änderung — bei jeder künftigen Anpassung einfach aktualisieren.
+const APP_VERSION = "2026.08.18";
+
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
   directions:   ["Long","Short"],
@@ -489,6 +493,11 @@ function getLastChangeAt(){ return parseInt(localStorage.getItem(LS_LASTCHANGE),
 function getLastBackupAt(){ const v = localStorage.getItem(LS_LASTBACKUP); return v ? (parseInt(v,10)||null) : null; }
 // Gibt es Änderungen, die noch in keinem JSON-Backup stecken?
 function hasUnbackedChanges(){ return getLastChangeAt() > (getLastBackupAt() || 0); }
+
+// Baut den kompletten Datenstand für Backup/Export/Cloud-Sync zusammen.
+function buildBackupPayload(){
+  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, savedAt: Date.now(), exportedAt: new Date().toISOString() };
+}
 
 // Bringt Trades aus älteren Speicherständen (localStorage oder importiertes JSON-Backup)
 // auf die aktuelle Struktur. Wird sowohl von loadTrades() als auch von importJson()
@@ -618,167 +627,32 @@ function buildDemoTrades(){
 }
 
 /* =========================================================================
-   GOOGLE DRIVE SYNC
-   Optionaler automatischer Abgleich über die Google Drive API, damit das
-   Journal auf mehreren Geräten denselben Stand zeigt. Nutzt schlanken
-   REST-Zugriff (fetch) statt der schweren gapi-Client-Bibliothek, und die
-   moderne Google Identity Services (GIS) für den Login — kein eigener
-   Server nötig, alles läuft im Browser.
+   GOOGLE DRIVE SYNC (über eigenen Cloud-Proxy)
+   Das Journal spricht nie direkt mit Google — stattdessen mit einer eigenen,
+   kleinen Cloud-Funktion (journalProxy), die den Google-Zugriff dauerhaft im
+   Hintergrund hält (per Refresh Token, serverseitig). Dadurch entfällt jeder
+   Login-Dialog im Browser komplett, auf jedem Gerät gleichermaßen — die App
+   ist praktisch immer "verbunden", ohne dass je ein Nutzer etwas bestätigen
+   müsste.
    Baut auf dem "letzte Änderung / letztes Backup"-Tracking oben auf: ein
-   erfolgreicher Drive-Push zählt genauso als "gesichert" (markBackedUp())
-   wie ein manueller JSON-Export — das Header-Badge greift also weiterhin.
-   Funktioniert nur über https:// (GitHub Pages o. Ä.), nicht bei lokal
-   geöffneten Dateien (file://) — Google verlangt zwingend eine echte Origin.
+   erfolgreicher Push zählt genauso als "gesichert" (markBackedUp()) wie ein
+   manueller JSON-Export — das Header-Badge greift also weiterhin.
    ========================================================================= */
-const GDRIVE_CLIENT_ID = "1078170007474-m2eemnir27le49jt8kcm009qgeu7dh1c.apps.googleusercontent.com";
-const GDRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-const GDRIVE_FILE_NAME = "trading-journal-backup.json";
-const LS_GDRIVE_ENABLED = "tj_gdrive_enabled_v1"; // "1", sobald einmal erfolgreich verbunden
-const LS_GDRIVE_FILEID  = "tj_gdrive_fileid_v1";  // gemerkte Drive-Datei-ID, spart eine Suche pro Sync
+const GDRIVE_PROXY_URL = "https://journalproxy-1078170007474.europe-west3.run.app";
+const GDRIVE_PROXY_KEY = "eSBG3zYoWXvwXRF2Qv5VCRZokk2oaeur";
 
-let gdriveTokenClient = null;
-let gdriveAccessToken = null;
-let gdriveTokenExpiresAt = 0;
 let gdrivePushTimer = null;
 
-function gdriveIsFileProtocol(){ return typeof location !== "undefined" && location.protocol === "file:"; }
-
-function loadGdriveScript(){
-  return new Promise((resolve, reject)=>{
-    if(window.google && window.google.accounts && window.google.accounts.oauth2){ resolve(); return; }
-    const existing = document.getElementById("gsiScript");
-    if(existing){
-      existing.addEventListener("load", ()=>resolve());
-      existing.addEventListener("error", ()=>reject(new Error("Google-Skript konnte nicht geladen werden.")));
-      return;
-    }
-    const s = document.createElement("script");
-    s.id = "gsiScript";
-    s.src = "https://accounts.google.com/gsi/client";
-    s.async = true; s.defer = true;
-    s.onload = ()=>resolve();
-    s.onerror = ()=>reject(new Error("Google-Skript konnte nicht geladen werden (offline?)."));
-    document.head.appendChild(s);
-  });
-}
-
-function ensureGdriveTokenClient(){
-  if(gdriveTokenClient) return gdriveTokenClient;
-  gdriveTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GDRIVE_CLIENT_ID,
-    scope: GDRIVE_SCOPE,
-    callback: ()=>{} // wird pro Aufruf unten via client.callback überschrieben
-  });
-  return gdriveTokenClient;
-}
-
-// Holt ein frisches Access Token. silent=true versucht es ohne Popup/Zustimmungsdialog
-// (klappt nur, wenn schon einmal zugestimmt wurde und die Google-Sitzung noch aktiv ist).
-// Bei silent=true gibt es zusätzlich ein 8-Sekunden-Timeout: In manchen Browsern/Situationen
-// (z. B. blockierte Drittanbieter-Cookies) meldet Google sich bei der stillen Anmeldung nie
-// zurück — weder Erfolg noch Fehler. Ohne dieses Timeout bliebe die Oberfläche dann für immer
-// bei "Verbinde …" hängen, statt auf den manuellen "Verbinden"-Button zurückzufallen.
-function gdriveRequestToken(silent){
-  return new Promise((resolve, reject)=>{
-    if(gdriveIsFileProtocol()){
-      reject(new Error("Google-Login funktioniert nicht bei lokal geöffneten Dateien — nur auf der online gehosteten Version."));
-      return;
-    }
-    let settled = false;
-    let timeoutId = null;
-    const settleResolve = (v)=>{ if(settled) return; settled = true; if(timeoutId) clearTimeout(timeoutId); resolve(v); };
-    const settleReject = (e)=>{ if(settled) return; settled = true; if(timeoutId) clearTimeout(timeoutId); reject(e); };
-
-    loadGdriveScript().then(()=>{
-      const client = ensureGdriveTokenClient();
-      client.callback = (resp)=>{
-        if(!resp || resp.error){ settleReject(new Error((resp&&resp.error)||"Login abgebrochen oder fehlgeschlagen.")); return; }
-        gdriveAccessToken = resp.access_token;
-        gdriveTokenExpiresAt = Date.now() + ((parseInt(resp.expires_in,10)||3600)*1000) - 60000; // 1 Min. Sicherheitspuffer
-        settleResolve(gdriveAccessToken);
-      };
-      if(silent){
-        timeoutId = setTimeout(()=>{ settleReject(new Error("Stille Anmeldung hat zu lange gedauert (Zeitüberschreitung).")); }, 8000);
-      }
-      client.requestAccessToken({ prompt: silent ? "" : "consent" });
-    }).catch(settleReject);
-  });
-}
-
-function gdriveEnsureToken(){
-  if(gdriveAccessToken && Date.now() < gdriveTokenExpiresAt) return Promise.resolve(gdriveAccessToken);
-  return gdriveRequestToken(true);
-}
-
-async function gdriveApiFetch(url, options){
-  const token = await gdriveEnsureToken();
-  const res = await fetch(url, Object.assign({}, options, {
-    headers: Object.assign({ Authorization: "Bearer " + token }, (options&&options.headers)||{})
-  }));
-  if(!res.ok){
-    const text = await res.text().catch(()=>"");
-    throw new Error("Drive-API-Fehler " + res.status + ": " + text.slice(0,200));
-  }
-  return res;
-}
-
-// Findet die App-eigene Backup-Datei im Drive des Nutzers (dank drive.file-Bereich sieht
-// die App ohnehin nur Dateien, die sie selbst angelegt hat). null, falls noch keine existiert.
-async function gdriveFindFile(){
-  const cached = localStorage.getItem(LS_GDRIVE_FILEID);
-  if(cached) return cached;
-  const q = encodeURIComponent(`name='${GDRIVE_FILE_NAME}' and trashed=false`);
-  const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)&spaces=drive`);
-  const data = await res.json();
-  if(data.files && data.files.length){
-    localStorage.setItem(LS_GDRIVE_FILEID, data.files[0].id);
-    return data.files[0].id;
-  }
-  return null;
-}
-
-function buildBackupPayload(){
-  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, savedAt: Date.now(), exportedAt: new Date().toISOString() };
-}
-
-async function gdriveCreateFile(payload){
-  const boundary = "tjboundary" + Date.now();
-  const metadata = { name: GDRIVE_FILE_NAME, mimeType: "application/json" };
-  const body =
-    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
-    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(payload)}\r\n` +
-    `--${boundary}--`;
-  const res = await gdriveApiFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
-    method: "POST",
-    headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
-    body
-  });
-  const data = await res.json();
-  localStorage.setItem(LS_GDRIVE_FILEID, data.id);
-  return data.id;
-}
-
-async function gdriveUpdateFile(fileId, payload){
-  await gdriveApiFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-}
-
-async function gdriveReadFile(fileId){
-  const res = await gdriveApiFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-  return res.json();
-}
-
-// Schreibt den aktuellen lokalen Stand in die Drive-Datei (legt sie beim ersten Mal an).
+// Schreibt den aktuellen lokalen Stand über den Proxy nach Google Drive.
 async function gdrivePush(){
   STATE.driveStatus = "syncing"; render();
   try{
-    let fileId = await gdriveFindFile();
-    const payload = buildBackupPayload();
-    if(fileId){ await gdriveUpdateFile(fileId, payload); }
-    else{ fileId = await gdriveCreateFile(payload); }
+    const res = await fetch(GDRIVE_PROXY_URL, {
+      method: "POST",
+      headers: { "X-Journal-Key": GDRIVE_PROXY_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(buildBackupPayload())
+    });
+    if(!res.ok) throw new Error("Proxy antwortete mit " + res.status);
     markBackedUp();
     STATE.driveLastSyncAt = Date.now();
     STATE.driveStatus = "connected";
@@ -790,18 +664,18 @@ async function gdrivePush(){
   render();
 }
 
-// Gleicht lokal und Drive ab: neuerer Stand gewinnt (Vergleich über "savedAt" im Backup
-// bzw. den lokalen "letzte Änderung"-Zeitstempel) — dieselbe Logik wie beim JSON-Backup,
-// nur automatisch statt manuell.
+// Gleicht lokal und Cloud ab: neuerer Stand gewinnt (Vergleich über "savedAt" im
+// Backup bzw. den lokalen "letzte Änderung"-Zeitstempel).
 async function gdrivePull(){
   STATE.driveStatus = "syncing"; render();
   try{
-    const fileId = await gdriveFindFile();
-    if(!fileId){
+    const res = await fetch(GDRIVE_PROXY_URL, { method: "GET", headers: { "X-Journal-Key": GDRIVE_PROXY_KEY } });
+    if(res.status === 404){
       await gdrivePush(); // noch keine Cloud-Datei -> aktuellen Stand als erste Version anlegen
       return;
     }
-    const remote = await gdriveReadFile(fileId);
+    if(!res.ok) throw new Error("Proxy antwortete mit " + res.status);
+    const remote = await res.json();
     const remoteSavedAt = remote.savedAt || 0;
     const localChangedAt = getLastChangeAt();
     if(remoteSavedAt > localChangedAt){
@@ -811,10 +685,10 @@ async function gdrivePull(){
       STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
       saveTrades(); saveConfig(); saveInsights(); saveDayConfirmations();
       markBackedUp();
-      toast("Neuester Stand aus Google Drive geladen.");
+      toast("Neuester Stand geladen.");
     }else if(localChangedAt > remoteSavedAt){
-      await gdriveUpdateFile(fileId, buildBackupPayload());
-      markBackedUp();
+      await gdrivePush(); // lokal neuer -> hochladen (kümmert sich selbst um Status/Render)
+      return;
     }
     STATE.driveLastSyncAt = Date.now();
     STATE.driveStatus = "connected";
@@ -826,38 +700,9 @@ async function gdrivePull(){
   render();
 }
 
-async function gdriveConnect(){
-  STATE.driveStatus = "connecting"; render();
-  try{
-    await gdriveRequestToken(false); // erster Login: mit sichtbarem Zustimmungsdialog
-    localStorage.setItem(LS_GDRIVE_ENABLED, "1");
-    await gdrivePull();
-  }catch(err){
-    STATE.driveStatus = "error";
-    STATE.driveError = err.message || String(err);
-    render();
-  }
-}
-
-function gdriveDisconnect(){
-  if(gdriveAccessToken && window.google && google.accounts && google.accounts.oauth2){
-    google.accounts.oauth2.revoke(gdriveAccessToken, ()=>{});
-  }
-  gdriveAccessToken = null; gdriveTokenExpiresAt = 0;
-  if(gdrivePushTimer){ clearTimeout(gdrivePushTimer); gdrivePushTimer = null; }
-  localStorage.removeItem(LS_GDRIVE_ENABLED);
-  localStorage.removeItem(LS_GDRIVE_FILEID);
-  STATE.driveStatus = "disconnected";
-  STATE.driveLastSyncAt = null;
-  STATE.driveError = "";
-  toast("Von Google Drive getrennt.");
-  render();
-}
-
-// Wird nach jeder lokalen Änderung aufgerufen (siehe markDataChanged unten), stößt einen
+// Wird nach jeder lokalen Änderung aufgerufen (siehe markDataChanged), stößt einen
 // verzögerten Push an, statt bei jeder einzelnen Änderung sofort zu synchronisieren.
 function scheduleDriveAutoPush(){
-  if(localStorage.getItem(LS_GDRIVE_ENABLED) !== "1") return;
   if(gdrivePushTimer) clearTimeout(gdrivePushTimer);
   gdrivePushTimer = setTimeout(()=>{ gdrivePush(); }, 4000);
 }
@@ -903,7 +748,7 @@ const STATE = {
   noteMergeSelection: [],
   insightMergeMode: false,
   insightMergeSelection: [],
-  driveStatus: localStorage.getItem(LS_GDRIVE_ENABLED)==="1" ? "connecting" : "disconnected", // disconnected|connecting|connected|syncing|error
+  driveStatus: "syncing", // syncing|connected|error — kein "disconnected" mehr nötig, Proxy ist immer bereit
   driveLastSyncAt: null,
   driveError: ""
 };
@@ -1208,7 +1053,7 @@ function renderStart(){
   return `
     <div class="start-hero">
       <div class="page-head">
-        <h1>Servus, Meister Clemens — heute schon journaliert?</h1>
+        <h1>Servus Clemens — heute schon journaliert?</h1>
         <p id="liveClock">${formatLiveDateTime()}</p>
       </div>
       ${statusLine}
@@ -1216,25 +1061,18 @@ function renderStart(){
 
     <div class="panel">
       <div class="section-title" style="margin-top:0;">☁ Google Drive Sync</div>
-      ${gdriveIsFileProtocol() ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Funktioniert nur auf der online gehosteten Version dieser App (https://…), nicht bei lokal geöffneten Dateien.</p>
-      ` : STATE.driveStatus === "disconnected" ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0 0 12px;">Verbinde dein Google Drive, damit das Journal automatisch auf allen Geräten denselben Stand zeigt — kein manueller Export mehr nötig.</p>
-        <button class="btn" id="gdriveConnectBtn">Mit Google Drive verbinden</button>
-      ` : STATE.driveStatus === "connecting" ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Verbinde …</p>
-      ` : STATE.driveStatus === "syncing" ? `
-        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere mit Google Drive …</p>
+      ${STATE.driveStatus === "syncing" ? `
+        <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere …</p>
       ` : STATE.driveStatus === "error" ? `
         <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Fehler bei der Synchronisierung: ${STATE.driveError||""}</p>
         <button class="btn" id="gdriveRetryBtn">Erneut versuchen</button>
-        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
       ` : `
-        <p style="color:var(--green); font-size:13.5px; margin:0 0 12px;">✓ Verbunden · Zuletzt synchronisiert: ${formatBackupTimestamp(STATE.driveLastSyncAt)}</p>
+        <p style="color:var(--green); font-size:13.5px; margin:0 0 12px;">✓ Synchronisiert · Zuletzt: ${formatBackupTimestamp(STATE.driveLastSyncAt)}</p>
         <button class="btn" id="gdriveSyncNowBtn">Jetzt synchronisieren</button>
-        <button class="btn btn-ghost" id="gdriveDisconnectBtn">Trennen</button>
       `}
     </div>
+
+    <div style="margin-top:14px; font-size:11px; color:var(--text-faint);">Version ${APP_VERSION}</div>
   `;
 }
 
@@ -1242,14 +1080,10 @@ function wireStart(){
   const dayConfirmBtn = document.getElementById("dayConfirmToggleBtn");
   if(dayConfirmBtn) dayConfirmBtn.addEventListener("click", toggleTodayConfirmed);
 
-  const gdriveConnectBtn = document.getElementById("gdriveConnectBtn");
-  if(gdriveConnectBtn) gdriveConnectBtn.addEventListener("click", gdriveConnect);
   const gdriveSyncNowBtn = document.getElementById("gdriveSyncNowBtn");
   if(gdriveSyncNowBtn) gdriveSyncNowBtn.addEventListener("click", gdrivePull);
   const gdriveRetryBtn = document.getElementById("gdriveRetryBtn");
   if(gdriveRetryBtn) gdriveRetryBtn.addEventListener("click", gdrivePull);
-  const gdriveDisconnectBtn = document.getElementById("gdriveDisconnectBtn");
-  if(gdriveDisconnectBtn) gdriveDisconnectBtn.addEventListener("click", gdriveDisconnect);
 }
 
 /* =========================================================================
@@ -3596,15 +3430,9 @@ window.addEventListener("beforeunload", (e)=>{
 });
 render();
 
-// Falls schon einmal mit Google Drive verbunden: beim Start still (ohne Zustimmungsdialog)
-// versuchen, ein neues Token zu bekommen und den neuesten Stand zu laden. Klappt das nicht
-// (z. B. Google-Sitzung im Browser abgelaufen), zeigt der Bericht-Tab einfach "Nicht
-// verbunden" — der Nutzer kann dann jederzeit manuell erneut auf "Verbinden" klicken.
-if(!gdriveIsFileProtocol() && localStorage.getItem(LS_GDRIVE_ENABLED) === "1"){
-  gdriveRequestToken(true)
-    .then(()=>{ gdrivePull(); })
-    .catch(()=>{ STATE.driveStatus = "disconnected"; render(); });
-}
+// Holt beim Start automatisch den neuesten Stand über den Proxy — kein Login,
+// kein Token-Handling mehr nötig, läuft einfach immer im Hintergrund.
+gdrivePull();
 </script>
 </body>
 </html>

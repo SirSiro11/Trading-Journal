@@ -300,7 +300,7 @@
   .shot-filelabel{color:var(--green); text-decoration:underline; cursor:pointer;}
   .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px;}
   .shot-thumb{position:relative; border-radius:9px; overflow:hidden; border:1px solid var(--border);}
-  .shot-thumb img{display:block; width:100%; height:90px; object-fit:cover;}
+  .shot-thumb img{display:block; width:100%; height:90px; object-fit:cover; cursor:zoom-in;}
   .shot-remove{
     position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:50%;
     background:rgba(0,0,0,.65); color:#fff; border:none; font-size:12px; line-height:1;
@@ -1805,7 +1805,7 @@ function renderModal(){
         <div class="shot-gallery">
           ${arr.map((src,i)=>`
             <div class="shot-thumb">
-              <img src="${src}">
+              <img src="${src}" data-editshotref="${c.key}:${i}" title="Zum Vergrößern klicken">
               <button type="button" class="shot-remove" data-remove-shot-cat="${c.key}" data-remove-shot="${i}" title="Entfernen">✕</button>
             </div>
           `).join("")}
@@ -1925,6 +1925,16 @@ function wireModal(){
       const i = parseInt(btn.dataset.removeShot, 10);
       STATE.draft.screenshots[cat].splice(i, 1);
       renderModal();
+    });
+  });
+
+  // Klick auf ein Vorschaubild vergrößert es (gleiche Lightbox wie in der Ansicht),
+  // unabhängig vom "Entfernen"-Button daneben.
+  document.querySelectorAll("[data-editshotref]").forEach(img=>{
+    img.addEventListener("click", ()=>{
+      const [cat, idxStr] = img.dataset.editshotref.split(":");
+      const arr = (STATE.draft.screenshots && STATE.draft.screenshots[cat]) || [];
+      openLightbox(arr[parseInt(idxStr, 10)]);
     });
   });
 

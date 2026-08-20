@@ -256,10 +256,15 @@
   .trade-market-col{display:flex; flex-direction:column; align-items:flex-start; gap:7px;}
   .trade-market{font-weight:700; font-size:15px;}
   .eod-inline-btn{font-size:11px; padding:5px 9px; white-space:nowrap;}
-  .trade-tags{display:flex; gap:6px; flex-wrap:wrap;}
+  .trade-tags{display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
+  .tag-group{display:flex; gap:5px; align-items:center;}
+  .tag-group + .tag-group{border-left:1px solid var(--border); padding-left:10px; margin-left:2px;}
   .trade-date-col{display:flex; justify-content:flex-start;}
   .trade-status-col{display:flex; justify-content:center;}
   .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600;}
+  .tag.tag-invalid{border-color:#4a3d14; color:var(--amber);}
+  .tag.tag-taken{border-color:#1c3c30; color:var(--green);}
+  .tag.tag-nottaken{border-color:#3c2222; color:var(--red);}
   .badge{padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap;}
   .badge-open{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
   .badge-closed{background:var(--bg-card); color:var(--text-dim); border:1px solid var(--border);}
@@ -1322,17 +1327,26 @@ function tradeCardHtml(t){
   const isOpen = !t.ergebnis;
   const rDisplay = (t.r===null || t.r===undefined || t.r==="") ? "—" : formatR(t.r);
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
-  const tags = [];
-  if(t.richtung) tags.push(t.richtung);
-  if(t.session) tags.push(t.session);
-  if(t.art) tags.push(t.art);
-  if(t.zeiteinheit) tags.push(t.zeiteinheit);
-  if(t.struktur) tags.push(t.struktur);
-  if(t.level) tags.push("Lvl " + t.level);
-  if(t.trend) tags.push(t.trend);
-  (t.kriterien||[]).forEach(k=>tags.push(k));
-  (t.invalidierung||[]).forEach(k=>tags.push(k));
-  if(t.area==="eod" && t.genommen!=null) tags.push(t.genommen ? "genommen" : "nicht genommen");
+
+  // Tags thematisch gruppiert statt einer langen, undifferenzierten Reihe — jede Gruppe
+  // bekommt eine dezente Trennlinie (siehe CSS .tag-group), bleibt aber in derselben
+  // kompakten, umbrechenden Zeile wie bisher. Invalidierung und EOD-Status bekommen
+  // zusätzlich eine leichte Farbabsetzung, weil sie inhaltlich "Warnung"/"Ergebnis" sind.
+  const groups = [];
+  const ctxTags = [t.richtung, t.session].filter(Boolean);
+  if(ctxTags.length) groups.push({cls:"", tags:ctxTags});
+  const entryTags = [t.art, t.zeiteinheit, t.struktur].filter(Boolean);
+  if(entryTags.length) groups.push({cls:"", tags:entryTags});
+  const posTags = [t.level ? "Lvl "+t.level : null, t.trend].filter(Boolean);
+  if(posTags.length) groups.push({cls:"", tags:posTags});
+  if((t.kriterien||[]).length) groups.push({cls:"", tags:t.kriterien});
+  if((t.invalidierung||[]).length) groups.push({cls:"tag-invalid", tags:t.invalidierung});
+  if(t.area==="eod" && t.genommen!=null) groups.push({cls: t.genommen?"tag-taken":"tag-nottaken", tags:[t.genommen?"genommen":"nicht genommen"]});
+
+  const tagsHtml = groups.map(g =>
+    `<span class="tag-group">${g.tags.map(tag=>`<span class="tag ${g.cls}">${escHtml(tag)}</span>`).join("")}</span>`
+  ).join("");
+
   return `
   <div class="trade-card" data-id="${t.id}">
     <div class="trade-market-col">
@@ -1341,7 +1355,7 @@ function tradeCardHtml(t){
       ${t.copiedToEod ? `<span class="badge badge-eod-copied">✓ in EOD</span>` : ""}
     </div>
     <div class="trade-tags">
-      ${tags.map(tag=>`<span class="tag">${escHtml(tag)}</span>`).join("")}
+      ${tagsHtml}
     </div>
     <div class="trade-date-col">${t.date ? `<span class="tag">${t.date}</span>` : ""}</div>
     <div class="trade-status-col"><div class="badge ${isOpen?"badge-open":"badge-closed"}">${isOpen?"offen":(t.ergebnis)}</div></div>

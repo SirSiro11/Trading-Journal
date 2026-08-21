@@ -189,6 +189,10 @@
   }
   .day-detail-item:hover{border-color:var(--border-light);}
   .view-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; margin-bottom:6px;}
+  .view-fields-row{display:flex; flex-wrap:wrap; align-items:center; gap:10px 30px; margin-bottom:20px;}
+  .view-field-inline{display:flex; align-items:center; gap:8px;}
+  .view-field-label{font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-faint); white-space:nowrap;}
+  .view-field-value{font-size:14px; color:var(--text); font-weight:600;}
   .view-row{margin-bottom:16px;}
   .view-label{font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-faint); margin-bottom:5px;}
   .view-value{font-size:14px; color:var(--text); line-height:1.5;}
@@ -251,6 +255,7 @@
     grid-template-columns: 128px minmax(140px,1fr) 100px 92px 78px auto;
     align-items:center; gap:14px;
     transition:.12s;
+    cursor:pointer;
   }
   .trade-card:hover{border-color:var(--border-light);}
   .trade-market-col{display:flex; flex-direction:column; align-items:flex-start; gap:7px;}
@@ -262,7 +267,6 @@
   .trade-date-col{display:flex; justify-content:flex-start;}
   .trade-status-col{display:flex; justify-content:center;}
   .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600;}
-  .tag.tag-invalid{border-color:#4a3d14; color:var(--amber);}
   .tag.tag-taken{border-color:#1c3c30; color:var(--green);}
   .tag.tag-nottaken{border-color:#3c2222; color:var(--red);}
   .badge{padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap;}
@@ -308,9 +312,11 @@
     padding:1px 6px; font-family:var(--mono); font-size:11.5px;
   }
   .shot-filelabel{color:var(--green); text-decoration:underline; cursor:pointer;}
-  .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:12px;}
+  .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:12px;}
+  .shot-gallery-lg{grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
   .shot-thumb{position:relative; border-radius:9px; overflow:hidden; border:1px solid var(--border);}
-  .shot-thumb img{display:block; width:100%; height:90px; object-fit:cover; cursor:zoom-in;}
+  .shot-thumb img{display:block; width:100%; height:160px; object-fit:cover; cursor:zoom-in;}
+  .shot-thumb.lg img{height:240px;}
   .shot-remove{
     position:absolute; top:5px; right:5px; width:22px; height:22px; border-radius:50%;
     background:rgba(0,0,0,.65); color:#fff; border:none; font-size:12px; line-height:1;
@@ -376,6 +382,7 @@
   .word-menu-empty{color:var(--text-faint); font-size:12px; padding:9px 10px; white-space:nowrap;}
   .notes-list{display:flex; flex-direction:column; gap:10px; margin-top:2px;}
   .note-item{background:var(--bg-card); border:1px solid var(--border); border-radius:9px; padding:12px 14px; cursor:pointer; transition:.12s;}
+  .note-item-title{font-size:15px; font-weight:700; color:var(--text); margin-bottom:6px;}
   .note-item:hover{border-color:var(--border-light);}
   .note-item-head{display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
   .note-item-text{color:var(--text); font-size:13.5px; line-height:1.55; white-space:pre-wrap;}
@@ -988,6 +995,14 @@ function render(){
   updateNavActive();
   updateBackupBadge();
   const app = document.getElementById("app");
+
+  if(STATE.viewingTrade){
+    stopStartClock();
+    app.innerHTML = renderTradeDetail(STATE.viewingTrade);
+    wireTradeDetail();
+    return;
+  }
+
   if(STATE.view === "start"){
     app.innerHTML = renderStart();
     wireStart();
@@ -1340,7 +1355,7 @@ function tradeCardHtml(t){
   const posTags = [t.level ? "Lvl "+t.level : null, t.trend].filter(Boolean);
   if(posTags.length) groups.push({cls:"", tags:posTags});
   if((t.kriterien||[]).length) groups.push({cls:"", tags:t.kriterien});
-  if((t.invalidierung||[]).length) groups.push({cls:"tag-invalid", tags:t.invalidierung});
+  if((t.invalidierung||[]).length) groups.push({cls:"", tags:t.invalidierung});
   if(t.area==="eod" && t.genommen!=null) groups.push({cls: t.genommen?"tag-taken":"tag-nottaken", tags:[t.genommen?"genommen":"nicht genommen"]});
 
   const tagsHtml = groups.map(g =>
@@ -1348,7 +1363,7 @@ function tradeCardHtml(t){
   ).join("");
 
   return `
-  <div class="trade-card" data-id="${t.id}">
+  <div class="trade-card" data-id="${t.id}" data-viewtrade="${t.id}">
     <div class="trade-market-col">
       <div class="trade-market">${escHtml(t.markt||"—")}</div>
       ${(t.area==="live" && !t.copiedToEod) ? `<button class="btn btn-sm eod-inline-btn" data-copy-eod="${t.id}">→ EOD kopieren</button>` : ""}
@@ -1450,10 +1465,14 @@ function wireAreaView(area){
     render();
   });
 
+  // Öffnet die Trade-Detailseite bei Klick — gilt sowohl für die Kalender-Tageseinträge
+  // und die "Gründe nicht genommen"-Suche als auch für die Trade-Karten selbst (dort
+  // aber NICHT, wenn auf einen der Buttons wie "Bearbeiten"/"Löschen" geklickt wurde).
   document.querySelectorAll("[data-viewtrade]").forEach(el=>{
-    el.addEventListener("click", ()=>{
+    el.addEventListener("click", (e)=>{
+      if(e.target.closest("button")) return;
       const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
-      if(t) openTradeViewModal(t);
+      if(t) openTradeDetail(t);
     });
   });
 
@@ -1471,9 +1490,10 @@ function wireAreaView(area){
       const container = document.getElementById("eodReasonsListContainer");
       if(container) container.innerHTML = eodReasonsListHtml(items, STATE.eodReasonsQuery);
       document.querySelectorAll("[data-viewtrade]").forEach(el=>{
-        el.addEventListener("click", ()=>{
+        el.addEventListener("click", (e)=>{
+          if(e.target.closest("button")) return;
           const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
-          if(t) openTradeViewModal(t);
+          if(t) openTradeDetail(t);
         });
       });
     });
@@ -1582,10 +1602,24 @@ function closeModal(){
    SCHREIBGESCHÜTZTE TRADE-ANSICHT (z.B. aus dem Kalender-Tagesdetail)
    Zeigt alle Felder + Screenshots an, ohne jede Bearbeitungsmöglichkeit.
    ========================================================================= */
-function openTradeViewModal(t){
+// Öffnet die Trade-Detailansicht als eigene, vollbreite Seite (statt eines kleinen
+// Modals) — überschreibt in render() vorübergehend die normale Ansicht, ohne
+// STATE.view selbst zu ändern. Dadurch bleibt beim Zurückgehen (closeTradeDetail)
+// automatisch genau die vorherige Ansicht (Live/EOD/Backtest/Bericht) erhalten,
+// inklusive markiertem Nav-Tab — ganz ohne eigene "return view"-Verwaltung.
+function openTradeDetail(t){
   STATE.viewingTrade = t;
-  const fieldRow = (label, value) => value ? `<div class="view-row"><div class="view-label">${label}</div><div class="view-value">${escHtml(value)}</div></div>` : "";
-  const tagsRow = (label, arr) => (arr && arr.length) ? `<div class="view-row"><div class="view-label">${label}</div><div class="view-value">${arr.map(v=>`<span class="tag">${escHtml(v)}</span>`).join(" ")}</div></div>` : "";
+  render();
+}
+
+function closeTradeDetail(){
+  STATE.viewingTrade = null;
+  render();
+}
+
+function renderTradeDetail(t){
+  const fieldInline = (label, value) => value ? `<div class="view-field-inline"><span class="view-field-label">${label}</span><span class="view-field-value">${escHtml(value)}</span></div>` : "";
+  const tagsInline = (label, arr) => (arr && arr.length) ? `<div class="view-field-inline"><span class="view-field-label">${label}</span>${arr.map(v=>`<span class="tag">${escHtml(v)}</span>`).join(" ")}</div>` : "";
   const rDisplay = (t.r===null || t.r===undefined) ? "" : formatR(t.r);
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
   const shotSections = SHOT_CATEGORIES.map(c=>{
@@ -1593,36 +1627,36 @@ function openTradeViewModal(t){
     if(!arr.length) return "";
     return `<div class="view-row">
       <div class="view-label">${c.label}</div>
-      <div class="shot-gallery">
-        ${arr.map((src,i)=>`<div class="shot-thumb" data-viewshotref="${c.key}:${i}"><img src="${src}"></div>`).join("")}
+      <div class="shot-gallery shot-gallery-lg">
+        ${arr.map((src,i)=>`<div class="shot-thumb lg" data-viewshotref="${c.key}:${i}"><img src="${src}"></div>`).join("")}
       </div>
     </div>`;
   }).join("");
 
-  const root = document.getElementById("modalRoot");
-  root.innerHTML = `
-  <div class="modal-backdrop" id="viewBackdrop">
-    <div class="modal">
-      <div class="modal-header-row">
-        <div>
-          <h2>${escHtml(t.markt||"Trade")}</h2>
-          <div class="modal-sub">${AREA_LABEL[t.area]} · ${t.date||""} · Nur Ansicht</div>
-        </div>
-        <button class="icon-btn" id="viewCloseBtn">✕</button>
-      </div>
+  return `
+    <div class="row-between">
+      <button class="btn btn-ghost btn-sm" id="tradeDetailBackBtn">← Zurück</button>
+      <button class="btn" id="tradeDetailEditBtn">Bearbeiten</button>
+    </div>
 
-      <div class="view-grid">
-        ${fieldRow("Richtung", t.richtung)}
-        ${fieldRow("Session", t.session)}
-        ${fieldRow("Entry-Art", t.art)}
-        ${fieldRow("Level", t.level)}
-        ${fieldRow("Trend", t.trend)}
-        ${fieldRow("Zeiteinheit", t.zeiteinheit)}
-        ${fieldRow("Struktur", t.struktur)}
-        ${(t.area==="eod" && t.genommen!=null) ? fieldRow("Setup genommen", t.genommen?"Ja":"Nein") : ""}
+    <div class="page-head" style="margin-top:18px;">
+      <h1>${escHtml(t.markt||"Trade")}</h1>
+      <p>${AREA_LABEL[t.area]} · ${t.date||""} · Nur Ansicht</p>
+    </div>
+
+    <div class="panel">
+      <div class="view-fields-row">
+        ${fieldInline("Richtung", t.richtung)}
+        ${fieldInline("Session", t.session)}
+        ${fieldInline("Entry-Art", t.art)}
+        ${fieldInline("Level", t.level)}
+        ${fieldInline("Trend", t.trend)}
+        ${fieldInline("Zeiteinheit", t.zeiteinheit)}
+        ${fieldInline("Struktur", t.struktur)}
+        ${(t.area==="eod" && t.genommen!=null) ? fieldInline("Setup genommen", t.genommen?"Ja":"Nein") : ""}
+        ${tagsInline("Kriterien", t.kriterien)}
+        ${tagsInline("Invalidierungskriterien", t.invalidierung)}
       </div>
-      ${tagsRow("Kriterien", t.kriterien)}
-      ${tagsRow("Invalidierungskriterien", t.invalidierung)}
 
       <div class="view-row">
         <div class="view-label">Ergebnis</div>
@@ -1635,18 +1669,18 @@ function openTradeViewModal(t){
       ${t.grundNichtGenommen ? `<div class="view-row"><div class="view-label">Warum nicht genommen?</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.grundNichtGenommen)}</div></div>` : ""}
       ${t.notizen ? `<div class="view-row"><div class="view-label">Notizen</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.notizen)}</div></div>` : ""}
 
-      ${shotSections}
-
-      <div class="modal-footer" style="justify-content:flex-end;">
-        <button class="btn btn-primary" id="viewCloseBtn2">Schließen</button>
-      </div>
+      ${shotSections || `<div style="color:var(--text-faint); font-size:13px;">Keine Screenshots hinterlegt.</div>`}
     </div>
-  </div>`;
+  `;
+}
 
-  const backdrop = document.getElementById("viewBackdrop");
-  backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeViewModal(); });
-  document.getElementById("viewCloseBtn").addEventListener("click", closeViewModal);
-  document.getElementById("viewCloseBtn2").addEventListener("click", closeViewModal);
+function wireTradeDetail(){
+  const t = STATE.viewingTrade;
+  document.getElementById("tradeDetailBackBtn").addEventListener("click", closeTradeDetail);
+  document.getElementById("tradeDetailEditBtn").addEventListener("click", ()=>{
+    closeTradeDetail();
+    openTradeModal(t.area, t);
+  });
   document.querySelectorAll("[data-viewshotref]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const [cat, idxStr] = el.dataset.viewshotref.split(":");
@@ -1654,11 +1688,6 @@ function openTradeViewModal(t){
       openLightbox(arr[parseInt(idxStr, 10)]);
     });
   });
-}
-
-function closeViewModal(){
-  document.getElementById("modalRoot").innerHTML = "";
-  STATE.viewingTrade = null;
 }
 
 function openLightbox(src){
@@ -3153,7 +3182,7 @@ function downloadBlob(content, filename, mime){
    der Notizen-Suche im Bericht, um wiederkehrende Themen zu erkennen.
    ========================================================================= */
 function emptyInsight(){
-  return { id: uid(), date: todayISO(), text: "", screenshots: [], createdAt: Date.now(), updatedAt: Date.now() };
+  return { id: uid(), date: todayISO(), titel: "", text: "", screenshots: [], createdAt: Date.now(), updatedAt: Date.now() };
 }
 
 function renderErkenntnisse(){
@@ -3200,7 +3229,7 @@ function renderErkenntnisse(){
 
 function insightListHtml(insights, query){
   const q = (query||"").trim().toLowerCase();
-  const filtered = q ? insights.filter(i=> matchesQuery(i.text, q)) : insights;
+  const filtered = q ? insights.filter(i=> matchesQuery(i.text, q) || matchesQuery(i.titel, q)) : insights;
   const sorted = filtered.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
 
   if(!sorted.length){
@@ -3212,6 +3241,7 @@ function insightListHtml(insights, query){
 
   return `<div class="notes-list">${sorted.map(i=>`
     <div class="note-item" data-insightedit="${i.id}">
+      ${i.titel ? `<div class="note-item-title">${highlightQuery(i.titel, q)}</div>` : ""}
       <div class="note-item-head">
         <span class="tag">${i.date||""}</span>
         ${(i.screenshots&&i.screenshots.length) ? `<span class="tag">${i.screenshots.length} Screenshot${i.screenshots.length===1?"":"s"}</span>` : ""}
@@ -3310,6 +3340,11 @@ function renderInsightModal(){
       </div>
 
       <div class="field-group">
+        <label class="fg-label">Überschrift (optional)</label>
+        <input type="text" id="i_titel" placeholder="Kurzer Titel, z. B. „Zu früh eingestiegen bei News“" value="${escAttr(d.titel||"")}">
+      </div>
+
+      <div class="field-group">
         <label class="fg-label">Datum</label>
         <input type="date" id="i_date" value="${d.date||""}">
       </div>
@@ -3333,7 +3368,7 @@ function renderInsightModal(){
         <div class="shot-gallery">
           ${d.screenshots.map((src,i)=>`
             <div class="shot-thumb">
-              <img src="${src}">
+              <img src="${src}" data-editinsightshotref="${i}" title="Zum Vergrößern klicken">
               <button type="button" class="shot-remove" data-insightremoveshot="${i}" title="Entfernen">✕</button>
             </div>
           `).join("")}
@@ -3355,6 +3390,7 @@ function wireInsightModal(){
   document.getElementById("insightCloseBtn").addEventListener("click", closeInsightModal);
   document.getElementById("insightCancelBtn").addEventListener("click", closeInsightModal);
 
+  document.getElementById("i_titel").addEventListener("input",(e)=>{ STATE.insightDraft.titel = e.target.value; });
   document.getElementById("i_date").addEventListener("input",(e)=>{ STATE.insightDraft.date = e.target.value; });
   document.getElementById("i_text").addEventListener("input",(e)=>{ STATE.insightDraft.text = e.target.value; });
 
@@ -3388,6 +3424,15 @@ function wireInsightModal(){
       const i = parseInt(btn.dataset.insightremoveshot, 10);
       STATE.insightDraft.screenshots.splice(i,1);
       renderInsightModal();
+    });
+  });
+
+  // Klick auf ein Vorschaubild vergrößert es (gleiche Lightbox wie bei Trades),
+  // unabhängig vom "Entfernen"-Button daneben.
+  document.querySelectorAll("[data-editinsightshotref]").forEach(img=>{
+    img.addEventListener("click", ()=>{
+      const i = parseInt(img.dataset.editinsightshotref, 10);
+      openLightbox(STATE.insightDraft.screenshots[i]);
     });
   });
 
@@ -3434,6 +3479,7 @@ function handleInsightImageFiles(files){
 
 function saveInsightDraft(){
   const d = STATE.insightDraft;
+  d.titel = document.getElementById("i_titel").value || "";
   d.date = document.getElementById("i_date").value || d.date;
   d.text = document.getElementById("i_text").value;
   d.updatedAt = Date.now();

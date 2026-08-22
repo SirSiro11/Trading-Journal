@@ -479,7 +479,10 @@ const DEFAULT_CONFIG = {
   // Frei vom Nutzer erstellte, zusätzliche Kategorien: [{key, label, multi}]
   // Die eigentlichen Auswahlwerte jeder solchen Kategorie liegen unter
   // config["custom_"+key], genau wie bei den fest eingebauten Kategorien oben.
-  customCategories: []
+  customCategories: [],
+  // Umbenannte Überschriften für die FEST eingebauten Kategorien (Richtung, Session, ...).
+  // Key = das Trade-Feld (z.B. "session"), Wert = der vom Nutzer vergebene neue Name.
+  categoryLabelOverrides: {}
 };
 
 const AREA_LABEL  = { live:"Live", backtest:"Backtest", eod:"EOD" };
@@ -911,7 +914,7 @@ function slugifyCategoryKey(label){
 function renderSettingsModal(){
   const cfg = STATE.config;
   const allMeta = [
-    ...CATEGORY_META,
+    ...CATEGORY_META.map(m=>({ ...m, label: categoryLabel(m.field, m.label) })),
     ...(cfg.customCategories||[]).map(c=>({ cfgKey:"custom_"+c.key, field:null, label:c.label, multi:c.multi, isCustom:true, customKey:c.key }))
   ];
   const sections = allMeta.map(meta=>{
@@ -924,7 +927,10 @@ function renderSettingsModal(){
       </span>`).join("");
     return `<div class="field-group">
       <label class="fg-label" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-        <span>${escHtml(meta.label)}${meta.isCustom ? ` <span style="color:var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0; font-size:11px;">(eigene Kategorie${meta.multi?", Mehrfachauswahl":""})</span>` : ""}</span>
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          ${escHtml(meta.label)}${meta.isCustom ? ` <span style="color:var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0; font-size:11px;">(eigene Kategorie${meta.multi?", Mehrfachauswahl":""})</span>` : ""}
+          <button type="button" class="market-chip-edit" style="position:static; opacity:.55;" data-editcatname="${meta.isCustom?meta.customKey:meta.field}" data-iscustomcat="${!!meta.isCustom}" data-currentlabel="${escAttr(meta.label)}" title="Kategorie-Überschrift umbenennen">✎</button>
+        </span>
         ${meta.isCustom ? `<button type="button" class="btn btn-sm btn-danger" data-delcustomcat="${meta.customKey}" data-catlabel="${escAttr(meta.label)}" style="text-transform:none; letter-spacing:0;">Kategorie löschen</button>` : ""}
       </label>
       <div class="chip-group">
@@ -975,6 +981,30 @@ function wireSettingsModal(){
     STATE.config["custom_"+key] = [];
     saveConfig();
     renderSettingsModal();
+  });
+
+  // Kategorie-Überschrift selbst umbenennen (nicht die Werte darin) — funktioniert
+  // sowohl für die fest eingebauten Kategorien (Richtung, Session, ...) als auch für
+  // frei erstellte. Wirkt sich sofort auf Formular, Übersicht und Detailseite aus.
+  document.querySelectorAll("[data-editcatname]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.editcatname;
+      const isCustom = btn.dataset.iscustomcat === "true";
+      const current = btn.dataset.currentlabel;
+      const input = prompt("Kategorie-Überschrift umbenennen:", current);
+      if(input === null) return;
+      const newLabel = input.trim();
+      if(!newLabel || newLabel === current) return;
+      if(isCustom){
+        const cat = (STATE.config.customCategories||[]).find(c=>c.key===key);
+        if(cat) cat.label = newLabel;
+      }else{
+        STATE.config.categoryLabelOverrides = STATE.config.categoryLabelOverrides || {};
+        STATE.config.categoryLabelOverrides[key] = newLabel;
+      }
+      saveConfig();
+      renderSettingsModal();
+    });
   });
 
   document.querySelectorAll("[data-delcustomcat]").forEach(btn=>{
@@ -1615,12 +1645,19 @@ const TRADE_CATEGORY_COLUMNS = [
 const TRADE_CATEGORY_COL_WIDTH = 85; // px, Listen-Ansicht
 const TRADE_CATEGORY_COL_WIDTH_DETAIL = 140; // px, Detailseite (mehr Platz verfügbar)
 
+// Liefert die aktuell gültige Überschrift für ein Kategorie-Feld — vom Nutzer
+// umbenannte Kategorien überschreiben den Standardnamen (siehe "Kategorie
+// umbenennen" im Verwalten-Bereich).
+function categoryLabel(field, defaultLabel){
+  return (STATE.config.categoryLabelOverrides && STATE.config.categoryLabelOverrides[field]) || defaultLabel;
+}
+
 // EOD-Trades bekommen zusätzlich die "Genommen"-Spalte — bei Live/Backtest gibt es
 // dieses Feld gar nicht, dort bleibt die Spalte entsprechend komplett weg (nicht nur
 // leer). Frei erstellte Kategorien werden danach angehängt, gelten für alle Bereiche.
 function tradeCategoryColumns(area){
-  const cols = [...TRADE_CATEGORY_COLUMNS];
-  if(area === "eod") cols.push({key:"genommen", label:"Genommen"});
+  const cols = TRADE_CATEGORY_COLUMNS.map(c=>({ ...c, label: categoryLabel(c.key, c.label) }));
+  if(area === "eod") cols.push({key:"genommen", label:categoryLabel("genommen","Genommen")});
   (STATE.config.customCategories||[]).forEach(c=>{
     cols.push({ key:c.key, label:c.label, multi:!!c.multi, custom:true });
   });
@@ -1940,54 +1977,54 @@ function renderModal(){
           <input type="date" id="f_date" value="${d.date||""}">
         </div>
         <div class="field-group">
-          <label class="fg-label">Richtung</label>
+          <label class="fg-label">${categoryLabel("richtung","Richtung")}</label>
           ${chipGroupHtml("richtung", cfg.directions, d.richtung)}
         </div>
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Markt</label>
+        <label class="fg-label">${categoryLabel("markt","Markt")}</label>
         <div id="marktChipWrap">${chipGroupHtml("markt", cfg.markets, d.markt)}</div>
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Entry-Art</label>
+        <label class="fg-label">${categoryLabel("art","Entry-Art")}</label>
         ${chipGroupHtml("art", cfg.entryTypes, d.art)}
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Struktur</label>
+        <label class="fg-label">${categoryLabel("struktur","Struktur")}</label>
         ${chipGroupHtml("struktur", cfg.struktur, d.struktur)}
       </div>
 
       <div class="two-col">
         <div class="field-group">
-          <label class="fg-label">Zeiteinheit</label>
+          <label class="fg-label">${categoryLabel("zeiteinheit","Zeiteinheit")}</label>
           ${chipGroupHtml("zeiteinheit", cfg.timeframes, d.zeiteinheit)}
         </div>
         <div class="field-group">
-          <label class="fg-label">Session</label>
+          <label class="fg-label">${categoryLabel("session","Session")}</label>
           ${chipGroupHtml("session", cfg.sessions, d.session)}
         </div>
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Level</label>
+        <label class="fg-label">${categoryLabel("level","Level")}</label>
         ${chipGroupHtml("level", cfg.levels, d.level)}
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Trend</label>
+        <label class="fg-label">${categoryLabel("trend","Trend")}</label>
         ${chipGroupHtml("trend", cfg.trend, d.trend)}
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Kriterien</label>
+        <label class="fg-label">${categoryLabel("kriterien","Kriterien")}</label>
         ${chipGroupHtml("kriterien", cfg.kriterien, d.kriterien, {multi:true})}
       </div>
 
       <div class="field-group">
-        <label class="fg-label">Invalidierungskriterien</label>
+        <label class="fg-label">${categoryLabel("invalidierung","Invalidierungskriterien")}</label>
         ${chipGroupHtml("invalidierung", cfg.invalidierung, d.invalidierung, {multi:true})}
       </div>
 

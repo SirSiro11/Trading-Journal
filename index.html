@@ -2331,7 +2331,7 @@ function saveDraft(){
 /* =========================================================================
    BERICHT
    ========================================================================= */
-const FILTER_DIMENSIONS = [
+const FILTER_DIMENSIONS_BASE = [
   {key:"markt", label:"Markt", cfgKey:"markets", field:"markt"},
   {key:"richtung", label:"Richtung", cfgKey:"directions", field:"richtung"},
   {key:"session", label:"Session", cfgKey:"sessions", field:"session"},
@@ -2343,11 +2343,21 @@ const FILTER_DIMENSIONS = [
   {key:"kriterien", label:"Kriterien", cfgKey:"kriterien", field:"kriterien", multi:true},
   {key:"invalidierung", label:"Invalidierung", cfgKey:"invalidierung", field:"invalidierung", multi:true},
 ];
+// Dynamische Filter-/Aufschlüsselungs-Dimensionen für den Bericht — berücksichtigt
+// umbenannte Überschriften (categoryLabel) und hängt frei erstellte Kategorien
+// automatisch an, genau wie tradeCategoryColumns() das für Übersicht/Detailseite tut.
+function getFilterDimensions(){
+  const base = FILTER_DIMENSIONS_BASE.map(d=>({ ...d, label: categoryLabel(d.field, d.label) }));
+  const custom = (STATE.config.customCategories||[]).map(c=>({
+    key: "custom_"+c.key, label:c.label, cfgKey:"custom_"+c.key, field:null, customKey:c.key, multi:!!c.multi, isCustom:true
+  }));
+  return [...base, ...custom];
+}
 
 function activeFilterCountLabel(){
   let count = 0;
   if(STATE.berichtDateFrom || STATE.berichtDateTo) count++;
-  FILTER_DIMENSIONS.forEach(dim=>{
+  getFilterDimensions().forEach(dim=>{
     const sel = STATE.berichtFilters[dim.key];
     if(sel && sel.length) count++;
   });
@@ -2428,7 +2438,7 @@ function renderBericht(){
     return `<button data-area="${a}" class="${on?"on":""}">${AREA_LABEL[a]}</button>`;
   }).join("");
 
-  const filterRows = FILTER_DIMENSIONS.map(dim=>{
+  const filterRows = getFilterDimensions().map(dim=>{
     const opts = cfg[dim.cfgKey];
     const sel = STATE.berichtFilters[dim.key] || [];
     return `<div class="filter-row">
@@ -2508,7 +2518,7 @@ function renderBericht(){
       <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <span style="color:var(--text-dim); font-size:13px;">Gruppieren nach:</span>
         <div class="chip-group" id="breakdownDimSelector">
-          ${FILTER_DIMENSIONS.filter(d=>!d.multi).map(d=>`<button type="button" class="chip ${STATE.breakdownDim===d.key?"selected":""}" data-dim="${d.key}">${d.label}</button>`).join("")}
+          ${getFilterDimensions().filter(d=>!d.multi).map(d=>`<button type="button" class="chip ${STATE.breakdownDim===d.key?"selected":""}" data-dim="${d.key}">${d.label}</button>`).join("")}
         </div>
       </div>
       ${breakdownTableHtml(filteredTrades)}
@@ -2930,11 +2940,19 @@ function notesSectionHtml(trades){
   `;
 }
 
+// Liest den Wert einer Filter-/Aufschlüsselungs-Dimension aus einem Trade — bei frei
+// erstellten Kategorien liegt der Wert in t.customCategories[customKey] statt direkt
+// in t[field].
+function filterDimValue(t, dimDef){
+  return dimDef.isCustom ? (t.customCategories||{})[dimDef.customKey] : t[dimDef.field];
+}
+
 function breakdownTableHtml(trades){
-  const dimDef = FILTER_DIMENSIONS.find(d=>d.key===STATE.breakdownDim) || FILTER_DIMENSIONS[0];
+  const dims = getFilterDimensions();
+  const dimDef = dims.find(d=>d.key===STATE.breakdownDim) || dims[0];
   const groups = {};
   trades.forEach(t=>{
-    const val = t[dimDef.field];
+    const val = filterDimValue(t, dimDef);
     if(val===null || val===undefined || val==="") return;
     if(t.r===null || t.r===undefined) return; // nur geschlossene Trades fließen in R-Auswertung ein
     (groups[val] = groups[val] || []).push(t.r);
@@ -2969,14 +2987,14 @@ function breakdownTableHtml(trades){
 function matchesBerichtFilters(t){
   if(STATE.berichtDateFrom && t.date && t.date < STATE.berichtDateFrom) return false;
   if(STATE.berichtDateTo && t.date && t.date > STATE.berichtDateTo) return false;
-  for(const dim of FILTER_DIMENSIONS){
+  for(const dim of getFilterDimensions()){
     const sel = STATE.berichtFilters[dim.key];
     if(!sel || !sel.length) continue;
     if(dim.multi){
-      const val = t[dim.field] || [];
+      const val = filterDimValue(t, dim) || [];
       if(!sel.some(s=>val.includes(s))) return false;
     }else{
-      if(!sel.includes(t[dim.field])) return false;
+      if(!sel.includes(filterDimValue(t, dim))) return false;
     }
   }
   return true;

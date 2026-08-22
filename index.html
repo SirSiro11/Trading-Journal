@@ -189,10 +189,6 @@
   }
   .day-detail-item:hover{border-color:var(--border-light);}
   .view-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 20px; margin-bottom:6px;}
-  .view-fields-row{display:flex; flex-wrap:wrap; align-items:center; gap:10px 30px; margin-bottom:20px;}
-  .view-field-inline{display:flex; align-items:center; gap:8px;}
-  .view-field-label{font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-faint); white-space:nowrap;}
-  .view-field-value{font-size:14px; color:var(--text); font-weight:600;}
   .view-row{margin-bottom:16px;}
   .view-label{font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text-faint); margin-bottom:5px;}
   .view-value{font-size:14px; color:var(--text); line-height:1.5;}
@@ -261,9 +257,15 @@
   .trade-market-col{display:flex; flex-direction:column; align-items:flex-start; gap:7px;}
   .trade-market{font-weight:700; font-size:15px;}
   .eod-inline-btn{font-size:11px; padding:5px 9px; white-space:nowrap;}
-  .trade-tags{display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
-  .tag-group{display:flex; gap:5px; align-items:center;}
-  .tag-group + .tag-group{border-left:1px solid var(--border); padding-left:10px; margin-left:2px;}
+  .trade-tags{display:block;}
+  .cat-table-header{display:grid; gap:8px; padding-bottom:6px;}
+  .cat-col-label{font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cat-table-row{display:grid; gap:8px; align-items:start;}
+  .cat-col-value{display:flex; flex-wrap:wrap; gap:4px; min-height:20px; align-items:center;}
+  .cat-col-mobile-label{display:none;}
+  .trade-cat-header-row{cursor:default; background:transparent; border-color:transparent; padding-bottom:0; margin-bottom:2px;}
+  .trade-cat-header-row:hover{border-color:transparent;}
+  .cat-table-standalone{border-bottom:1px solid var(--border); margin-bottom:14px;}
   .trade-date-col{display:flex; justify-content:flex-start;}
   .trade-status-col{display:flex; justify-content:center;}
   .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600;}
@@ -409,6 +411,11 @@
     .topnav-right{justify-content:center;}
     main{padding:18px 14px 70px;}
     .trade-card{grid-template-columns:1fr; row-gap:8px;}
+    .trade-cat-header-row{display:none;}
+    .cat-table-row{display:block;}
+    .cat-col-value{margin-bottom:4px;}
+    .cat-col-value.cat-col-empty{display:none;}
+    .cat-col-mobile-label{display:inline; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); margin-right:6px;}
     .trade-date-col, .trade-status-col{justify-content:flex-start;}
     .trade-r{text-align:left;}
     .trade-actions{justify-content:flex-start;}
@@ -1129,7 +1136,7 @@ function getAreaFilteredTrades(area){
 
 function renderAreaView(area){
   const trades = getAreaFilteredTrades(area);
-  const list = trades.length ? trades.map(t=>tradeCardHtml(t)).join("") : emptyStateHtml(area);
+  const list = trades.length ? tradeCategoryHeaderHtml(area, true) + trades.map(t=>tradeCardHtml(t)).join("") : emptyStateHtml(area);
   const filterVal = STATE.areaDateFilter[area] || "alles";
 
   const subtabs = ["alles","monat","woche","heute"].map(f=>{
@@ -1343,25 +1350,6 @@ function tradeCardHtml(t){
   const rDisplay = (t.r===null || t.r===undefined || t.r==="") ? "—" : formatR(t.r);
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
 
-  // Tags thematisch gruppiert statt einer langen, undifferenzierten Reihe — jede Gruppe
-  // bekommt eine dezente Trennlinie (siehe CSS .tag-group), bleibt aber in derselben
-  // kompakten, umbrechenden Zeile wie bisher. Invalidierung und EOD-Status bekommen
-  // zusätzlich eine leichte Farbabsetzung, weil sie inhaltlich "Warnung"/"Ergebnis" sind.
-  const groups = [];
-  const ctxTags = [t.richtung, t.session].filter(Boolean);
-  if(ctxTags.length) groups.push({cls:"", tags:ctxTags});
-  const entryTags = [t.art, t.zeiteinheit, t.struktur].filter(Boolean);
-  if(entryTags.length) groups.push({cls:"", tags:entryTags});
-  const posTags = [t.level ? "Lvl "+t.level : null, t.trend].filter(Boolean);
-  if(posTags.length) groups.push({cls:"", tags:posTags});
-  if((t.kriterien||[]).length) groups.push({cls:"", tags:t.kriterien});
-  if((t.invalidierung||[]).length) groups.push({cls:"", tags:t.invalidierung});
-  if(t.area==="eod" && t.genommen!=null) groups.push({cls: t.genommen?"tag-taken":"tag-nottaken", tags:[t.genommen?"genommen":"nicht genommen"]});
-
-  const tagsHtml = groups.map(g =>
-    `<span class="tag-group">${g.tags.map(tag=>`<span class="tag ${g.cls}">${escHtml(tag)}</span>`).join("")}</span>`
-  ).join("");
-
   return `
   <div class="trade-card" data-id="${t.id}" data-viewtrade="${t.id}">
     <div class="trade-market-col">
@@ -1370,7 +1358,7 @@ function tradeCardHtml(t){
       ${t.copiedToEod ? `<span class="badge badge-eod-copied">✓ in EOD</span>` : ""}
     </div>
     <div class="trade-tags">
-      ${tagsHtml}
+      ${tradeCategoryRowHtml(t)}
     </div>
     <div class="trade-date-col">${t.date ? `<span class="tag">${t.date}</span>` : ""}</div>
     <div class="trade-status-col"><div class="badge ${isOpen?"badge-open":"badge-closed"}">${isOpen?"offen":(t.ergebnis)}</div></div>
@@ -1511,6 +1499,66 @@ function wireAreaView(area){
    ========================================================================= */
 // Screenshot-Kategorien pro Trade. "key" ist der Feldname in t.screenshots,
 // "label" der Anzeigetext in Formular und Detailansicht.
+// Feste Kategorien-Spalten für die Trade-Tabellen-Darstellung — bewusst eine einzige,
+// gemeinsame Quelle für Übersicht (Live/EOD/Backtest) UND Detailansicht, damit beide
+// garantiert gleich aussehen. "multi" = mehrere Tags möglich (Kriterien/Invalidierung).
+const TRADE_CATEGORY_COLUMNS = [
+  { key:"richtung", label:"Richtung" },
+  { key:"session", label:"Session" },
+  { key:"art", label:"Entry-Art" },
+  { key:"level", label:"Level" },
+  { key:"trend", label:"Trend" },
+  { key:"zeiteinheit", label:"Zeiteinheit" },
+  { key:"struktur", label:"Struktur" },
+  { key:"kriterien", label:"Kriterien", multi:true },
+  { key:"invalidierung", label:"Invalidierung", multi:true }
+];
+const TRADE_CATEGORY_GRID = "90px 100px 90px 70px 90px 90px 90px 1fr 1fr";
+const TRADE_CATEGORY_GRID_EOD = "90px 100px 90px 70px 90px 90px 90px 1fr 1fr 100px";
+
+// EOD-Trades bekommen zusätzlich die "Genommen"-Spalte — bei Live/Backtest gibt es
+// dieses Feld gar nicht, dort bleibt die Spalte entsprechend komplett weg (nicht nur leer).
+function tradeCategoryColumns(area){
+  return area==="eod" ? [...TRADE_CATEGORY_COLUMNS, {key:"genommen", label:"Genommen"}] : TRADE_CATEGORY_COLUMNS;
+}
+function tradeCategoryGrid(area){
+  return area==="eod" ? TRADE_CATEGORY_GRID_EOD : TRADE_CATEGORY_GRID;
+}
+function tradeCategoryCellValues(t, col){
+  if(col.key === "level") return t.level ? [{text:"Lvl "+t.level}] : [];
+  if(col.key === "genommen"){
+    if(t.genommen==null) return [];
+    return [{ text: t.genommen?"genommen":"nicht genommen", cls: t.genommen?"tag-taken":"tag-nottaken" }];
+  }
+  if(col.multi) return (t[col.key]||[]).map(v=>({text:v}));
+  return t[col.key] ? [{text:t[col.key]}] : [];
+}
+// Eine Zeile mit den ausgewählten Werten eines einzelnen Trades, spaltengenau zur
+// Kopfzeile ausgerichtet. Nicht gesetzte Kategorien bleiben als leere Spalte stehen,
+// statt komplett zu verschwinden — dadurch bleibt die Ausrichtung über alle Trades hinweg
+// konsistent. Enthält zusätzlich ein Mini-Label pro Zelle, das nur auf schmalen
+// Bildschirmen sichtbar wird (siehe CSS), wenn die Kopfzeile dort ausgeblendet ist.
+function tradeCategoryRowHtml(t){
+  const cols = tradeCategoryColumns(t.area);
+  const cells = cols.map(col=>{
+    const values = tradeCategoryCellValues(t, col);
+    const chips = values.map(v=>`<span class="tag ${v.cls||""}">${escHtml(v.text)}</span>`).join("");
+    return `<div class="cat-col-value${values.length?"":" cat-col-empty"}">${values.length?`<span class="cat-col-mobile-label">${col.label}</span>`:""}${chips}</div>`;
+  }).join("");
+  return `<div class="cat-table-row" style="grid-template-columns:${tradeCategoryGrid(t.area)}">${cells}</div>`;
+}
+// Kopfzeile mit den fixen Kategorienamen. wrapped=true bettet sie in eine unsichtbare
+// Kopie des Trade-Karten-Rasters ein, damit die Spalten exakt über den echten Karten
+// darunter stehen (siehe renderAreaView); wrapped=false liefert nur die reine
+// Kopfzeile für die Detailansicht, die kein Karten-Raster drumherum braucht.
+function tradeCategoryHeaderHtml(area, wrapped){
+  const inner = `<div class="cat-table-header" style="grid-template-columns:${tradeCategoryGrid(area)}">
+    ${tradeCategoryColumns(area).map(c=>`<div class="cat-col-label">${c.label}</div>`).join("")}
+  </div>`;
+  if(!wrapped) return inner;
+  return `<div class="trade-card trade-cat-header-row"><div></div>${inner}<div></div><div></div><div></div><div></div></div>`;
+}
+
 const SHOT_CATEGORIES = [
   { key:"htf",      label:"HTF (Higher Time Frame)" },
   { key:"ltf",      label:"LTF (Lower Time Frame)" },
@@ -1618,8 +1666,6 @@ function closeTradeDetail(){
 }
 
 function renderTradeDetail(t){
-  const fieldInline = (label, value) => value ? `<div class="view-field-inline"><span class="view-field-label">${label}</span><span class="view-field-value">${escHtml(value)}</span></div>` : "";
-  const tagsInline = (label, arr) => (arr && arr.length) ? `<div class="view-field-inline"><span class="view-field-label">${label}</span>${arr.map(v=>`<span class="tag">${escHtml(v)}</span>`).join(" ")}</div>` : "";
   const rDisplay = (t.r===null || t.r===undefined) ? "" : formatR(t.r);
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
   const shotSections = SHOT_CATEGORIES.map(c=>{
@@ -1645,17 +1691,9 @@ function renderTradeDetail(t){
     </div>
 
     <div class="panel">
-      <div class="view-fields-row">
-        ${fieldInline("Richtung", t.richtung)}
-        ${fieldInline("Session", t.session)}
-        ${fieldInline("Entry-Art", t.art)}
-        ${fieldInline("Level", t.level)}
-        ${fieldInline("Trend", t.trend)}
-        ${fieldInline("Zeiteinheit", t.zeiteinheit)}
-        ${fieldInline("Struktur", t.struktur)}
-        ${(t.area==="eod" && t.genommen!=null) ? fieldInline("Setup genommen", t.genommen?"Ja":"Nein") : ""}
-        ${tagsInline("Kriterien", t.kriterien)}
-        ${tagsInline("Invalidierungskriterien", t.invalidierung)}
+      <div class="cat-table-standalone">
+        ${tradeCategoryHeaderHtml(t.area, false)}
+        ${tradeCategoryRowHtml(t)}
       </div>
 
       <div class="view-row">

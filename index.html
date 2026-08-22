@@ -88,6 +88,7 @@
   .backup-badge.show{display:flex;}
 
   main{max-width:1560px; margin:0 auto; padding:28px 24px 80px;}
+  main.main-narrow{max-width:1180px;}
 
   .page-head{margin-bottom:20px;}
   .page-head h1{font-size:26px; margin:0 0 4px;}
@@ -132,7 +133,14 @@
   .chip.selected.result-BE{background:var(--amber); border-color:var(--amber); color:#2b2205;}
   .chip-add{border-style:dashed;}
   .market-chip-wrap{position:relative; display:inline-flex; align-items:center;}
-  .market-chip-label{padding-right:26px;}
+  .market-chip-label{padding-right:46px;}
+  .market-chip-edit{
+    position:absolute; right:23px; top:50%; transform:translateY(-50%);
+    width:16px; height:16px; border-radius:50%; border:none;
+    background:transparent; color:inherit; opacity:.55; font-size:10px;
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  .market-chip-edit:hover{opacity:1; background:var(--white); color:#0a0a0d;}
   .market-chip-remove{
     position:absolute; right:5px; top:50%; transform:translateY(-50%);
     width:16px; height:16px; border-radius:50%; border:none;
@@ -467,7 +475,11 @@ const DEFAULT_CONFIG = {
   hiddenInsightWords: [],
   // Gruppen zusammengeführter Begriffe: [{id, label, words:[...]}]
   noteWordGroups:    [],
-  insightWordGroups: []
+  insightWordGroups: [],
+  // Frei vom Nutzer erstellte, zusätzliche Kategorien: [{key, label, multi}]
+  // Die eigentlichen Auswahlwerte jeder solchen Kategorie liegen unter
+  // config["custom_"+key], genau wie bei den fest eingebauten Kategorien oben.
+  customCategories: []
 };
 
 const AREA_LABEL  = { live:"Live", backtest:"Backtest", eod:"EOD" };
@@ -882,17 +894,39 @@ function openSettingsModal(){
   renderSettingsModal();
 }
 
+// Erzeugt aus einem Label einen eindeutigen, technischen Schlüssel für eine neue
+// frei erstellte Kategorie (z. B. "Markt-Phase" -> "markt_phase").
+function slugifyCategoryKey(label){
+  let base = label.trim().toLowerCase()
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+    .replace(/[^a-z0-9]+/g,"_")
+    .replace(/^_+|_+$/g,"");
+  if(!base) base = "kategorie";
+  const existing = (STATE.config.customCategories||[]).map(c=>c.key);
+  let key = base, i = 2;
+  while(existing.includes(key)){ key = base + "_" + i; i++; }
+  return key;
+}
+
 function renderSettingsModal(){
   const cfg = STATE.config;
-  const sections = CATEGORY_META.map(meta=>{
+  const allMeta = [
+    ...CATEGORY_META,
+    ...(cfg.customCategories||[]).map(c=>({ cfgKey:"custom_"+c.key, field:null, label:c.label, multi:c.multi, isCustom:true, customKey:c.key }))
+  ];
+  const sections = allMeta.map(meta=>{
     const items = cfg[meta.cfgKey] || [];
     const chips = items.map(v=>`
       <span class="market-chip-wrap">
         <span class="chip market-chip-label" style="cursor:default;">${escHtml(v)}</span>
-        <button type="button" class="market-chip-remove" data-cat="${meta.cfgKey}" data-catfield="${meta.field}" data-catmulti="${meta.multi}" data-value="${escAttr(v)}" title="Entfernen">✕</button>
+        <button type="button" class="market-chip-edit" data-cat="${meta.cfgKey}" data-catfield="${meta.field||""}" data-catmulti="${meta.multi}" data-catlabel="${escAttr(meta.label)}" data-value="${escAttr(v)}" ${meta.isCustom?`data-customkey="${meta.customKey}"`:""} title="Umbenennen">✎</button>
+        <button type="button" class="market-chip-remove" data-cat="${meta.cfgKey}" data-catfield="${meta.field||""}" data-catmulti="${meta.multi}" data-value="${escAttr(v)}" ${meta.isCustom?`data-customkey="${meta.customKey}"`:""} title="Entfernen">✕</button>
       </span>`).join("");
     return `<div class="field-group">
-      <label class="fg-label">${meta.label}</label>
+      <label class="fg-label" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <span>${escHtml(meta.label)}${meta.isCustom ? ` <span style="color:var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0; font-size:11px;">(eigene Kategorie${meta.multi?", Mehrfachauswahl":""})</span>` : ""}</span>
+        ${meta.isCustom ? `<button type="button" class="btn btn-sm btn-danger" data-delcustomcat="${meta.customKey}" data-catlabel="${escAttr(meta.label)}" style="text-transform:none; letter-spacing:0;">Kategorie löschen</button>` : ""}
+      </label>
       <div class="chip-group">
         ${chips}
         <button type="button" class="chip chip-add" data-addcat="${meta.cfgKey}" data-catlabel="${escAttr(meta.label)}">+ hinzufügen</button>
@@ -906,11 +940,14 @@ function renderSettingsModal(){
       <div class="modal-header-row">
         <div>
           <h2>Kategorien verwalten</h2>
-          <div class="modal-sub">Werte hinzufügen oder entfernen — wirkt sich sofort auf alle Formulare und Filter aus.</div>
+          <div class="modal-sub">Werte hinzufügen, umbenennen (✎) oder entfernen (✕) — wirkt sich sofort auf alle Formulare und Filter aus. Umbenennen aktualisiert automatisch auch alle bestehenden Trades.</div>
         </div>
         <button class="icon-btn" id="settingsCloseBtn">✕</button>
       </div>
       ${sections}
+      <div class="field-group" style="border-top:1px solid var(--border); padding-top:18px; margin-top:6px;">
+        <button type="button" class="btn" id="addNewCategoryBtn">+ Neue Kategorie erstellen</button>
+      </div>
       <div class="modal-footer" style="justify-content:flex-end;">
         <button class="btn btn-primary" id="settingsDoneBtn">Fertig</button>
       </div>
@@ -925,6 +962,36 @@ function wireSettingsModal(){
   backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeSettingsModal(); });
   document.getElementById("settingsCloseBtn").addEventListener("click", closeSettingsModal);
   document.getElementById("settingsDoneBtn").addEventListener("click", closeSettingsModal);
+
+  document.getElementById("addNewCategoryBtn").addEventListener("click", ()=>{
+    const name = prompt('Name der neuen Kategorie (z. B. "Marktphase"):');
+    if(!name) return;
+    const label = name.trim();
+    if(!label) return;
+    const multi = confirm(`Soll bei "${label}" eine Mehrfachauswahl möglich sein (wie bei Kriterien)?\n\nOK = Ja, mehrere Werte gleichzeitig wählbar.\nAbbrechen = Nein, nur ein Wert auswählbar.`);
+    const key = slugifyCategoryKey(label);
+    STATE.config.customCategories = STATE.config.customCategories || [];
+    STATE.config.customCategories.push({ key, label, multi });
+    STATE.config["custom_"+key] = [];
+    saveConfig();
+    renderSettingsModal();
+  });
+
+  document.querySelectorAll("[data-delcustomcat]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const key = btn.dataset.delcustomcat;
+      const label = btn.dataset.catlabel;
+      if(!confirm(`Kategorie "${label}" komplett löschen? Sie verschwindet dadurch aus allen Formularen, Übersichten und bestehenden Trades — das kann nicht rückgängig gemacht werden.`)) return;
+      STATE.config.customCategories = (STATE.config.customCategories||[]).filter(c=>c.key!==key);
+      delete STATE.config["custom_"+key];
+      STATE.trades.forEach(t=>{
+        if(t.customCategories && key in t.customCategories) delete t.customCategories[key];
+      });
+      saveConfig();
+      saveTrades();
+      renderSettingsModal();
+    });
+  });
 
   document.querySelectorAll("[data-addcat]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
@@ -942,15 +1009,64 @@ function wireSettingsModal(){
     });
   });
 
-  document.querySelectorAll("[data-cat][data-value]").forEach(btn=>{
+  document.querySelectorAll(".market-chip-edit[data-cat]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const cfgKey = btn.dataset.cat;
+      const field = btn.dataset.catfield;
+      const multi = btn.dataset.catmulti === "true";
+      const label = btn.dataset.catlabel;
+      const oldVal = btn.dataset.value;
+      const customKey = btn.dataset.customkey || null;
+      const input = prompt(`"${label}" umbenennen:`, oldVal);
+      if(input === null) return;
+      const newVal = input.trim();
+      if(!newVal || newVal === oldVal) return;
+
+      const list = STATE.config[cfgKey];
+      const duplicateExists = list.includes(newVal);
+
+      // In der Auswahlliste umbenennen — existiert der neue Name schon, wird der alte
+      // Eintrag einfach entfernt (kein doppelter Eintrag), sonst wird er ersetzt.
+      STATE.config[cfgKey] = list.filter(x=>x!==oldVal);
+      if(!duplicateExists) STATE.config[cfgKey].push(newVal);
+
+      // Alle bestehenden Trades, die den alten Wert verwenden, automatisch auf den neuen
+      // Namen umstellen — genau das "im ganzen Programm automatisch aktualisieren".
+      // Bei frei erstellten Kategorien liegt der Wert in t.customCategories[customKey]
+      // statt direkt in t[field].
+      let changed = false;
+      STATE.trades.forEach(t=>{
+        const cur = customKey ? (t.customCategories||{}) : t;
+        const curKey = customKey || field;
+        if(customKey && !t.customCategories) return;
+        if(multi){
+          if(Array.isArray(cur[curKey]) && cur[curKey].includes(oldVal)){
+            cur[curKey] = [...new Set(cur[curKey].map(x=> x===oldVal ? newVal : x))];
+            changed = true;
+          }
+        }else if(cur[curKey] === oldVal){
+          cur[curKey] = newVal;
+          changed = true;
+        }
+      });
+
+      saveConfig();
+      if(changed) saveTrades();
+      renderSettingsModal();
+    });
+  });
+
+  document.querySelectorAll(".market-chip-remove[data-cat]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const cfgKey = btn.dataset.cat;
       const field = btn.dataset.catfield;
       const multi = btn.dataset.catmulti === "true";
       const val = btn.dataset.value;
+      const customKey = btn.dataset.customkey || null;
       const inUse = STATE.trades.some(t=>{
-        if(multi) return (t[field]||[]).includes(val);
-        return t[field] === val;
+        const cv = customKey ? (t.customCategories||{})[customKey] : t[field];
+        if(multi) return (cv||[]).includes(val);
+        return cv === val;
       });
       const msg = inUse
         ? `"${val}" wird noch in bestehenden Trades verwendet. Trotzdem aus der Auswahlliste entfernen? (Bestehende Trades behalten den Wert, er ist danach nur nicht mehr neu auswählbar.)`
@@ -996,6 +1112,12 @@ function render(){
   updateNavActive();
   updateBackupBadge();
   const app = document.getElementById("app");
+  const isStart = STATE.view === "start" && !STATE.viewingTrade;
+  app.classList.toggle("main-narrow", isStart);
+  // Basis-Breite reicht für die 9 eingebauten Kategorien; jede frei erstellte Kategorie
+  // braucht zusätzlichen Platz (85px Spalte + 10px Abstand) — daher hier statt einer
+  // festen CSS-Breite eine inline berechnete, die automatisch mitwächst.
+  app.style.maxWidth = isStart ? "" : (1560 + (STATE.config.customCategories||[]).length * 95) + "px";
 
   if(STATE.viewingTrade){
     stopStartClock();
@@ -1487,25 +1609,35 @@ const TRADE_CATEGORY_COLUMNS = [
 // unterschiedlich große Lücken zur Folge, selbst wenn jede Spalte für sich korrekt
 // berechnet ist). Lange Einzelwerte (z. B. "Out of Session") brechen bei Bedarf
 // innerhalb ihrer Zelle auf zwei Zeilen um, statt zu überlaufen (siehe .tag CSS).
+// Die Anzahl Spalten ist nicht mehr fix — frei erstellte Kategorien (siehe
+// STATE.config.customCategories) werden automatisch angehängt, das Raster wird
+// entsprechend dynamisch neu berechnet statt einer festen Werteliste.
 const TRADE_CATEGORY_COL_WIDTH = 85; // px, Listen-Ansicht
-const TRADE_CATEGORY_GRID = Array(9).fill(TRADE_CATEGORY_COL_WIDTH+"px").join(" ");
-const TRADE_CATEGORY_GRID_EOD = Array(10).fill(TRADE_CATEGORY_COL_WIDTH+"px").join(" ");
 const TRADE_CATEGORY_COL_WIDTH_DETAIL = 140; // px, Detailseite (mehr Platz verfügbar)
-const TRADE_CATEGORY_GRID_DETAIL = Array(9).fill(TRADE_CATEGORY_COL_WIDTH_DETAIL+"px").join(" ");
-const TRADE_CATEGORY_GRID_DETAIL_EOD = Array(10).fill(TRADE_CATEGORY_COL_WIDTH_DETAIL+"px").join(" ");
-function tradeCategoryGridDetail(area){
-  return area==="eod" ? TRADE_CATEGORY_GRID_DETAIL_EOD : TRADE_CATEGORY_GRID_DETAIL;
-}
 
 // EOD-Trades bekommen zusätzlich die "Genommen"-Spalte — bei Live/Backtest gibt es
-// dieses Feld gar nicht, dort bleibt die Spalte entsprechend komplett weg (nicht nur leer).
+// dieses Feld gar nicht, dort bleibt die Spalte entsprechend komplett weg (nicht nur
+// leer). Frei erstellte Kategorien werden danach angehängt, gelten für alle Bereiche.
 function tradeCategoryColumns(area){
-  return area==="eod" ? [...TRADE_CATEGORY_COLUMNS, {key:"genommen", label:"Genommen"}] : TRADE_CATEGORY_COLUMNS;
+  const cols = [...TRADE_CATEGORY_COLUMNS];
+  if(area === "eod") cols.push({key:"genommen", label:"Genommen"});
+  (STATE.config.customCategories||[]).forEach(c=>{
+    cols.push({ key:c.key, label:c.label, multi:!!c.multi, custom:true });
+  });
+  return cols;
 }
 function tradeCategoryGrid(area){
-  return area==="eod" ? TRADE_CATEGORY_GRID_EOD : TRADE_CATEGORY_GRID;
+  return Array(tradeCategoryColumns(area).length).fill(TRADE_CATEGORY_COL_WIDTH+"px").join(" ");
+}
+function tradeCategoryGridDetail(area){
+  return Array(tradeCategoryColumns(area).length).fill(TRADE_CATEGORY_COL_WIDTH_DETAIL+"px").join(" ");
 }
 function tradeCategoryCellValues(t, col){
+  if(col.custom){
+    const raw = (t.customCategories||{})[col.key];
+    if(col.multi) return (raw||[]).map(v=>({text:v}));
+    return raw ? [{text:raw}] : [];
+  }
   if(col.key === "level") return t.level ? [{text:"Lvl "+t.level}] : [];
   if(col.key === "genommen"){
     if(t.genommen==null) return [];
@@ -1610,6 +1742,7 @@ function emptyTrade(area){
     genommen: area==="eod" ? null : undefined,
     grundNichtGenommen: "",
     notizen: "",
+    customCategories: {},
     screenshots: { htf: [], ltf: [], sonstige: [] },
     createdAt: Date.now(),
     updatedAt: Date.now()
@@ -1639,6 +1772,7 @@ function copyTradeToEod(liveTrade){
     r: liveTrade.r,
     genommen: true, // war ein echter Live-Trade, wurde also genommen
     notizen: liveTrade.notizen || "",
+    customCategories: JSON.parse(JSON.stringify(liveTrade.customCategories||{})),
     screenshots: {
       htf: [...((liveTrade.screenshots&&liveTrade.screenshots.htf)||[])],
       ltf: [...((liveTrade.screenshots&&liveTrade.screenshots.ltf)||[])],
@@ -1857,6 +1991,12 @@ function renderModal(){
         ${chipGroupHtml("invalidierung", cfg.invalidierung, d.invalidierung, {multi:true})}
       </div>
 
+      ${(cfg.customCategories||[]).map(c=>`
+      <div class="field-group">
+        <label class="fg-label">${escHtml(c.label)}</label>
+        ${chipGroupHtml("custom_"+c.key, cfg["custom_"+c.key]||[], (d.customCategories||{})[c.key], {multi:!!c.multi})}
+      </div>`).join("")}
+
       ${d.area==="eod" ? `
       <div class="field-group">
         <label class="fg-label">Setup genommen?</label>
@@ -1957,12 +2097,19 @@ function wireModal(){
         renderModal();
         return;
       }
+      // Frei erstellte Kategorien nutzen das Präfix "custom_" im Gruppennamen und werden
+      // in d.customCategories[key] statt direkt in d[key] gespeichert.
+      const isCustom = g.startsWith("custom_");
+      const customKey = isCustom ? g.slice(7) : null;
+      if(isCustom && !d.customCategories) d.customCategories = {};
+      const target = isCustom ? d.customCategories : d;
+      const targetKey = isCustom ? customKey : g;
       if(multi){
-        const arr = d[g] || (d[g]=[]);
+        const arr = target[targetKey] || (target[targetKey]=[]);
         const i = arr.indexOf(val);
         if(i>-1) arr.splice(i,1); else arr.push(val);
       }else{
-        d[g] = (d[g]===val) ? null : val;
+        target[targetKey] = (target[targetKey]===val) ? null : val;
       }
       if(g === "ergebnis"){
         if(d.ergebnis === "BE"){
@@ -2228,7 +2375,7 @@ function compareSectionHtml(){
         ${compareRingHtml("EOD", AREA_COLOR.eod, eodStats)}
       </div>
     </div>
-    <div style="color:var(--text-faint); font-size:12px; margin:-16px 0 20px;">
+    <div style="color:var(--text-faint); font-size:12px; margin:10px 0 20px;">
       Alles in R. Ein Break-Even-Trade (0R) zählt in die Anzahl, nicht in die Trefferquote. Beide Spalten berücksichtigen die aktuellen Filter oben, aber jeweils nur ihre eigenen Trades.
     </div>
   `;

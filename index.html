@@ -421,10 +421,40 @@
     .cat-col-value{margin-bottom:4px;}
     .cat-col-value.cat-col-empty{display:none;}
     .cat-col-mobile-label{display:inline; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); margin-right:6px;}
+    #lockScreen{
+    position:fixed; inset:0; z-index:9999;
+    background:var(--bg); display:flex; align-items:center; justify-content:center;
+    padding:20px;
   }
+  .lock-box{
+    width:100%; max-width:320px; text-align:center;
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:36px 28px;
+  }
+  .lock-title{font-size:20px; font-weight:700; margin-bottom:6px;}
+  .lock-sub{color:var(--text-dim); font-size:13px; margin-bottom:22px;}
+  .lock-pin-input{
+    width:100%; text-align:center; font-size:26px; letter-spacing:14px; font-family:var(--mono);
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm);
+    color:var(--text); padding:12px 0 12px 14px;
+  }
+  .lock-pin-input:focus{outline:none; border-color:var(--border-light);}
+  .lock-error{color:var(--red); font-size:12.5px; margin-top:12px;}
 </style>
 </head>
 <body>
+
+<div id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-title">🔒 Mein Journal</div>
+    <div class="lock-sub">Code eingeben, um fortzufahren.</div>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" id="lockPinInput" class="lock-pin-input" autocomplete="off">
+    <div class="lock-error" id="lockError" style="display:none;">Falscher Code. Bitte erneut versuchen.</div>
+    <button type="button" class="btn btn-primary" id="lockSubmitBtn" style="width:100%; margin-top:14px;">Entsperren</button>
+  </div>
+</div>
+
+<div id="appShell" style="display:none;">
 
 <header class="topnav">
   <div class="topnav-left">
@@ -448,6 +478,8 @@
 
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
+
+</div>
 
 <script>
 /* =========================================================================
@@ -3757,6 +3789,57 @@ function saveInsightDraft(){
 }
 
 /* =========================================================================
+   ZUGANGSSPERRE
+   Einfache Code-Abfrage, die zufällige Besucher des öffentlichen Links abhält —
+   KEINE echte Sicherheit: die App selbst wird trotzdem komplett im Browser
+   geladen, ein technisch versierter Besucher könnte die Sperre über die
+   Entwicklertools umgehen. Der PIN liegt bewusst nicht im Klartext im Code,
+   sondern nur als einfacher Prüfwert (kein kryptografisches Verfahren, damit es
+   auch offline/lokal ganz ohne Browser-Sicherheitsfunktionen funktioniert).
+   ========================================================================= */
+const LOCK_PIN_CHECK = "7c795e72";
+const LOCK_STORAGE_KEY = "tj_unlocked_v1";
+
+function simpleHash(str){
+  let h = 5381;
+  for(let i=0;i<str.length;i++){
+    h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+  }
+  return h.toString(16);
+}
+
+function startApp(){
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("appShell").style.display = "";
+  render();
+  gdrivePull();
+}
+
+function tryUnlock(){
+  const input = document.getElementById("lockPinInput");
+  const val = input.value.trim();
+  if(!val) return;
+  if(simpleHash(val) === LOCK_PIN_CHECK){
+    localStorage.setItem(LOCK_STORAGE_KEY, "true");
+    startApp();
+  }else{
+    document.getElementById("lockError").style.display = "block";
+    input.value = "";
+    input.focus();
+  }
+}
+
+if(localStorage.getItem(LOCK_STORAGE_KEY) === "true"){
+  startApp();
+}else{
+  document.getElementById("lockSubmitBtn").addEventListener("click", tryUnlock);
+  document.getElementById("lockPinInput").addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") tryUnlock();
+  });
+  document.getElementById("lockPinInput").focus();
+}
+
+/* =========================================================================
    INIT
    ========================================================================= */
 // Warnt beim Schließen/Verlassen der Seite, falls es Änderungen gibt, die noch in
@@ -3768,11 +3851,6 @@ window.addEventListener("beforeunload", (e)=>{
     e.returnValue = "";
   }
 });
-render();
-
-// Holt beim Start automatisch den neuesten Stand über den Proxy — kein Login,
-// kein Token-Handling mehr nötig, läuft einfach immer im Hintergrund.
-gdrivePull();
 </script>
 </body>
 </html>

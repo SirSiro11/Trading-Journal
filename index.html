@@ -421,7 +421,8 @@
     .cat-col-value{margin-bottom:4px;}
     .cat-col-value.cat-col-empty{display:none;}
     .cat-col-mobile-label{display:inline; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); margin-right:6px;}
-    #lockScreen{
+  }
+  #lockScreen{
     position:fixed; inset:0; z-index:9999;
     background:var(--bg); display:flex; align-items:center; justify-content:center;
     padding:20px;
@@ -3796,9 +3797,9 @@ function saveInsightDraft(){
    Entwicklertools umgehen. Der PIN liegt bewusst nicht im Klartext im Code,
    sondern nur als einfacher Prüfwert (kein kryptografisches Verfahren, damit es
    auch offline/lokal ganz ohne Browser-Sicherheitsfunktionen funktioniert).
+   Wird bei JEDEM Öffnen erneut abgefragt (keine Merkfunktion).
    ========================================================================= */
 const LOCK_PIN_CHECK = "7c795e72";
-const LOCK_STORAGE_KEY = "tj_unlocked_v1";
 
 function simpleHash(str){
   let h = 5381;
@@ -3820,7 +3821,6 @@ function tryUnlock(){
   const val = input.value.trim();
   if(!val) return;
   if(simpleHash(val) === LOCK_PIN_CHECK){
-    localStorage.setItem(LOCK_STORAGE_KEY, "true");
     startApp();
   }else{
     document.getElementById("lockError").style.display = "block";
@@ -3829,15 +3829,11 @@ function tryUnlock(){
   }
 }
 
-if(localStorage.getItem(LOCK_STORAGE_KEY) === "true"){
-  startApp();
-}else{
-  document.getElementById("lockSubmitBtn").addEventListener("click", tryUnlock);
-  document.getElementById("lockPinInput").addEventListener("keydown", (e)=>{
-    if(e.key === "Enter") tryUnlock();
-  });
-  document.getElementById("lockPinInput").focus();
-}
+document.getElementById("lockSubmitBtn").addEventListener("click", tryUnlock);
+document.getElementById("lockPinInput").addEventListener("keydown", (e)=>{
+  if(e.key === "Enter") tryUnlock();
+});
+document.getElementById("lockPinInput").focus();
 
 /* =========================================================================
    INIT

@@ -80,9 +80,6 @@
   nav.tabs button:hover{color:var(--text);}
   nav.tabs button.active{background:var(--white); color:#0a0a0d;}
   nav.tabs .tabs-sep{width:1px; align-self:stretch; background:var(--border-light); margin:2px 6px;}
-  nav.tabs button[data-view="strategie"]{color:var(--green);}
-  nav.tabs button[data-view="strategie"]:hover{color:var(--green);}
-  nav.tabs button[data-view="strategie"].active{background:var(--green); color:#06281c;}
   .backup-badge{
     display:none; align-items:center; gap:6px;
     background:rgba(251,191,36,.12); border:1px solid rgba(251,191,36,.4); color:var(--amber);
@@ -865,13 +862,22 @@ function scheduleDriveAutoPush(){
    NEWS — High-Impact-Wirtschaftstermine ("3 Sterne") auf der Startseite
    Investing.com selbst bietet keine öffentliche API und blockt Cross-Origin-
    Anfragen aus dem Browser (CORS) — ein direkter fetch() von dort scheitert
-   deshalb technisch. Stattdessen nutzen wir den öffentlichen, CORS-offenen
-   JSON-Feed von ForexFactory (nfs.faireconomy.media), der dieselben
-   Impact-Stufen (Low/Medium/High) führt und von vielen Trading-Tools/EAs für
-   genau diesen Zweck verwendet wird. "High" entspricht Investings 3-Sterne-
-   bzw. rotem High-Impact-Symbol.
+   deshalb technisch. Stattdessen nutzen wir den öffentlichen JSON-Feed von
+   ForexFactory (nfs.faireconomy.media), der dieselben Impact-Stufen
+   (Low/Medium/High) führt und von vielen Trading-Tools/EAs für genau diesen
+   Zweck verwendet wird. "High" entspricht Investings 3-Sterne-/rotem
+   High-Impact-Symbol.
+   Falls der Feed selbst (je nach Browser/Netzwerk) keine CORS-Freigabe
+   liefert, greifen wir automatisch über einen öffentlichen CORS-Proxy als
+   Fallback zu — beides schlägt in der freien Wildbahn gelegentlich mal fehl
+   (Rate-Limits, Ausfälle), daher mehrere Versuche der Reihe nach.
    ========================================================================= */
 const NEWS_FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+const NEWS_FEED_URLS = [
+  NEWS_FEED_URL,
+  "https://api.allorigins.win/raw?url=" + encodeURIComponent(NEWS_FEED_URL),
+  "https://corsproxy.io/?url=" + encodeURIComponent(NEWS_FEED_URL)
+];
 const NEWS_CACHE_MAX_AGE_MS = 20 * 60 * 1000; // 20 Minuten — danach beim Start-Aufruf neu laden
 
 function loadNewsCache(){
@@ -888,6 +894,24 @@ function isLocalToday(d){
   return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
 }
 
+// Probiert die News-Quellen der Reihe nach (direkt, dann CORS-Proxys) und gibt
+// das erste erfolgreich geparste JSON-Array zurück. Wirft erst, wenn alle scheitern.
+async function fetchNewsRaw(){
+  let lastErr = null;
+  for(const url of NEWS_FEED_URLS){
+    try{
+      const res = await fetch(url, { method:"GET" });
+      if(!res.ok) throw new Error("Antwort " + res.status);
+      const raw = await res.json();
+      if(Array.isArray(raw)) return raw;
+      throw new Error("Unerwartetes Antwortformat");
+    }catch(err){
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error("Keine Quelle erreichbar");
+}
+
 async function fetchHighImpactNews(force){
   const cached = loadNewsCache();
   if(cached && !force && (Date.now() - cached.fetchedAt) < NEWS_CACHE_MAX_AGE_MS){
@@ -899,10 +923,8 @@ async function fetchHighImpactNews(force){
   STATE.newsStatus = "loading";
   if(STATE.view === "start") render();
   try{
-    const res = await fetch(NEWS_FEED_URL, { method:"GET" });
-    if(!res.ok) throw new Error("Feed antwortete mit " + res.status);
-    const raw = await res.json();
-    const high = (Array.isArray(raw) ? raw : [])
+    const raw = await fetchNewsRaw();
+    const high = raw
       .filter(e => e.impact === "High")
       .map(e => ({ title:e.title, country:e.country, date:e.date, forecast:e.forecast||"", previous:e.previous||"" }))
       .sort((a,b)=> new Date(a.date) - new Date(b.date));
@@ -1429,7 +1451,7 @@ function renderStart(){
 
     ${renderNewsPanel()}
 
-    <div class="panel">
+    <div class="panel" style="margin-top:14px;">
       <div class="section-title" style="margin-top:0;">☁ Google Drive Sync</div>
       ${STATE.driveStatus === "syncing" ? `
         <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere …</p>

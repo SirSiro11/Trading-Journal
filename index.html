@@ -495,17 +495,51 @@
     .cat-col-value.cat-col-empty{display:none;}
     .cat-col-mobile-label{display:inline; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); margin-right:6px;}
   }
+  /* ---------- Dezenter, dynamisch beweglicher Gold-Fade von unten (über der gesamten App) ---------- */
+  #ambientGoldGlow{
+    position:fixed; left:0; right:0; bottom:0; height:56vh; z-index:-2;
+    pointer-events:none;
+    background:radial-gradient(ellipse 92% 100% at 50% 100%, rgba(212,175,55,0.18), rgba(212,175,55,0.06) 45%, transparent 74%);
+    animation:ambientGoldDrift 12s ease-in-out infinite;
+    will-change:opacity, transform;
+  }
+  @keyframes ambientGoldDrift{
+    0%{opacity:.8; transform:translateY(0) translateX(-1.5%) scale(1);}
+    50%{opacity:1; transform:translateY(-3.5%) translateX(1.5%) scale(1.08);}
+    100%{opacity:.8; transform:translateY(0) translateX(-1.5%) scale(1);}
+  }
   #lockScreen{
     position:fixed; inset:0; z-index:9999;
     background:var(--bg); display:flex; align-items:center; justify-content:center;
     padding:20px;
-    transition:opacity .38s ease;
+    transition:opacity .5s ease, filter .5s ease;
   }
-  #lockScreen.lock-fading{opacity:0;}
-  #appShell{animation:appShellIn .45s ease;}
+  #lockScreen::before{
+    content:""; position:absolute; left:0; right:0; bottom:0; height:56vh;
+    pointer-events:none;
+    background:radial-gradient(ellipse 92% 100% at 50% 100%, rgba(212,175,55,0.18), rgba(212,175,55,0.06) 45%, transparent 74%);
+    animation:ambientGoldDrift 12s ease-in-out infinite;
+  }
+  #lockScreen.lock-fading{opacity:0; filter:blur(6px);}
+  #lockScreen.lock-fading .lock-box{animation:lockBoxOut .5s ease forwards;}
+  @keyframes lockBoxOut{
+    from{opacity:1; transform:translateY(0) scale(1);}
+    to{opacity:0; transform:translateY(-14px) scale(.92);}
+  }
+  #appShell{animation:appShellIn .7s cubic-bezier(.22,1,.36,1);}
   @keyframes appShellIn{
-    from{opacity:0; transform:translateY(8px) scale(.99);}
-    to{opacity:1; transform:translateY(0) scale(1);}
+    0%{opacity:0; transform:translateY(22px) scale(.97); filter:blur(4px);}
+    55%{opacity:1; filter:blur(0);}
+    100%{opacity:1; transform:translateY(0) scale(1); filter:blur(0);}
+  }
+  #appShell.app-shell-glow::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(circle at 50% 30%, rgba(52,211,153,0.16), transparent 60%);
+    animation:appShellGlow 1s ease forwards;
+  }
+  @keyframes appShellGlow{
+    from{opacity:1;}
+    to{opacity:0;}
   }
   #app.app-fade-run{animation:viewFadeIn .22s ease;}
   @keyframes viewFadeIn{
@@ -529,6 +563,8 @@
 </style>
 </head>
 <body>
+
+<div id="ambientGoldGlow" aria-hidden="true"></div>
 
 <div id="lockScreen">
   <div class="lock-box">
@@ -4455,16 +4491,22 @@ function simpleHash(str){
 function startApp(){
   const lockScreen = document.getElementById("lockScreen");
   const appShell = document.getElementById("appShell");
-  // Sanfter Übergang: Lock-Screen ausblenden, dann erst danach die App einblenden
+  // Mehrstufiger Übergang: Lock-Box schrumpft/verblasst zuerst nach oben weg,
+  // der Lock-Screen blendet mit leichtem Weichzeichner aus, danach kommt die
+  // App mit Blur-Auflösung, sanftem Hochgleiten und kurzem Glow-Aufblitzen rein
   // (statt hartem display:none-Umschalten).
   lockScreen.classList.add("lock-fading");
   setTimeout(()=>{
     lockScreen.style.display = "none";
     appShell.style.display = "";
+    appShell.classList.remove("app-shell-glow");
+    void appShell.offsetWidth;
+    appShell.classList.add("app-shell-glow");
     render();
     gdrivePull();
     fetchHighImpactNews();
-  }, 320);
+    setTimeout(()=> appShell.classList.remove("app-shell-glow"), 1100);
+  }, 460);
 }
 
 function tryUnlock(){

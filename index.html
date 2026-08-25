@@ -399,6 +399,7 @@
   .section-title{font-size:12px; letter-spacing:1px; color:var(--text-faint); font-weight:700; text-transform:uppercase; margin:28px 0 12px;}
 
   /* ---------- News (Startseite) ---------- */
+  .panel-news{border-left:3px solid var(--green); background:linear-gradient(180deg, rgba(52,211,153,0.06), rgba(52,211,153,0) 60%);}
   .news-list{display:flex; flex-direction:column; gap:2px;}
   .news-row{display:flex; align-items:flex-start; gap:12px; padding:9px 4px; border-bottom:1px solid var(--border);}
   .news-row:last-child{border-bottom:none;}
@@ -498,6 +499,18 @@
     position:fixed; inset:0; z-index:9999;
     background:var(--bg); display:flex; align-items:center; justify-content:center;
     padding:20px;
+    transition:opacity .38s ease;
+  }
+  #lockScreen.lock-fading{opacity:0;}
+  #appShell{animation:appShellIn .45s ease;}
+  @keyframes appShellIn{
+    from{opacity:0; transform:translateY(8px) scale(.99);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  #app.app-fade-run{animation:viewFadeIn .22s ease;}
+  @keyframes viewFadeIn{
+    from{opacity:0; transform:translateY(6px);}
+    to{opacity:1; transform:translateY(0);}
   }
   .lock-box{
     width:100%; max-width:320px; text-align:center;
@@ -1353,6 +1366,11 @@ function render(){
   updateNavActive();
   updateBackupBadge();
   const app = document.getElementById("app");
+  // Sanften Fade/Slide-Übergang bei jedem Reiter-/Ansichtswechsel erneut auslösen:
+  // Animation entfernen, Reflow erzwingen, dann wieder hinzufügen.
+  app.classList.remove("app-fade-run");
+  void app.offsetWidth;
+  app.classList.add("app-fade-run");
   const isStart = STATE.view === "start" && !STATE.viewingTrade;
   app.classList.toggle("main-narrow", isStart);
   // Basis-Breite reicht für die 9 eingebauten Kategorien; jede frei erstellte Kategorie
@@ -1503,13 +1521,13 @@ function renderNewsPanel(){
       </div>
     `;
   return `
-    <div class="panel" style="margin-top:14px;">
+    <div class="panel panel-news" style="margin-top:14px;">
       <div class="row-between" style="margin-bottom:${STATE.newsEvents.length?"14px":"0"};">
         <div class="section-title" style="margin:0;">📰 High-Impact-News heute</div>
         <button type="button" class="btn btn-ghost btn-sm" id="newsRefreshBtn" title="Termine neu laden">⟳</button>
       </div>
       ${body}
-      <div style="margin-top:12px; font-size:11px; color:var(--text-faint);">Quelle: ForexFactory-Kalender (nfs.faireconomy.media) — Investing.com selbst blockt direkte Abfragen aus dem Browser.</div>
+      <div style="margin-top:12px; font-size:11px; color:var(--text-faint);">Quelle: ForexFactory-Kalender (nfs.faireconomy.media)</div>
     </div>
   `;
 }
@@ -4435,11 +4453,18 @@ function simpleHash(str){
 }
 
 function startApp(){
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("appShell").style.display = "";
-  render();
-  gdrivePull();
-  fetchHighImpactNews();
+  const lockScreen = document.getElementById("lockScreen");
+  const appShell = document.getElementById("appShell");
+  // Sanfter Übergang: Lock-Screen ausblenden, dann erst danach die App einblenden
+  // (statt hartem display:none-Umschalten).
+  lockScreen.classList.add("lock-fading");
+  setTimeout(()=>{
+    lockScreen.style.display = "none";
+    appShell.style.display = "";
+    render();
+    gdrivePull();
+    fetchHighImpactNews();
+  }, 320);
 }
 
 function tryUnlock(){

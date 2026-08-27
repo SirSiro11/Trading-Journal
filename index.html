@@ -644,7 +644,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.08.25";
+const APP_VERSION = "2026.08.27";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -944,10 +944,21 @@ function scheduleDriveAutoPush(){
    (Rate-Limits, Ausfälle), daher mehrere Versuche der Reihe nach.
    ========================================================================= */
 const NEWS_FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
-const NEWS_FEED_URLS = [
-  NEWS_FEED_URL,
-  "https://api.allorigins.win/raw?url=" + encodeURIComponent(NEWS_FEED_URL),
-  "https://corsproxy.io/?url=" + encodeURIComponent(NEWS_FEED_URL)
+// Mehrere Quellen der Reihe nach probieren: direkter Aufruf zuerst (schnellster Weg,
+// funktioniert aber nur wenn der Server CORS erlaubt), danach mehrere unabhängige
+// CORS-Proxys als Fallback — deren Verfügbarkeit schwankt (Rate-Limits, Ausfälle,
+// gelegentlich 401/500), daher bewusst mehr als nur ein oder zwei Fallbacks.
+// "transform" wandelt die jeweilige Proxy-Antwort ins rohe Kalender-JSON-Array um.
+const NEWS_FEED_SOURCES = [
+  { url: NEWS_FEED_URL },
+  { url: "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(NEWS_FEED_URL) },
+  { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(NEWS_FEED_URL) },
+  {
+    url: "https://api.allorigins.win/get?url=" + encodeURIComponent(NEWS_FEED_URL),
+    transform: (data) => JSON.parse(data.contents)
+  },
+  { url: "https://corsproxy.io/?url=" + encodeURIComponent(NEWS_FEED_URL) },
+  { url: "https://thingproxy.freeboard.io/fetch/" + NEWS_FEED_URL }
 ];
 const NEWS_CACHE_MAX_AGE_MS = 20 * 60 * 1000; // 20 Minuten — danach beim Start-Aufruf neu laden
 
@@ -969,11 +980,12 @@ function isLocalToday(d){
 // das erste erfolgreich geparste JSON-Array zurück. Wirft erst, wenn alle scheitern.
 async function fetchNewsRaw(){
   let lastErr = null;
-  for(const url of NEWS_FEED_URLS){
+  for(const source of NEWS_FEED_SOURCES){
     try{
-      const res = await fetch(url, { method:"GET" });
+      const res = await fetch(source.url, { method:"GET" });
       if(!res.ok) throw new Error("Antwort " + res.status);
-      const raw = await res.json();
+      const data = await res.json();
+      const raw = source.transform ? source.transform(data) : data;
       if(Array.isArray(raw)) return raw;
       throw new Error("Unerwartetes Antwortformat");
     }catch(err){

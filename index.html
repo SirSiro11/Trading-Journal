@@ -951,15 +951,29 @@ const NEWS_FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 // "transform" wandelt die jeweilige Proxy-Antwort ins rohe Kalender-JSON-Array um.
 const NEWS_FEED_SOURCES = [
   { url: NEWS_FEED_URL },
-  { url: "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(NEWS_FEED_URL) },
-  { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(NEWS_FEED_URL) },
   {
     url: "https://api.allorigins.win/get?url=" + encodeURIComponent(NEWS_FEED_URL),
     transform: (data) => JSON.parse(data.contents)
   },
+  { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(NEWS_FEED_URL) },
+  { url: "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(NEWS_FEED_URL) },
   { url: "https://corsproxy.io/?url=" + encodeURIComponent(NEWS_FEED_URL) },
+  { url: "https://proxy.corsfix.com/?" + NEWS_FEED_URL },
+  { url: "https://cors.eu.org/" + NEWS_FEED_URL },
   { url: "https://thingproxy.freeboard.io/fetch/" + NEWS_FEED_URL }
 ];
+// Pro Quelle nicht ewig hängen bleiben (manche tote/überlastete Proxys antworten gar
+// nicht) — nach 8 Sekunden abbrechen und zur nächsten Quelle springen.
+const NEWS_FETCH_TIMEOUT_MS = 8000;
+async function fetchWithTimeout(url, ms){
+  const controller = new AbortController();
+  const timer = setTimeout(()=> controller.abort(), ms);
+  try{
+    return await fetch(url, { method:"GET", signal: controller.signal });
+  }finally{
+    clearTimeout(timer);
+  }
+}
 const NEWS_CACHE_MAX_AGE_MS = 20 * 60 * 1000; // 20 Minuten — danach beim Start-Aufruf neu laden
 
 function loadNewsCache(){
@@ -982,7 +996,7 @@ async function fetchNewsRaw(){
   let lastErr = null;
   for(const source of NEWS_FEED_SOURCES){
     try{
-      const res = await fetch(source.url, { method:"GET" });
+      const res = await fetchWithTimeout(source.url, NEWS_FETCH_TIMEOUT_MS);
       if(!res.ok) throw new Error("Antwort " + res.status);
       const data = await res.json();
       const raw = source.transform ? source.transform(data) : data;
@@ -1566,7 +1580,8 @@ function renderNewsPanel(){
   const body = STATE.newsStatus === "loading" && !STATE.newsEvents.length ? `
       <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Lade Termine …</p>
     ` : STATE.newsStatus === "error" && !STATE.newsEvents.length ? `
-      <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Termine konnten nicht geladen werden: ${escHtml(STATE.newsError||"")}</p>
+      <p style="color:var(--red); font-size:13.5px; margin:0 0 8px;">⚠ Termine konnten nicht geladen werden: ${escHtml(STATE.newsError||"")}</p>
+      <p style="color:var(--text-faint); font-size:11.5px; margin:0 0 12px;">Falls das dauerhaft passiert: eventuell blockiert ein Werbe-/Trackingblocker, ein DNS-Filter (z.B. NextDNS, Pi-hole) oder eine Firewall die genutzten Proxy-Domains (allorigins.win, corsproxy.io, codetabs.com u.a.).</p>
       <button class="btn btn-sm" id="newsRetryBtn">Erneut versuchen</button>
     ` : !STATE.newsEvents.length ? `
       <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Heute keine High-Impact-Termine.</p>

@@ -319,6 +319,12 @@
     background:var(--bg-panel); border:1px solid var(--border-light); border-radius:5px;
     padding:1px 6px; font-family:var(--mono); font-size:11.5px;
   }
+  .shot-url-row{display:flex; gap:8px; margin-top:8px;}
+  .shot-url-input{
+    flex:1; background:var(--bg-card); border:1px solid var(--border-light); border-radius:8px;
+    color:var(--text); font-size:13px; padding:8px 10px;
+  }
+  .shot-url-input:focus{outline:none; border-color:var(--green);}
   .shot-filelabel{color:var(--green); text-decoration:underline; cursor:pointer;}
   .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:12px;}
   .shot-gallery-lg{grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
@@ -326,9 +332,10 @@
   .trade-detail-shots{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:18px; align-items:start;}
   .trade-detail-shot-col .view-label{margin-bottom:8px;}
   .shot-gallery-col{display:flex; flex-direction:column; gap:10px;}
-  .shot-gallery-col .shot-thumb.lg img{height:170px;}
+  .shot-gallery-col .shot-thumb.lg img{height:340px;}
   @media (max-width:720px){
     .trade-detail-shots{grid-template-columns:1fr;}
+    .shot-gallery-col .shot-thumb.lg img{height:260px;}
   }
   /* Trade-Detailansicht: Kategorien tabellarisch, eine Zeile pro Kategorie */
   .trade-detail-cat-table{margin-top:10px;}
@@ -2435,6 +2442,10 @@ function renderModal(){
           </div>
         </div>
         <input type="file" id="f_shot_${c.key}" accept="image/*" multiple style="display:none;">
+        <div class="shot-url-row">
+          <input type="text" class="shot-url-input" id="f_shoturl_${c.key}" placeholder="…oder Bild-URL einfügen (z. B. TradingView-Snapshot-Link) und Enter drücken">
+          <button type="button" class="btn btn-sm" data-add-shot-url="${c.key}">Hinzufügen</button>
+        </div>
         ${arr.length ? `
         <div class="shot-gallery">
           ${arr.map((src,i)=>`
@@ -2546,6 +2557,21 @@ function wireModal(){
       const files = Array.from(e.dataTransfer.files || []).filter(f=>f.type.startsWith("image/"));
       if(files.length) handleImageFiles(files, c.key);
     });
+
+    // Bild per URL hinzufügen (z.B. TradingView-Snapshot-Link) — direkt als Vorschau
+    // in die Galerie übernehmen, ganz ohne Datei-Upload.
+    const urlInput = document.getElementById("f_shoturl_"+c.key);
+    const urlBtn = document.querySelector('[data-add-shot-url="'+c.key+'"]');
+    const addShotUrl = ()=>{
+      const url = (urlInput.value||"").trim();
+      if(!url) return;
+      STATE.draft._activeShotCategory = c.key;
+      addShotFromUrl(url, c.key);
+    };
+    if(urlBtn) urlBtn.addEventListener("click", addShotUrl);
+    if(urlInput) urlInput.addEventListener("keydown", (e)=>{
+      if(e.key === "Enter"){ e.preventDefault(); addShotUrl(); }
+    });
   });
   // Nur beim allerersten Öffnen des Formulars die erste Dropzone (HTF) fokussieren
   // (nicht bei jedem Re-Render durch Chip-Klicks — das verursachte den Sprung ans Formularende).
@@ -2610,6 +2636,18 @@ function handlePasteEvent(e){
     e.preventDefault();
     handleImageFiles(files, STATE.draft._activeShotCategory || SHOT_CATEGORIES[0].key);
   }
+}
+
+// Hängt einen per URL eingefügten Screenshot (z.B. TradingView-Snapshot-Link) direkt als
+// Bild-Vorschau an die Screenshot-Liste der übergebenen Kategorie an. Die URL wird direkt
+// als src gespeichert (kein Download/Umwandeln nötig) — funktioniert mit jedem direkt
+// verlinkbaren Bild (z.B. "Bildadresse kopieren" auf einem TradingView-Snapshot).
+function addShotFromUrl(url, category){
+  const cat = category || SHOT_CATEGORIES[0].key;
+  if(!STATE.draft.screenshots) STATE.draft.screenshots = { htf:[], ltf:[], sonstige:[] };
+  if(!Array.isArray(STATE.draft.screenshots[cat])) STATE.draft.screenshots[cat] = [];
+  STATE.draft.screenshots[cat].push(url);
+  renderModal();
 }
 
 // Verarbeitet mehrere Bilder (Datei-Auswahl, Drag&Drop oder Paste) und hängt sie an die

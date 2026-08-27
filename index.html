@@ -322,6 +322,21 @@
   .shot-filelabel{color:var(--green); text-decoration:underline; cursor:pointer;}
   .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:12px;}
   .shot-gallery-lg{grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
+  /* Trade-Detailansicht: HTF/LTF/Zusätzlich-Screenshots nebeneinander als Spalten */
+  .trade-detail-shots{display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:18px; align-items:start;}
+  .trade-detail-shot-col .view-label{margin-bottom:8px;}
+  .shot-gallery-col{display:flex; flex-direction:column; gap:10px;}
+  .shot-gallery-col .shot-thumb.lg img{height:170px;}
+  @media (max-width:720px){
+    .trade-detail-shots{grid-template-columns:1fr;}
+  }
+  /* Trade-Detailansicht: Kategorien tabellarisch, eine Zeile pro Kategorie */
+  .trade-detail-cat-table{margin-top:10px;}
+  .trade-detail-cat-table td{vertical-align:top;}
+  .trade-detail-cat-label{width:220px; color:var(--text-faint); font-weight:700; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px; white-space:nowrap;}
+  @media (max-width:720px){
+    .trade-detail-cat-label{width:auto;}
+  }
   .shot-thumb{position:relative; border-radius:9px; overflow:hidden; border:1px solid var(--border);}
   .shot-thumb img{display:block; width:100%; height:160px; object-fit:cover; cursor:zoom-in;}
   .shot-thumb.lg img{height:240px;}
@@ -2183,15 +2198,28 @@ function closeTradeDetail(){
 function renderTradeDetail(t){
   const rDisplay = (t.r===null || t.r===undefined) ? "" : formatR(t.r);
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
-  const shotSections = SHOT_CATEGORIES.map(c=>{
+
+  // Screenshots (HTF / LTF / Zusätzlich) nebeneinander als eigene Spalten anordnen,
+  // statt sie wie zuvor in vollen Reihen untereinander zu stapeln.
+  const shotCols = SHOT_CATEGORIES.map(c=>{
     const arr = (t.screenshots && t.screenshots[c.key]) || [];
     if(!arr.length) return "";
-    return `<div class="view-row">
+    return `<div class="trade-detail-shot-col">
       <div class="view-label">${c.label}</div>
-      <div class="shot-gallery shot-gallery-lg">
+      <div class="shot-gallery-col">
         ${arr.map((src,i)=>`<div class="shot-thumb lg" data-viewshotref="${c.key}:${i}"><img src="${src}"></div>`).join("")}
       </div>
     </div>`;
+  }).join("");
+
+  // Kategorien + zugehörige Tags tabellenartig, Zeile pro Kategorie (statt Spalte pro
+  // Kategorie) — dadurch bleibt es übersichtlich, egal wie viele Kategorien es gibt.
+  const catCols = tradeCategoryColumns(t.area);
+  const catRows = catCols.map(col=>{
+    const values = tradeCategoryCellValues(t, col);
+    if(!values.length) return "";
+    const chips = values.map(v=>`<span class="tag ${v.cls||""}">${escHtml(v.text)}</span>`).join("");
+    return `<tr><td class="trade-detail-cat-label">${escHtml(col.label)}</td><td>${chips}</td></tr>`;
   }).join("");
 
   return `
@@ -2206,11 +2234,6 @@ function renderTradeDetail(t){
     </div>
 
     <div class="panel">
-      <div class="cat-table-standalone">
-        ${tradeCategoryHeaderHtml(t.area)}
-        ${tradeCategoryRowHtml(t)}
-      </div>
-
       <div class="view-row">
         <div class="view-label">Ergebnis</div>
         <div class="view-value">
@@ -2222,7 +2245,11 @@ function renderTradeDetail(t){
       ${t.grundNichtGenommen ? `<div class="view-row"><div class="view-label">Warum nicht genommen?</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.grundNichtGenommen)}</div></div>` : ""}
       ${t.notizen ? `<div class="view-row"><div class="view-label">Notizen</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.notizen)}</div></div>` : ""}
 
-      ${shotSections || `<div style="color:var(--text-faint); font-size:13px;">Keine Screenshots hinterlegt.</div>`}
+      ${shotCols ? `<div class="view-row"><div class="trade-detail-shots">${shotCols}</div></div>` : `<div style="color:var(--text-faint); font-size:13px; margin-bottom:16px;">Keine Screenshots hinterlegt.</div>`}
+
+      ${catRows ? `<div class="view-row"><div class="view-label">Kategorien</div>
+        <table class="breakdown trade-detail-cat-table"><tbody>${catRows}</tbody></table>
+      </div>` : ""}
     </div>
   `;
 }

@@ -281,6 +281,9 @@
   .badge-open{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
   .badge-closed{background:var(--bg-card); color:var(--text-dim); border:1px solid var(--border);}
   .badge-eod-copied{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
+  .badge-session-london{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
+  .badge-session-newyork{background:#2a1e3c; color:#c084fc; border:1px solid #4a3369;}
+  .badge-session-out{background:var(--bg-card); color:var(--text-faint); border:1px solid var(--border);}
   .trade-r{font-family:var(--mono); font-weight:700; font-size:15px; text-align:right;}
   .trade-actions{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
   .empty-state{text-align:center; padding:60px 20px; color:var(--text-dim);}
@@ -949,7 +952,16 @@ const NEWS_FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 // CORS-Proxys als Fallback — deren Verfügbarkeit schwankt (Rate-Limits, Ausfälle,
 // gelegentlich 401/500), daher bewusst mehr als nur ein oder zwei Fallbacks.
 // "transform" wandelt die jeweilige Proxy-Antwort ins rohe Kalender-JSON-Array um.
+// Eigener Proxy-Endpunkt (derselbe Cloud-Run-Dienst wie für Google Drive Sync, siehe
+// GDRIVE_PROXY_URL weiter oben) — zuverlässiger als die öffentlichen Gratis-CORS-Proxys
+// weiter unten, die immer wieder gleichzeitig ausfallen/blockiert werden (401/403/429/
+// Timeouts/tote Domains — alles schon beobachtet). Erfordert einen zusätzlichen "/news"-
+// Endpunkt auf diesem Cloud-Run-Dienst, der serverseitig den Kalender-Feed abruft (dort
+// gibt es kein CORS-Problem) und mit CORS-Freigabe zurückgibt.
+const NEWS_OWN_PROXY_URL = GDRIVE_PROXY_URL + "/news";
+
 const NEWS_FEED_SOURCES = [
+  { url: NEWS_OWN_PROXY_URL, headers: { "X-Journal-Key": GDRIVE_PROXY_KEY } },
   { url: NEWS_FEED_URL },
   {
     url: "https://api.allorigins.win/get?url=" + encodeURIComponent(NEWS_FEED_URL),
@@ -965,11 +977,11 @@ const NEWS_FEED_SOURCES = [
 // Pro Quelle nicht ewig hängen bleiben (manche tote/überlastete Proxys antworten gar
 // nicht) — nach 8 Sekunden abbrechen und zur nächsten Quelle springen.
 const NEWS_FETCH_TIMEOUT_MS = 8000;
-async function fetchWithTimeout(url, ms){
+async function fetchWithTimeout(url, ms, headers){
   const controller = new AbortController();
   const timer = setTimeout(()=> controller.abort(), ms);
   try{
-    return await fetch(url, { method:"GET", signal: controller.signal });
+    return await fetch(url, { method:"GET", signal: controller.signal, headers: headers || undefined });
   }finally{
     clearTimeout(timer);
   }
@@ -996,7 +1008,7 @@ async function fetchNewsRaw(){
   let lastErr = null;
   for(const source of NEWS_FEED_SOURCES){
     try{
-      const res = await fetchWithTimeout(source.url, NEWS_FETCH_TIMEOUT_MS);
+      const res = await fetchWithTimeout(source.url, NEWS_FETCH_TIMEOUT_MS, source.headers);
       if(!res.ok) throw new Error("Antwort " + res.status);
       const data = await res.json();
       const raw = source.transform ? source.transform(data) : data;
@@ -1487,6 +1499,24 @@ function render(){
    Begrüßung, Live-Datum/Uhrzeit und der Cloud-Status auf einen Blick, direkt
    beim Öffnen des Journals — statt den Drive-Status im Bericht suchen zu müssen.
    ========================================================================= */
+// Grobe Näherung der Handelssessions anhand der UTC-Uhrzeit (DST wird bewusst nicht
+// exakt nachgebildet, reicht für eine Orientierungsanzeige auf der Startseite).
+// Bei Überlappung (London + New York gleichzeitig) hat New York Vorrang, da dort meist
+// das höhere Volumen liegt.
+function getCurrentTradingSession(){
+  const h = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
+  const inLondon = h >= 7 && h < 16;
+  const inNewYork = h >= 12 && h < 21;
+  if(inNewYork) return { label:"New York", cls:"badge-session-newyork" };
+  if(inLondon) return { label:"London", cls:"badge-session-london" };
+  return { label:"Out of Session", cls:"badge-session-out" };
+}
+
+function renderSessionBadge(){
+  const s = getCurrentTradingSession();
+  return `<span class="badge ${s.cls}" id="sessionBadge">${s.label}</span>`;
+}
+
 function formatLiveDateTime(){
   const d = new Date();
   const weekday = d.toLocaleDateString("de-DE", { weekday:"long" });
@@ -1523,7 +1553,14 @@ function startStartClock(){
   stopStartClock();
   startClockInterval = setInterval(()=>{
     const el = document.getElementById("liveClock");
-    if(el) el.textContent = formatLiveDateTime(); else stopStartClock();
+    if(!el){ stopStartClock(); return; }
+    el.textContent = formatLiveDateTime();
+    const badgeEl = document.getElementById("sessionBadge");
+    if(badgeEl){
+      const s = getCurrentTradingSession();
+      badgeEl.textContent = s.label;
+      badgeEl.className = "badge " + s.cls;
+    }
   }, 1000);
 }
 
@@ -1546,7 +1583,10 @@ function renderStart(){
     <div class="start-hero">
       <div class="page-head">
         <h1>Servus Clemens — heute schon journaliert?</h1>
-        <p id="liveClock">${formatLiveDateTime()}</p>
+        <p style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="liveClock">${formatLiveDateTime()}</span>
+          ${renderSessionBadge()}
+        </p>
       </div>
       ${statusLine}
     </div>

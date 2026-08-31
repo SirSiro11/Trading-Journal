@@ -187,6 +187,11 @@
 
   /* ---------- Trade list ---------- */
   .trade-list{display:flex; flex-direction:column; gap:10px;}
+  /* Verhindert, dass Bearbeiten/Löschen-Buttons bei schmaleren Fenstern (z.B. Laptop
+     statt großem Desktop-Monitor) rechts über den Bildschirmrand hinausragen — die
+     Tabelle bekommt stattdessen bei Bedarf einen horizontalen Scrollbalken. */
+  .trade-list-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  .trade-list-scroll .trade-list{min-width:max-content;}
   .subtab-row{display:flex; gap:4px; background:var(--bg-panel); padding:4px; border-radius:12px; flex-wrap:wrap;}
   .subtab{background:transparent; border:none; color:var(--text-dim); padding:8px 15px; border-radius:9px; font-size:13.5px; font-weight:600; white-space:nowrap;}
   .subtab:hover{color:var(--text);}
@@ -519,6 +524,7 @@
     .cat-col-value{margin-bottom:4px;}
     .cat-col-value.cat-col-empty{display:none;}
     .cat-col-mobile-label{display:inline; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); margin-right:6px;}
+    .trade-list-scroll .trade-list{min-width:0;}
   }
   /* ---------- Dezenter, dynamisch beweglicher Gold-Fade von unten (über der gesamten App) ---------- */
   #ambientGoldGlow{
@@ -1708,7 +1714,7 @@ function renderAreaView(area){
       <button class="btn btn-primary" id="btnAddTrade">+ Trade hinzufügen</button>
     </div>
     <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:14px;">${trades.length} Trade${trades.length===1?"":"s"}</div>
-    <div class="trade-list">${list}</div>
+    <div class="trade-list-scroll"><div class="trade-list">${list}</div></div>
     ${area==="eod" ? eodReasonsSectionHtml() : ""}
     ${calendarHtml(area)}
     ${dayDetailHtml(area)}

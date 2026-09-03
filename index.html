@@ -289,12 +289,19 @@
   .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600; white-space:normal; word-break:break-word; min-width:0; text-align:center;}
   .tag.tag-taken{border-color:#1c3c30; color:var(--green);}
   .tag.tag-nottaken{border-color:#3c2222; color:var(--red);}
+  /* Richtung farblich: Long grün, Short rot — schneller zu scannen als lauter graue Pillen */
+  .tag.tag-long{border-color:#1c3c30; color:var(--green); background:rgba(52,211,153,.07);}
+  .tag.tag-short{border-color:#3c2222; color:var(--red); background:rgba(248,113,113,.07);}
   .badge{padding:4px 10px; border-radius:7px; font-size:11.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap;}
   .badge-open{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
   .badge-closed{background:var(--bg-card); color:var(--text-dim); border:1px solid var(--border);}
+  /* Ergebnis in seiner Farbe (TP grün / SL rot / BE amber) statt einheitlich grau */
+  .badge-result-TP{background:var(--green-dim); color:var(--green); border:1px solid #1c3c30;}
+  .badge-result-SL{background:var(--red-dim); color:var(--red); border:1px solid #3c2222;}
+  .badge-result-BE{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
   .badge-eod-copied{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
   .badge-session{background:var(--bg-card); color:var(--text); border:1px solid var(--border-light);}
-  .trade-r{font-family:var(--mono); font-weight:700; font-size:15px; text-align:right;}
+  .trade-r{font-family:var(--mono); font-weight:700; font-size:16px; text-align:right;}
   .trade-actions{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
   .empty-state{text-align:center; padding:60px 20px; color:var(--text-dim);}
   .empty-state .big{font-size:40px; margin-bottom:10px;}
@@ -433,6 +440,25 @@
 
   .section-title{font-size:12px; letter-spacing:1px; color:var(--text-faint); font-weight:700; text-transform:uppercase; margin:28px 0 12px;}
 
+  /* ---------- Startseite: Schnellzugriff + Kennzahlen ---------- */
+  .start-quick{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+  .start-quick .btn{flex:1 1 180px; justify-content:center; padding:13px 16px; font-size:14.5px;}
+  .start-quick .btn-eod{background:#2a2410; color:var(--amber); border-color:#4a3d14;}
+  .start-quick .btn-eod:hover{background:#3a3216;}
+  .start-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:14px;}
+  .start-stat{background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px;}
+  .start-stat .label{font-size:10.5px; letter-spacing:.5px; color:var(--text-faint); font-weight:700; text-transform:uppercase; margin-bottom:6px;}
+  .start-stat .value{font-family:var(--mono); font-size:22px; font-weight:700; line-height:1.1;}
+  .start-stat .sub{color:var(--text-dim); font-size:12px; margin-top:4px;}
+  @media (max-width:640px){
+    .start-quick .btn{flex:1 1 140px; padding:12px 10px; font-size:14px;}
+    .start-stats{grid-template-columns:1fr 1fr 1fr; gap:8px;}
+    .start-stat{padding:10px 10px;}
+    .start-stat .label{font-size:9.5px;}
+    .start-stat .value{font-size:18px;}
+    .start-stat .sub{font-size:11px;}
+  }
+
   /* ---------- News (Startseite) ---------- */
   .panel-news{border-left:3px solid var(--green); background:linear-gradient(180deg, rgba(52,211,153,0.06), rgba(52,211,153,0) 60%);}
   .news-list{display:flex; flex-direction:column; gap:2px;}
@@ -505,6 +531,19 @@
   .strat-modal-content table.strat-table{margin-bottom:14px;}
   .strat-modal-content > *:last-child{margin-bottom:0;}
 
+  /* Eigene Dialoge (Ersatz für prompt/confirm — im App-Design, funktionieren auch im
+     iOS-Homescreen-Modus zuverlässig). Liegen über allen anderen Modals. */
+  .dialog-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:400; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .dialog{width:100%; max-width:420px; background:var(--bg-panel); border:1px solid var(--border-light); border-radius:var(--radius); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,.5); animation:dialogIn .16s ease;}
+  @keyframes dialogIn{ from{opacity:0; transform:translateY(8px) scale(.98);} to{opacity:1; transform:none;} }
+  .dialog h3{margin:0 0 6px; font-size:16.5px;}
+  .dialog p{margin:0 0 14px; color:var(--text-dim); font-size:13.5px; line-height:1.5; white-space:pre-wrap;}
+  .dialog input[type=text]{width:100%; background:var(--bg-card); border:1px solid var(--border-light); color:var(--text); padding:10px 12px; border-radius:9px; font-size:14px;}
+  .dialog input[type=text]:focus{outline:none; border-color:var(--green);}
+  .dialog-check{display:flex; align-items:center; gap:10px; margin-top:12px; font-size:13.5px; color:var(--text); cursor:pointer;}
+  .dialog-check input{width:17px; height:17px; accent-color:var(--green);}
+  .dialog-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:18px;}
+
   .toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
     background:var(--bg-card); border:1px solid var(--border-light); color:var(--text);
@@ -520,16 +559,70 @@
   @media (max-width:640px){
     .two-col{grid-template-columns:1fr;}
     .filter-row{grid-template-columns:1fr;}
-    header.topnav{padding:12px 14px; padding-top:calc(12px + env(safe-area-inset-top)); grid-template-columns:1fr; justify-items:center; row-gap:10px;}
-    .topnav-right{justify-content:center;}
-    main{padding:18px 14px 70px;}
-    .trade-card{display:flex !important; flex-direction:column; align-items:stretch; gap:6px;}
+    /* Kopfzeile: nur noch Marke + Kategorien-Button in EINER Zeile; die Reiter wandern
+       als feste Tab-Leiste an den unteren Bildschirmrand (Daumen-Reichweite, wie bei
+       nativen iPhone-Apps) — dasselbe nav-Element, nur anders positioniert. */
+    /* backdrop-filter würde die Kopfzeile zum Bezugsrahmen für position:fixed machen —
+       die Tab-Leiste hinge dann oben in der Kopfzeile statt am unteren Bildschirmrand. */
+    header.topnav{padding:10px 14px; padding-top:calc(10px + env(safe-area-inset-top)); grid-template-columns:1fr auto; row-gap:0; backdrop-filter:none; background:rgba(10,10,13,.97);}
+    header.topnav nav.tabs{
+      position:fixed; left:0; right:0; bottom:0; z-index:60;
+      display:flex; flex-wrap:nowrap; gap:0; border-radius:0; padding:4px 2px;
+      padding-bottom:calc(4px + env(safe-area-inset-bottom));
+      background:rgba(19,19,25,.96); backdrop-filter:blur(10px); border-top:1px solid var(--border);
+    }
+    header.topnav nav.tabs button{
+      flex:1 1 0; min-width:0; padding:7px 2px; font-size:10.5px; letter-spacing:-.1px; border-radius:8px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    header.topnav nav.tabs .tabs-sep{display:none;}
+    .topnav-right{justify-content:flex-end;}
+    .backup-badge{padding:5px 8px; font-size:11px;}
+    main{padding:16px 12px calc(84px + env(safe-area-inset-bottom));}
+    .toast{bottom:calc(64px + env(safe-area-inset-bottom)); width:calc(100vw - 24px); white-space:normal;}
+    .page-head h1{font-size:22px;}
+    .row-between{margin-bottom:12px;}
+    .subtab{padding:7px 11px; font-size:12.5px;}
+    /* Trade-Karte kompakt: Zeile 1 = Markt · Datum · Ergebnis · R, Zeile 2 = alle Tags als
+       Inline-Chips (ohne Kategorie-Labels — die Detailseite zeigt sie mit Bezeichnung),
+       Zeile 3 = EOD-Verweis + Buttons. Vorher war jede Kategorie eine eigene Zeile und
+       ein einzelner Trade rund 400px hoch. */
+    .trade-card{display:flex !important; flex-wrap:wrap; align-items:center; gap:6px 8px; padding:10px 12px;}
+    .trade-card .trade-market{order:1; font-size:15px;}
+    .trade-card .trade-date-badge{order:2; font-size:12px;}
+    .trade-card > .badge{order:3; margin-left:auto; align-self:center; width:auto;}
+    .trade-card .trade-r{order:4; font-size:15px;}
+    /* Zeilenumbrüche im Flex-Layout: ::before trennt Kopfzeile von den Tags, ::after die
+       Tags von der Button-Zeile (Pseudo-Elemente mit voller Breite und Höhe 0). */
+    .trade-card::before{content:""; flex-basis:100%; height:0; order:5;}
+    .trade-card .cat-col-value{order:6; margin:0; min-height:0; display:inline-flex;}
+    .trade-card .cat-col-value.cat-col-empty{display:none;}
+    .trade-card .cat-col-mobile-label{display:none;}
+    .trade-card .tag{font-size:11px; padding:2px 7px;}
+    .trade-card::after{content:""; flex-basis:100%; height:0; order:7;}
+    .trade-card .eod-slot{order:8;}
+    .trade-card .eod-slot:empty{display:none;}
+    .trade-card .trade-actions{order:9; flex:1 1 auto; justify-content:flex-end; align-items:center; gap:6px;}
+    .trade-card .btn-sm{padding:5px 9px; font-size:12px;}
     .cat-table-header-bar{display:none;}
     .cat-table-row{display:block;}
     .cat-col-value{margin-bottom:4px;}
     .cat-col-value.cat-col-empty{display:none;}
     .cat-col-mobile-label{display:inline; font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--text-faint); margin-right:6px;}
     .trade-list-scroll .trade-list{min-width:0;}
+    .modal{padding:18px 14px;}
+    .modal-backdrop{padding:12px 8px;}
+    .stat-grid{grid-template-columns:1fr 1fr; gap:10px;}
+    .stat-card{padding:14px;}
+    .stat-card .value{font-size:22px;}
+    .mini-stat-row{gap:14px; padding:12px 14px;}
+    .area-toggle button{padding:8px 12px; font-size:12.5px;}
+    .strat-entry-grid{grid-template-columns:1fr 1fr; gap:10px;}
+    .strat-panel{padding:16px 14px;}
+    .lightbox-backdrop{padding:10px;}
+  }
+  @media (max-width:640px) and (max-height:500px){
+    header.topnav nav.tabs{position:static;}
   }
   /* ---------- Dezenter, dynamisch beweglicher Gold-Fade von unten (über der gesamten App) ---------- */
   #ambientGoldGlow{
@@ -637,6 +730,7 @@
 <main id="app"></main>
 
 <div id="modalRoot"></div>
+<div id="dialogRoot"></div>
 <div id="toastRoot"></div>
 
 </div>
@@ -715,6 +809,8 @@ const LS_INSIGHTS = "tj_insights_v1";
 const LS_DAYCONFIRM = "tj_dayconfirm_v1"; // Liste von ISO-Daten, an denen der Tag ohne Trades manuell bestätigt wurde
 const LS_LASTCHANGE = "tj_lastchange_v1"; // Zeitstempel (ms) der letzten Datenänderung
 const LS_LASTBACKUP = "tj_lastbackup_v1"; // Zeitstempel (ms) des letzten JSON-Backups (Export oder Import)
+const LS_DRIVE_SEEN = "tj_driveseen_v1"; // savedAt des zuletzt gesehenen Cloud-Stands (Pull oder eigener Push) — Basis der Konfliktprüfung
+const LS_BERICHT_UI = "tj_berichtui_v1"; // gemerkte Bericht-Einstellungen (Bereiche, Filter, Zeitraum, Gruppierung, Modus)
 const LS_NEWS_CACHE = "tj_newscache_v1"; // { fetchedAt: ms, events: [...] } — Cache für High-Impact-News (siehe NEWS weiter unten)
 
 // Merkt sich, dass sich Daten geändert haben (wird von allen save*()-Funktionen aufgerufen).
@@ -898,70 +994,172 @@ const GDRIVE_PROXY_URL = "https://journalproxy-1078170007474.europe-west3.run.ap
 const GDRIVE_PROXY_KEY = "eSBG3zYoWXvwXRF2Qv5VCRZokk2oaeur";
 
 let gdrivePushTimer = null;
+let gdriveBusy = false;          // verhindert überlappende Pull/Push-Aufrufe
+let gdriveLastPullAt = 0;        // für den Pull bei Rückkehr in die App (visibilitychange)
+const GDRIVE_REPULL_MIN_MS = 60 * 1000;
+
+// Welchen Cloud-Stand (savedAt) hat DIESES Gerät zuletzt gesehen? Ist der Stand in der
+// Cloud beim Push neuer als das, hat zwischenzeitlich ein anderes Gerät geschrieben —
+// dann darf nicht blind überschrieben werden (Konflikt, siehe gdrivePush).
+function getDriveSeenAt(){
+  const v = parseInt(localStorage.getItem(LS_DRIVE_SEEN), 10);
+  if(v) return v;
+  // Gerät, das schon vor Einführung der Konfliktprüfung synchronisiert hat: Zeitpunkt des
+  // letzten erfolgreichen Sync/Backups als Näherung, sonst gäbe es einmalig einen Fehlalarm.
+  return getLastBackupAt() || 0;
+}
+function setDriveSeenAt(ts){ try{ localStorage.setItem(LS_DRIVE_SEEN, String(ts)); }catch(e){} }
+
+async function gdriveFetchRemote(){
+  const res = await fetch(GDRIVE_PROXY_URL, { method:"GET", headers:{ "X-Journal-Key": GDRIVE_PROXY_KEY } });
+  if(res.status === 404) return null; // noch keine Cloud-Datei
+  if(!res.ok) throw new Error("Proxy antwortete mit " + res.status);
+  return await res.json();
+}
+
+// Übernimmt einen Cloud-Stand lokal — OHNE markDataChanged/Auto-Push. Der lokale
+// "letzte Änderung"-Zeitstempel wird auf savedAt der Cloud gesetzt, damit beide Seiten
+// als identisch gelten (vorher löste jeder Pull 4 s später einen sinnlosen Push aus, der
+// savedAt hochzählte und auf allen anderen Geräten wieder einen Pull provozierte).
+function applyRemoteState(remote){
+  STATE.trades = migrateTrades(Array.isArray(remote.trades) ? remote.trades : []);
+  if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
+  if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
+  STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
+  safeSetItem(LS_TRADES, JSON.stringify(STATE.trades));
+  safeSetItem(LS_CONFIG, JSON.stringify(STATE.config));
+  safeSetItem(LS_INSIGHTS, JSON.stringify(STATE.insights));
+  safeSetItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations));
+  const savedAt = remote.savedAt || Date.now();
+  localStorage.setItem(LS_LASTCHANGE, String(savedAt));
+  setDriveSeenAt(savedAt);
+  markBackedUp();
+  if(gdrivePushTimer){ clearTimeout(gdrivePushTimer); gdrivePushTimer = null; }
+}
 
 // Schreibt den aktuellen lokalen Stand über den Proxy nach Google Drive.
-async function gdrivePush(){
+// force=true überspringt die Konfliktprüfung (nur nach ausdrücklicher Nutzerentscheidung).
+async function gdrivePush(force){
+  if(gdriveBusy){ scheduleDriveAutoPush(); return; }
+  gdriveBusy = true;
   STATE.driveStatus = "syncing"; render();
   try{
+    if(!force){
+      // Konfliktprüfung: Hat ein anderes Gerät seit unserem letzten Abgleich geschrieben?
+      const remote = await gdriveFetchRemote();
+      const remoteSavedAt = remote ? (remote.savedAt || 0) : 0;
+      if(remote && remoteSavedAt > getDriveSeenAt()){
+        STATE.driveStatus = "conflict";
+        STATE.driveConflictRemote = remote;
+        STATE.driveError = "";
+        gdriveBusy = false;
+        render();
+        toast("⚠ In der Cloud liegt ein neuerer Stand von einem anderen Gerät — bitte auf der Startseite entscheiden.", null, null, 8000);
+        return;
+      }
+    }
+    const payload = buildBackupPayload();
     const res = await fetch(GDRIVE_PROXY_URL, {
       method: "POST",
       headers: { "X-Journal-Key": GDRIVE_PROXY_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify(buildBackupPayload())
+      body: JSON.stringify(payload)
     });
     if(!res.ok) throw new Error("Proxy antwortete mit " + res.status);
+    setDriveSeenAt(payload.savedAt);
     markBackedUp();
     STATE.driveLastSyncAt = Date.now();
     STATE.driveStatus = "connected";
     STATE.driveError = "";
+    STATE.driveConflictRemote = null;
   }catch(err){
     STATE.driveStatus = "error";
     STATE.driveError = err.message || String(err);
   }
+  gdriveBusy = false;
   render();
 }
 
 // Gleicht lokal und Cloud ab: neuerer Stand gewinnt (Vergleich über "savedAt" im
 // Backup bzw. den lokalen "letzte Änderung"-Zeitstempel).
 async function gdrivePull(){
+  if(gdriveBusy) return;
+  gdriveBusy = true;
   STATE.driveStatus = "syncing"; render();
   try{
-    const res = await fetch(GDRIVE_PROXY_URL, { method: "GET", headers: { "X-Journal-Key": GDRIVE_PROXY_KEY } });
-    if(res.status === 404){
-      await gdrivePush(); // noch keine Cloud-Datei -> aktuellen Stand als erste Version anlegen
+    const remote = await gdriveFetchRemote();
+    gdriveLastPullAt = Date.now();
+    if(!remote){
+      gdriveBusy = false;
+      await gdrivePush(true); // noch keine Cloud-Datei -> aktuellen Stand als erste Version anlegen
       return;
     }
-    if(!res.ok) throw new Error("Proxy antwortete mit " + res.status);
-    const remote = await res.json();
     const remoteSavedAt = remote.savedAt || 0;
     const localChangedAt = getLastChangeAt();
     if(remoteSavedAt > localChangedAt){
-      STATE.trades = migrateTrades(Array.isArray(remote.trades) ? remote.trades : []);
-      if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
-      if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
-      STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
-      saveTrades(); saveConfig(); saveInsights(); saveDayConfirmations();
-      markBackedUp();
+      applyRemoteState(remote);
       toast("Neuester Stand geladen.");
     }else if(localChangedAt > remoteSavedAt){
+      // Lokal ist neuer. Wenn wir den Cloud-Stand aber noch nie gesehen haben (frisches Gerät,
+      // z. B. mit Demo-Daten, während die Cloud längst echte Daten hat), ist das ein Konflikt.
+      if(remoteSavedAt > getDriveSeenAt()){
+        STATE.driveStatus = "conflict";
+        STATE.driveConflictRemote = remote;
+        STATE.driveError = "";
+        gdriveBusy = false;
+        render();
+        return;
+      }
+      gdriveBusy = false;
       await gdrivePush(); // lokal neuer -> hochladen (kümmert sich selbst um Status/Render)
       return;
+    }else{
+      setDriveSeenAt(remoteSavedAt);
     }
     STATE.driveLastSyncAt = Date.now();
     STATE.driveStatus = "connected";
     STATE.driveError = "";
+    STATE.driveConflictRemote = null;
   }catch(err){
     STATE.driveStatus = "error";
     STATE.driveError = err.message || String(err);
   }
+  gdriveBusy = false;
   render();
+}
+
+// Konfliktauflösung (Buttons auf der Startseite): Cloud-Stand übernehmen (lokale
+// Änderungen gehen verloren) oder lokalen Stand hochladen (Cloud wird überschrieben).
+async function gdriveResolveConflict(useRemote){
+  if(useRemote){
+    const remote = STATE.driveConflictRemote || await gdriveFetchRemote();
+    if(remote){ applyRemoteState(remote); toast("Cloud-Stand übernommen."); }
+    STATE.driveConflictRemote = null;
+    STATE.driveStatus = "connected";
+    STATE.driveLastSyncAt = Date.now();
+    render();
+  }else{
+    STATE.driveConflictRemote = null;
+    await gdrivePush(true);
+  }
 }
 
 // Wird nach jeder lokalen Änderung aufgerufen (siehe markDataChanged), stößt einen
 // verzögerten Push an, statt bei jeder einzelnen Änderung sofort zu synchronisieren.
 function scheduleDriveAutoPush(){
   if(gdrivePushTimer) clearTimeout(gdrivePushTimer);
-  gdrivePushTimer = setTimeout(()=>{ gdrivePush(); }, 4000);
+  gdrivePushTimer = setTimeout(()=>{ gdrivePushTimer = null; gdrivePush(); }, 4000);
 }
+
+// Kommt die App wieder in den Vordergrund (Tab-Wechsel, iPhone entsperrt), den Cloud-
+// Stand nachladen — sonst laufen zwei parallel offene Geräte auseinander, bis eines
+// neu geladen wird. Nicht, wenn gerade ein eigener Push ansteht (der hat Vorrang).
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState !== "visible") return;
+  if(document.getElementById("appShell").style.display === "none") return; // noch gesperrt
+  if(gdrivePushTimer || gdriveBusy || STATE.driveStatus === "conflict") return;
+  if(Date.now() - gdriveLastPullAt < GDRIVE_REPULL_MIN_MS) return;
+  gdrivePull();
+});
 
 /* =========================================================================
    NEWS — High-Impact-Wirtschaftstermine ("3 Sterne") auf der Startseite
@@ -1104,12 +1302,14 @@ const STATE = {
   insightSearchQuery: "",
   // Standard: nur Live — Backtest-/EOD-Zahlen mit Live in eine Kennzahl zu mischen ist
   // analytisch selten sinnvoll; beide lassen sich weiterhin per Klick dazuschalten.
+  // Alle Bericht-Einstellungen werden gemerkt (siehe loadBerichtUi/saveBerichtUi) und
+  // überleben damit ein Neuladen — vorher waren nach jedem Reload alle Filter weg.
   berichtAreas: { live:true, backtest:false, eod:false },
   berichtFilters: {}, // { markets:[], directions:[], ... }
   berichtDateFrom: "",
   berichtDateTo: "",
   breakdownDim: "markt",
-  berichtFiltersExpanded: true,
+  berichtFiltersExpanded: false, // eingeklappt starten, damit die Kennzahlen sofort sichtbar sind
   berichtCompareMode: "gesamt", // "gesamt" | "vergleich" (nur bei Live+EOD gleichzeitig aktiv)
   notesSearchQuery: "",
   // Datums-Unterkategorien pro Bereich: "alles" | "monat" | "woche" | "heute"
@@ -1128,7 +1328,8 @@ const STATE = {
   noteMergeSelection: [],
   insightMergeMode: false,
   insightMergeSelection: [],
-  driveStatus: "syncing", // syncing|connected|error — kein "disconnected" mehr nötig, Proxy ist immer bereit
+  driveStatus: "syncing", // syncing|connected|error|conflict — kein "disconnected" mehr nötig, Proxy ist immer bereit
+  driveConflictRemote: null, // bei "conflict": der neuere Cloud-Stand, zur Übernahme per Klick
   driveLastSyncAt: null,
   // Direkt aus dem Cache vorbefüllt, damit der erste Render schon etwas zeigt,
   // statt bis zur ersten fetchHighImpactNews()-Antwort leer/ladend zu wirken.
@@ -1138,6 +1339,33 @@ const STATE = {
   newsError: "",
   driveError: ""
 };
+
+// Gemerkte Bericht-Einstellungen wiederherstellen (reine UI-Präferenz, kein Datenbestand —
+// daher ohne markDataChanged und ohne Cloud-Sync).
+function loadBerichtUi(){
+  try{
+    const u = JSON.parse(localStorage.getItem(LS_BERICHT_UI));
+    if(!u || typeof u !== "object") return;
+    if(u.berichtAreas && typeof u.berichtAreas === "object") STATE.berichtAreas = Object.assign({ live:true, backtest:false, eod:false }, u.berichtAreas);
+    if(u.berichtFilters && typeof u.berichtFilters === "object") STATE.berichtFilters = u.berichtFilters;
+    if(typeof u.berichtDateFrom === "string") STATE.berichtDateFrom = u.berichtDateFrom;
+    if(typeof u.berichtDateTo === "string") STATE.berichtDateTo = u.berichtDateTo;
+    if(typeof u.breakdownDim === "string") STATE.breakdownDim = u.breakdownDim;
+    if(typeof u.berichtFiltersExpanded === "boolean") STATE.berichtFiltersExpanded = u.berichtFiltersExpanded;
+    if(u.berichtCompareMode === "gesamt" || u.berichtCompareMode === "vergleich") STATE.berichtCompareMode = u.berichtCompareMode;
+  }catch(e){}
+}
+function saveBerichtUi(){
+  try{
+    localStorage.setItem(LS_BERICHT_UI, JSON.stringify({
+      berichtAreas: STATE.berichtAreas, berichtFilters: STATE.berichtFilters,
+      berichtDateFrom: STATE.berichtDateFrom, berichtDateTo: STATE.berichtDateTo,
+      breakdownDim: STATE.breakdownDim, berichtFiltersExpanded: STATE.berichtFiltersExpanded,
+      berichtCompareMode: STATE.berichtCompareMode
+    }));
+  }catch(e){}
+}
+loadBerichtUi();
 
 // Demo-Trades nur einfügen, wenn wirklich noch nichts gespeichert ist (erster Start).
 // WICHTIG: bewusst NICHT über saveTrades(), da das markDataChanged() auslösen und damit
@@ -1209,6 +1437,63 @@ function toast(msg, undoLabel, undoFn, durationMs){
   root.innerHTML = "";
   root.appendChild(el);
   setTimeout(()=>{ el.remove(); }, durationMs || (undoFn ? 5000 : 2400));
+}
+
+/* =========================================================================
+   DIALOGE — Ersatz für prompt()/confirm()/alert()
+   Liefern ein Promise: uiConfirm -> true/false, uiPrompt -> String oder null
+   (Abbrechen). Enter bestätigt, Escape bricht ab, Klick auf den Hintergrund ebenfalls.
+   ========================================================================= */
+function uiDialog(opts){
+  return new Promise(resolve=>{
+    const root = document.getElementById("dialogRoot");
+    const hasInput = opts.input !== undefined;
+    root.innerHTML = `
+      <div class="dialog-backdrop" id="uiDialogBackdrop">
+        <div class="dialog" role="dialog" aria-modal="true">
+          ${opts.title ? `<h3>${escHtml(opts.title)}</h3>` : ""}
+          ${opts.text ? `<p>${escHtml(opts.text)}</p>` : ""}
+          ${hasInput ? `<input type="text" id="uiDialogInput" value="${escAttr(opts.input||"")}" placeholder="${escAttr(opts.placeholder||"")}" autocomplete="off">` : ""}
+          ${opts.checkbox ? `<label class="dialog-check"><input type="checkbox" id="uiDialogCheck" ${opts.checkboxDefault?"checked":""}> ${escHtml(opts.checkbox)}</label>` : ""}
+          <div class="dialog-actions">
+            <button type="button" class="btn btn-ghost" id="uiDialogCancel">${escHtml(opts.cancelText||"Abbrechen")}</button>
+            <button type="button" class="btn ${opts.danger?"btn-danger":"btn-primary"}" id="uiDialogOk">${escHtml(opts.okText||"OK")}</button>
+          </div>
+        </div>
+      </div>`;
+    const backdrop = document.getElementById("uiDialogBackdrop");
+    const input = document.getElementById("uiDialogInput");
+    const check = document.getElementById("uiDialogCheck");
+    const finish = (ok)=>{
+      document.removeEventListener("keydown", onKey);
+      root.innerHTML = "";
+      if(!ok) return resolve(null);
+      resolve({ value: input ? input.value : "", checked: check ? check.checked : false });
+    };
+    const onKey = (e)=>{
+      if(e.key === "Escape"){ e.preventDefault(); finish(false); }
+      else if(e.key === "Enter" && (!input || document.activeElement === input)){ e.preventDefault(); finish(true); }
+    };
+    document.addEventListener("keydown", onKey);
+    backdrop.addEventListener("click", (e)=>{ if(e.target === backdrop) finish(false); });
+    document.getElementById("uiDialogCancel").addEventListener("click", ()=> finish(false));
+    document.getElementById("uiDialogOk").addEventListener("click", ()=> finish(true));
+    setTimeout(()=>{ if(input){ input.focus(); input.select(); } else document.getElementById("uiDialogOk").focus(); }, 30);
+  });
+}
+async function uiConfirm(text, opts){
+  opts = opts || {};
+  const r = await uiDialog({ title: opts.title, text, okText: opts.okText || "Ja", cancelText: opts.cancelText || "Abbrechen", danger: !!opts.danger });
+  return !!r;
+}
+async function uiPrompt(text, defaultValue, opts){
+  opts = opts || {};
+  const r = await uiDialog({ title: opts.title, text, input: defaultValue || "", placeholder: opts.placeholder, okText: opts.okText || "Übernehmen" });
+  return r ? r.value : null;
+}
+function uiAlert(text, opts){
+  opts = opts || {};
+  return uiDialog({ title: opts.title, text, okText: "OK", cancelText: "Schließen" });
 }
 
 /* =========================================================================
@@ -1322,12 +1607,12 @@ function wireSettingsModal(){
   document.getElementById("settingsCloseBtn").addEventListener("click", closeSettingsModal);
   document.getElementById("settingsDoneBtn").addEventListener("click", closeSettingsModal);
 
-  document.getElementById("addNewCategoryBtn").addEventListener("click", ()=>{
-    const name = prompt('Name der neuen Kategorie (z. B. "Marktphase"):');
-    if(!name) return;
-    const label = name.trim();
+  document.getElementById("addNewCategoryBtn").addEventListener("click", async ()=>{
+    const r = await uiDialog({ title:"Neue Kategorie erstellen", text:"Erscheint automatisch im Formular, in den Übersichten und im Bericht.", input:"", placeholder:'z. B. "Marktphase"', checkbox:"Mehrfachauswahl möglich (wie bei Kriterien)", okText:"Erstellen" });
+    if(!r) return;
+    const label = r.value.trim();
     if(!label) return;
-    const multi = confirm(`Soll bei "${label}" eine Mehrfachauswahl möglich sein (wie bei Kriterien)?\n\nOK = Ja, mehrere Werte gleichzeitig wählbar.\nAbbrechen = Nein, nur ein Wert auswählbar.`);
+    const multi = r.checked;
     const key = slugifyCategoryKey(label);
     STATE.config.customCategories = STATE.config.customCategories || [];
     STATE.config.customCategories.push({ key, label, multi });
@@ -1340,11 +1625,11 @@ function wireSettingsModal(){
   // sowohl für die fest eingebauten Kategorien (Richtung, Session, ...) als auch für
   // frei erstellte. Wirkt sich sofort auf Formular, Übersicht und Detailseite aus.
   document.querySelectorAll("[data-editcatname]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const key = btn.dataset.editcatname;
       const isCustom = btn.dataset.iscustomcat === "true";
       const current = btn.dataset.currentlabel;
-      const input = prompt("Kategorie-Überschrift umbenennen:", current);
+      const input = await uiPrompt("Neue Überschrift für diese Kategorie:", current, { title:"Kategorie umbenennen" });
       if(input === null) return;
       const newLabel = input.trim();
       if(!newLabel || newLabel === current) return;
@@ -1361,10 +1646,10 @@ function wireSettingsModal(){
   });
 
   document.querySelectorAll("[data-delcustomcat]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const key = btn.dataset.delcustomcat;
       const label = btn.dataset.catlabel;
-      if(!confirm(`Kategorie "${label}" komplett löschen? Sie verschwindet dadurch aus allen Formularen, Übersichten und bestehenden Trades — das kann nicht rückgängig gemacht werden.`)) return;
+      if(!await uiConfirm(`Sie verschwindet dadurch aus allen Formularen, Übersichten und bestehenden Trades — das kann nicht rückgängig gemacht werden.`, { title:`Kategorie „${label}“ löschen?`, okText:"Löschen", danger:true })) return;
       STATE.config.customCategories = (STATE.config.customCategories||[]).filter(c=>c.key!==key);
       delete STATE.config["custom_"+key];
       STATE.trades.forEach(t=>{
@@ -1377,10 +1662,10 @@ function wireSettingsModal(){
   });
 
   document.querySelectorAll("[data-addcat]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const cfgKey = btn.dataset.addcat;
       const label = btn.dataset.catlabel;
-      const val = prompt(`Neuen Wert für "${label}" hinzufügen:`);
+      const val = await uiPrompt(`Neuer Wert für „${label}“:`, "", { title:"Wert hinzufügen", okText:"Hinzufügen" });
       if(!val) return;
       const v = val.trim();
       if(!v) return;
@@ -1393,14 +1678,14 @@ function wireSettingsModal(){
   });
 
   document.querySelectorAll(".market-chip-edit[data-cat]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const cfgKey = btn.dataset.cat;
       const field = btn.dataset.catfield;
       const multi = btn.dataset.catmulti === "true";
       const label = btn.dataset.catlabel;
       const oldVal = btn.dataset.value;
       const customKey = btn.dataset.customkey || null;
-      const input = prompt(`"${label}" umbenennen:`, oldVal);
+      const input = await uiPrompt(`Neuer Name — alle bestehenden Trades werden automatisch mit umbenannt.`, oldVal, { title:`„${label}“: Wert umbenennen` });
       if(input === null) return;
       const newVal = input.trim();
       if(!newVal || newVal === oldVal) return;
@@ -1440,7 +1725,7 @@ function wireSettingsModal(){
   });
 
   document.querySelectorAll(".market-chip-remove[data-cat]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const cfgKey = btn.dataset.cat;
       const field = btn.dataset.catfield;
       const multi = btn.dataset.catmulti === "true";
@@ -1452,9 +1737,9 @@ function wireSettingsModal(){
         return cv === val;
       });
       const msg = inUse
-        ? `"${val}" wird noch in bestehenden Trades verwendet. Trotzdem aus der Auswahlliste entfernen? (Bestehende Trades behalten den Wert, er ist danach nur nicht mehr neu auswählbar.)`
-        : `"${val}" aus der Auswahlliste entfernen?`;
-      if(!confirm(msg)) return;
+        ? `Wird noch in bestehenden Trades verwendet. Bestehende Trades behalten den Wert, er ist danach nur nicht mehr neu auswählbar.`
+        : `Der Wert wird aus der Auswahlliste entfernt.`;
+      if(!await uiConfirm(msg, { title:`„${val}“ entfernen?`, okText:"Entfernen", danger:true })) return;
       STATE.config[cfgKey] = STATE.config[cfgKey].filter(x=>x!==val);
       saveConfig();
       renderSettingsModal();
@@ -1520,7 +1805,7 @@ function render(){
     startStartClock();
   }else{
     stopStartClock();
-    if(STATE.view === "bericht"){ app.innerHTML = renderBericht(); wireBericht(); renderCharts(); }
+    if(STATE.view === "bericht"){ saveBerichtUi(); app.innerHTML = renderBericht(); wireBericht(); renderCharts(); }
     else if(STATE.view === "erkenntnisse"){ app.innerHTML = renderErkenntnisse(); wireErkenntnisse(); }
     else if(STATE.view === "strategie"){ app.innerHTML = renderStrategie(); wireStrategie(); }
     else{ app.innerHTML = renderAreaView(STATE.view); wireAreaView(STATE.view); }
@@ -1615,6 +1900,47 @@ function startStartClock(){
   }, 1000);
 }
 
+// Kompakte Live-Kennzahlen für die Startseite: aktuelle Woche und aktueller Monat
+// (nur Bereich Live, nur Trades mit Ergebnis — offene werden separat gezählt).
+function startPeriodStats(filter){
+  const trades = STATE.trades.filter(t=> t.area==="live" && dateMatchesFilter(t.date, filter));
+  const closed = trades.filter(t=> t.r!==null && t.r!==undefined);
+  const sum = closed.reduce((a,t)=>a+t.r, 0);
+  const wins = closed.filter(t=>t.r>0).length, losses = closed.filter(t=>t.r<0).length;
+  return { count:trades.length, closed:closed.length, open:trades.length-closed.length, sum, wins, losses, winrate:(wins+losses)?Math.round(wins/(wins+losses)*100):null };
+}
+// Aktuelle Serie über die letzten geschlossenen Live-Trades (z. B. "3 Gewinner in Folge").
+function startStreak(){
+  const closed = STATE.trades.filter(t=> t.area==="live" && t.r!==null && t.r!==undefined && t.r!==0)
+    .sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+  if(!closed.length) return null;
+  const sign = closed[0].r > 0;
+  let n = 0;
+  for(const t of closed){ if((t.r>0)===sign) n++; else break; }
+  return { n, win:sign };
+}
+function renderStartStats(){
+  const w = startPeriodStats("woche"), m = startPeriodStats("monat"), streak = startStreak();
+  const rCls = v => v>0?"pos":(v<0?"neg":"");
+  return `<div class="start-stats">
+    <div class="start-stat">
+      <div class="label">Diese Woche · Live</div>
+      <div class="value ${rCls(w.sum)}">${w.closed ? formatR(w.sum) : "—"}</div>
+      <div class="sub">${w.count} Trade${w.count===1?"":"s"}${w.open?` · ${w.open} offen`:""}${w.winrate!==null?` · ${w.winrate}% Treffer`:""}</div>
+    </div>
+    <div class="start-stat">
+      <div class="label">Dieser Monat · Live</div>
+      <div class="value ${rCls(m.sum)}">${m.closed ? formatR(m.sum) : "—"}</div>
+      <div class="sub">${m.count} Trade${m.count===1?"":"s"}${m.open?` · ${m.open} offen`:""}${m.winrate!==null?` · ${m.winrate}% Treffer`:""}</div>
+    </div>
+    <div class="start-stat">
+      <div class="label">Aktuelle Serie</div>
+      <div class="value ${streak ? (streak.win?"pos":"neg") : ""}">${streak ? streak.n : "—"}</div>
+      <div class="sub">${streak ? (streak.win ? "Gewinner" : "Verlierer") + " in Folge" : "noch kein Ergebnis"}</div>
+    </div>
+  </div>`;
+}
+
 function renderStart(){
   const count = journaledTodayCount();
   const confirmed = isTodayConfirmed();
@@ -1640,6 +1966,12 @@ function renderStart(){
         </p>
       </div>
       ${statusLine}
+      <div class="start-quick">
+        <button type="button" class="btn btn-primary" id="quickAddLiveBtn">+ Live-Trade</button>
+        <button type="button" class="btn btn-eod" id="quickAddEodBtn">+ EOD-Eintrag</button>
+        <button type="button" class="btn" id="quickAddInsightBtn">+ Erkenntnis</button>
+      </div>
+      ${renderStartStats()}
     </div>
 
     ${renderNewsPanel()}
@@ -1648,6 +1980,13 @@ function renderStart(){
       <div class="section-title" style="margin-top:0;">☁ Google Drive Sync</div>
       ${STATE.driveStatus === "syncing" ? `
         <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Synchronisiere …</p>
+      ` : STATE.driveStatus === "conflict" ? `
+        <p style="color:var(--amber); font-size:13.5px; margin:0 0 6px;">⚠ Konflikt: In der Cloud liegt ein neuerer Stand von einem anderen Gerät (${formatBackupTimestamp(STATE.driveConflictRemote && STATE.driveConflictRemote.savedAt)}), hier gibt es aber ebenfalls ungesicherte Änderungen.</p>
+        <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 12px;">Cloud: ${STATE.driveConflictRemote && Array.isArray(STATE.driveConflictRemote.trades) ? STATE.driveConflictRemote.trades.length : "?"} Trades · Hier: ${STATE.trades.length} Trades. Nichts wurde überschrieben — bitte entscheiden:</p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="gdriveUseRemoteBtn">Cloud-Stand übernehmen</button>
+          <button class="btn btn-danger" id="gdriveUseLocalBtn">Lokalen Stand hochladen (Cloud überschreiben)</button>
+        </div>
       ` : STATE.driveStatus === "error" ? `
         <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Fehler bei der Synchronisierung: ${STATE.driveError||""}</p>
         <button class="btn" id="gdriveRetryBtn">Erneut versuchen</button>
@@ -1709,6 +2048,15 @@ function renderNewsPanel(){
 }
 
 function wireStart(){
+  // Schnellzugriff: Formulare direkt von der Startseite aus öffnen (Eintragen ist die
+  // tägliche Hauptaufgabe — vorher brauchte es dafür erst den Wechsel in einen Reiter).
+  const qLive = document.getElementById("quickAddLiveBtn");
+  if(qLive) qLive.addEventListener("click", ()=> openTradeModal("live", null));
+  const qEod = document.getElementById("quickAddEodBtn");
+  if(qEod) qEod.addEventListener("click", ()=> openTradeModal("eod", null));
+  const qIns = document.getElementById("quickAddInsightBtn");
+  if(qIns) qIns.addEventListener("click", ()=> openInsightModal(null));
+
   const dayConfirmBtn = document.getElementById("dayConfirmToggleBtn");
   if(dayConfirmBtn) dayConfirmBtn.addEventListener("click", toggleTodayConfirmed);
 
@@ -1716,6 +2064,16 @@ function wireStart(){
   if(gdriveSyncNowBtn) gdriveSyncNowBtn.addEventListener("click", gdrivePull);
   const gdriveRetryBtn = document.getElementById("gdriveRetryBtn");
   if(gdriveRetryBtn) gdriveRetryBtn.addEventListener("click", gdrivePull);
+  const useRemoteBtn = document.getElementById("gdriveUseRemoteBtn");
+  if(useRemoteBtn) useRemoteBtn.addEventListener("click", async ()=>{
+    if(!await uiConfirm("Alle Änderungen, die nur auf diesem Gerät gemacht wurden, gehen verloren.", { title:"Cloud-Stand übernehmen?", okText:"Übernehmen" })) return;
+    gdriveResolveConflict(true);
+  });
+  const useLocalBtn = document.getElementById("gdriveUseLocalBtn");
+  if(useLocalBtn) useLocalBtn.addEventListener("click", async ()=>{
+    if(!await uiConfirm("Der neuere Stand in der Cloud (vom anderen Gerät) wird mit dem Stand dieses Geräts überschrieben.", { title:"Cloud überschreiben?", okText:"Überschreiben", danger:true })) return;
+    gdriveResolveConflict(false);
+  });
 
   const newsRefreshBtn = document.getElementById("newsRefreshBtn");
   if(newsRefreshBtn) newsRefreshBtn.addEventListener("click", ()=>fetchHighImpactNews(true));
@@ -1781,7 +2139,7 @@ function dayDetailHtml(area){
     .sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
   return `
     <div class="row-between" style="margin-top:26px; margin-bottom:0;">
-      <div class="section-title" style="margin:0;">Trades am ${date}</div>
+      <div class="section-title" style="margin:0;">Trades am ${formatDateDE(date)}</div>
       <button type="button" class="btn btn-sm btn-ghost" id="closeDayDetail">✕ schließen</button>
     </div>
     <div class="panel">
@@ -1801,7 +2159,7 @@ function dayDetailItemHtml(t){
     return `<div class="day-detail-item" data-viewtrade="${t.id}">
       <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
       <div class="trade-tags" style="flex:1;">${genommenTag}</div>
-      <span class="badge ${t.ergebnis?"badge-closed":"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
+      <span class="badge ${t.ergebnis?resultBadgeClass(t.ergebnis):"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
       <span class="trade-r ${rClass}">${rDisplay}</span>
     </div>`;
   }
@@ -1810,7 +2168,7 @@ function dayDetailItemHtml(t){
   return `<div class="day-detail-item" data-viewtrade="${t.id}">
     <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
     <div class="trade-tags" style="flex:1;">${subtags.map(x=>`<span class="tag">${escHtml(x)}</span>`).join("")}</div>
-    <span class="badge ${t.ergebnis?"badge-closed":"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
+    <span class="badge ${t.ergebnis?resultBadgeClass(t.ergebnis):"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
     <span class="trade-r ${rClass}">${rDisplay}</span>
   </div>`;
 }
@@ -1864,9 +2222,9 @@ function eodReasonsListHtml(items, query){
     const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
     return `<div class="note-item" data-viewtrade="${t.id}">
       <div class="note-item-head">
-        <span class="tag">${t.date||""}</span>
+        <span class="tag">${formatDateDE(t.date)}</span>
         <span class="tag">${escHtml(t.markt||"—")}</span>
-        ${t.ergebnis ? `<span class="badge badge-closed">${t.ergebnis}</span>` : `<span class="badge badge-open">kein Ergebnis</span>`}
+        ${t.ergebnis ? `<span class="badge ${resultBadgeClass(t.ergebnis)}">${t.ergebnis}</span>` : `<span class="badge badge-open">kein Ergebnis</span>`}
         ${rDisplay ? `<span class="trade-r ${rClass}" style="margin-left:auto;">${rDisplay}</span>` : ""}
       </div>
       <div class="note-item-text">${highlightQuery(t.grundNichtGenommen, q)}</div>
@@ -1950,10 +2308,23 @@ function calendarHtml(area){
   `;
 }
 
+// CSS-Klasse für das Ergebnis-Badge (TP grün, SL rot, BE amber, sonst neutral).
+function resultBadgeClass(ergebnis){
+  return (ergebnis==="TP"||ergebnis==="SL"||ergebnis==="BE") ? "badge-closed badge-result-"+ergebnis : "badge-closed";
+}
+
 function formatR(r){
   const n = Number(r);
   const s = n.toFixed(2).replace(".", ",");
   return (n>0?"+":"") + s + "R";
+}
+
+// ISO-Datum (JJJJ-MM-TT, so wird intern gespeichert) -> deutsche Anzeige TT.MM.JJJJ.
+// Einheitlich in Listen, Detailseite, Notizen und Erkenntnissen — vorher stand dort das
+// rohe ISO-Format neben deutsch formatierten Zeitstempeln.
+function formatDateDE(iso){
+  if(!iso || typeof iso !== "string" || iso.length < 10) return iso || "";
+  return iso.slice(8,10) + "." + iso.slice(5,7) + "." + iso.slice(0,4);
 }
 
 function formatBackupTimestamp(ts){
@@ -1972,8 +2343,8 @@ function wireAreaView(area){
     });
   });
   document.querySelectorAll("[data-del]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      if(!confirm("Diesen Trade wirklich löschen?")) return;
+    b.addEventListener("click", async ()=>{
+      if(!await uiConfirm("Das kann nicht rückgängig gemacht werden.", { title:"Diesen Trade löschen?", okText:"Löschen", danger:true })) return;
       const deleted = STATE.trades.find(x=>x.id===b.dataset.del);
       STATE.trades = STATE.trades.filter(x=>x.id!==b.dataset.del);
       // War das ein EOD-Trade, der aus einem Live-Trade kopiert wurde? Dann den
@@ -2138,6 +2509,11 @@ function tradeCategoryCellValues(t, col){
     return raw ? [{text:raw}] : [];
   }
   if(col.key === "level") return t.level ? [{text:"Lvl "+t.level}] : [];
+  if(col.key === "richtung"){
+    if(!t.richtung) return [];
+    const v = String(t.richtung).toLowerCase();
+    return [{ text:t.richtung, cls: v.includes("long") ? "tag-long" : (v.includes("short") ? "tag-short" : "") }];
+  }
   if(col.key === "genommen"){
     if(t.genommen==null) return [];
     return [{ text: t.genommen?"genommen":"nicht genommen", cls: t.genommen?"tag-taken":"tag-nottaken" }];
@@ -2193,7 +2569,7 @@ function tradeListRowHtml(t){
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
   const eodExtra = (t.area==="live" && !t.copiedToEod) ? `<button class="btn btn-sm eod-inline-btn" data-copy-eod="${t.id}">→ EOD</button>`
     : t.copiedToEod ? `<span class="badge badge-eod-copied">✓ EOD</span>` : "";
-  const eodExtraSlot = t.area === "eod" ? "" : `<div>${eodExtra}</div>`;
+  const eodExtraSlot = t.area === "eod" ? "" : `<div class="eod-slot">${eodExtra}</div>`;
   const cols = tradeCategoryColumns(t.area);
   const catCells = cols.map(col=>{
     const values = tradeCategoryCellValues(t, col);
@@ -2203,10 +2579,10 @@ function tradeListRowHtml(t){
 
   return `<div class="trade-card" data-id="${t.id}" data-viewtrade="${t.id}" style="grid-template-columns:${tradeListGrid(t.area)}">
     <div class="trade-market" title="${escAttr(t.markt||"")}">${escHtml(t.markt||"—")}</div>
-    <div class="trade-date-badge">${t.date||""}</div>
+    <div class="trade-date-badge">${formatDateDE(t.date)}</div>
     ${eodExtraSlot}
     ${catCells}
-    <div class="badge ${isOpen?"badge-open":"badge-closed"}">${isOpen?"offen":(t.ergebnis)}</div>
+    <div class="badge ${isOpen?"badge-open":resultBadgeClass(t.ergebnis)}">${isOpen?"offen":(t.ergebnis)}</div>
     <div class="trade-r ${rClass}">${rDisplay}</div>
     <div class="trade-actions">
       <button class="btn btn-sm" data-edit="${t.id}">Bearbeiten</button>
@@ -2358,14 +2734,14 @@ function renderTradeDetail(t){
 
     <div class="page-head" style="margin-top:18px;">
       <h1>${escHtml(t.markt||"Trade")}</h1>
-      <p>${AREA_LABEL[t.area]} · ${t.date||""} · Nur Ansicht</p>
+      <p>${AREA_LABEL[t.area]} · ${formatDateDE(t.date)} · Nur Ansicht</p>
     </div>
 
     <div class="panel">
       <div class="view-row">
         <div class="view-label">Ergebnis</div>
         <div class="view-value">
-          ${t.ergebnis ? `<span class="badge badge-closed">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
+          ${t.ergebnis ? `<span class="badge ${resultBadgeClass(t.ergebnis)}">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
           ${rDisplay ? `<span class="trade-r ${rClass}" style="margin-left:10px;">${rDisplay}</span>` : ""}
         </div>
       </div>
@@ -3328,7 +3704,7 @@ function wireWordCloudEvents(opts){
     });
   });
   document.querySelectorAll(`[data-${mergeConfirmAttr}]`).forEach(btn=>{
-    btn.addEventListener("click", ()=>{
+    btn.addEventListener("click", async ()=>{
       const sel = isNotes ? STATE.noteMergeSelection : STATE.insightMergeSelection;
       if(sel.length<2) return;
       let words = [];
@@ -3344,7 +3720,9 @@ function wireWordCloudEvents(opts){
       });
       words = [...new Set(words)];
       const defaultLabel = words.join(" / ");
-      const label = prompt("Name für die zusammengeführten Begriffe:", defaultLabel) || defaultLabel;
+      const entered = await uiPrompt("Name für die zusammengeführten Begriffe:", defaultLabel, { title:"Begriffe zusammenführen", okText:"Zusammenführen" });
+      if(entered === null) return;
+      const label = entered.trim() || defaultLabel;
       STATE.config[groupsArrayKey].push({ id: uid(), label, words });
       saveConfig();
       if(isNotes){ STATE.noteMergeMode=false; STATE.noteMergeSelection=[]; }
@@ -3402,9 +3780,9 @@ function notesListHtml(trades, query){
     <div class="note-item" data-noteedit="${t.id}">
       <div class="note-item-head">
         <span class="tag">${AREA_LABEL[t.area]}</span>
-        <span class="tag">${t.date||""}</span>
+        <span class="tag">${formatDateDE(t.date)}</span>
         <span class="tag">${escHtml(t.markt||"—")}</span>
-        ${t.ergebnis ? `<span class="badge badge-closed">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
+        ${t.ergebnis ? `<span class="badge ${resultBadgeClass(t.ergebnis)}">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
         ${t.r!==null && t.r!==undefined ? `<span class="trade-r ${t.r>0?"pos":(t.r<0?"neg":"")}" style="margin-left:auto;">${formatR(t.r)}</span>` : ""}
       </div>
       <div class="note-item-text">${highlightQuery(t.notizen, q)}</div>
@@ -3930,12 +4308,12 @@ function importJson(e){
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = (ev)=>{
+  reader.onload = async (ev)=>{
     try{
       const data = JSON.parse(ev.target.result);
       if(!Array.isArray(data.trades)) throw new Error("Ungültiges Format");
       const insightCount = Array.isArray(data.insights) ? data.insights.length : 0;
-      if(!confirm(`${data.trades.length} Trades${insightCount?` und ${insightCount} Erkenntnisse`:""} importieren? Das ersetzt deine aktuellen Daten.`)) return;
+      if(!await uiConfirm(`${data.trades.length} Trades${insightCount?` und ${insightCount} Erkenntnisse`:""} importieren? Das ersetzt deine aktuellen Daten.`, { title:"Backup importieren", okText:"Importieren" })) return;
       STATE.trades = migrateTrades(data.trades);
       if(data.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), data.config);
       if(Array.isArray(data.insights)) STATE.insights = data.insights;
@@ -3945,7 +4323,7 @@ function importJson(e){
       render();
       toast("Backup importiert.");
     }catch(err){
-      alert("Import fehlgeschlagen: Datei ist kein gültiges Backup.");
+      uiAlert("Die Datei ist kein gültiges Backup.", { title:"Import fehlgeschlagen" });
     }
   };
   reader.readAsText(file);
@@ -4027,7 +4405,7 @@ function insightListHtml(insights, query){
     <div class="note-item" data-insightedit="${i.id}">
       ${i.titel ? `<div class="note-item-title">${highlightQuery(i.titel, q)}</div>` : ""}
       <div class="note-item-head">
-        <span class="tag">${i.date||""}</span>
+        <span class="tag">${formatDateDE(i.date)}</span>
         ${(i.screenshots&&i.screenshots.length) ? `<span class="tag">${i.screenshots.length} Screenshot${i.screenshots.length===1?"":"s"}</span>` : ""}
         <button type="button" class="btn btn-sm btn-danger" data-insightdel="${i.id}" style="margin-left:auto;">Löschen</button>
       </div>
@@ -4468,9 +4846,9 @@ function wireInsightListClicks(){
     });
   });
   document.querySelectorAll("[data-insightdel]").forEach(btn=>{
-    btn.addEventListener("click",(e)=>{
+    btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
-      if(!confirm("Diese Erkenntnis wirklich löschen?")) return;
+      if(!await uiConfirm("Das kann nicht rückgängig gemacht werden.", { title:"Diese Erkenntnis löschen?", okText:"Löschen", danger:true })) return;
       STATE.insights = STATE.insights.filter(x=>x.id!==btn.dataset.insightdel);
       saveInsights();
       render();
@@ -4734,8 +5112,12 @@ document.getElementById("lockPinInput").focus();
 // Warnt beim Schließen/Verlassen der Seite, falls es Änderungen gibt, die noch in
 // keinem JSON-Backup stecken (Browser zeigt dafür seinen eigenen Standard-Dialog,
 // der Text lässt sich aus Sicherheitsgründen nicht anpassen).
+// Seit dem automatischen Drive-Sync nur noch, wenn tatsächlich etwas verloren ginge:
+// ein Push steht noch aus, läuft gerade, ist fehlgeschlagen oder wartet auf eine
+// Konfliktentscheidung. Nach erfolgreichem Sync keine Warnung mehr.
 window.addEventListener("beforeunload", (e)=>{
-  if(hasUnbackedChanges()){
+  const pushPending = !!gdrivePushTimer || gdriveBusy || STATE.driveStatus === "error" || STATE.driveStatus === "conflict";
+  if(hasUnbackedChanges() && pushPending){
     e.preventDefault();
     e.returnValue = "";
   }

@@ -1941,6 +1941,87 @@ function renderStartStats(){
   </div>`;
 }
 
+/* ---------- Speicherverbrauch (localStorage) ----------
+   Der Browser gibt jeder Seite nur rund 5 MB localStorage. Weil Screenshots als
+   Base64 direkt in den Trades liegen, ist das die einzige echte Grenze der App.
+   Gezählt wird in UTF-16-Einheiten (2 Byte pro Zeichen) — so rechnen Chrome und
+   Safari ihre Quota ab. Die Schaetzung "noch Platz für X Screenshots" nutzt die
+   durchschnittliche Größe der bereits gespeicherten Bilder. */
+const LS_LIMIT_BYTES = 5 * 1024 * 1024;
+const LS_FALLBACK_SHOT_BYTES = 150 * 1024; // Annahme, solange noch kein Bild gespeichert ist
+
+function formatBytes(bytes){
+  if(bytes >= 1024*1024) return (bytes/(1024*1024)).toFixed(2).replace(".", ",") + " MB";
+  return Math.round(bytes/1024).toLocaleString("de-DE") + " KB";
+}
+
+function storageStats(){
+  let totalChars = 0, appChars = 0, shotChars = 0, shotCount = 0;
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      const v = localStorage.getItem(k) || "";
+      const chars = (k ? k.length : 0) + v.length;
+      totalChars += chars;
+      if(k && k.indexOf("tj_") === 0) appChars += chars;
+    }
+  }catch(e){}
+  const addShot = (u)=>{
+    if(typeof u !== "string" || !u) return;
+    if(u.indexOf("data:") === 0){ shotChars += u.length; shotCount++; }
+  };
+  try{
+    (STATE.trades||[]).forEach(t=>{
+      const sc = t.screenshots || {};
+      ["htf","ltf","sonstige"].forEach(cat=>{ (sc[cat]||[]).forEach(addShot); });
+    });
+    (STATE.insights||[]).forEach(i=>{ (i.screenshots||[]).forEach(addShot); });
+  }catch(e){}
+  const usedBytes = totalChars * 2;
+  const shotBytes = shotChars * 2;
+  const freeBytes = Math.max(0, LS_LIMIT_BYTES - usedBytes);
+  const avgShotBytes = shotCount ? Math.round(shotBytes / shotCount) : LS_FALLBACK_SHOT_BYTES;
+  return {
+    usedBytes,
+    appBytes: appChars * 2,
+    shotBytes,
+    shotCount,
+    freeBytes,
+    avgShotBytes,
+    percent: Math.min(100, Math.round(usedBytes / LS_LIMIT_BYTES * 100)),
+    shotsLeft: Math.floor(freeBytes / avgShotBytes)
+  };
+}
+
+function renderStoragePanel(){
+  const st = storageStats();
+  const color = st.percent >= 85 ? "var(--red)" : st.percent >= 60 ? "var(--amber)" : "var(--green)";
+  const shotShare = st.usedBytes ? Math.round(st.shotBytes / st.usedBytes * 100) : 0;
+  const hint = st.percent >= 85
+    ? "Der Speicher wird knapp. Am schnellsten hilft es, alte Screenshots zu entfernen oder statt Uploads externe Bild-Links zu verwenden."
+    : st.shotsLeft <= 5
+      ? "Es passen nur noch wenige Bilder hinein — bei neuen Trades lieber externe Bild-Links nutzen."
+      : "Deine Trade-Daten selbst (Texte, Kategorien, Ergebnisse) brauchen kaum Platz — praktisch der gesamte Verbrauch sind Screenshots.";
+  return `
+    <div class="panel" style="margin-top:14px;">
+      <div class="section-title" style="margin-top:0;">💾 Speicherplatz</div>
+      <div style="height:10px; border-radius:6px; background:rgba(255,255,255,.07); overflow:hidden; margin-bottom:10px;">
+        <div style="height:100%; width:${st.percent}%; background:${color}; border-radius:6px;"></div>
+      </div>
+      <p style="font-size:13.5px; margin:0 0 6px; color:var(--text);">
+        <strong style="color:${color};">${formatBytes(st.usedBytes)}</strong> von ca. ${formatBytes(LS_LIMIT_BYTES)} belegt (${st.percent} %)
+      </p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 6px;">
+        Davon ${formatBytes(st.shotBytes)} Screenshots (${st.shotCount} Bild${st.shotCount===1?"":"er"}, ${shotShare} % des Verbrauchs)${st.shotCount?` · Ø ${formatBytes(st.avgShotBytes)} pro Bild`:""}
+      </p>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 6px;">
+        Frei: ${formatBytes(st.freeBytes)} — reicht noch für ca. <strong>${st.shotsLeft}</strong> weitere Screenshot${st.shotsLeft===1?"":"s"} dieser Größe.
+      </p>
+      <p style="font-size:11.5px; color:var(--text-faint); margin:0;">${hint}</p>
+    </div>
+  `;
+}
+
 function renderStart(){
   const count = journaledTodayCount();
   const confirmed = isTodayConfirmed();
@@ -1995,6 +2076,8 @@ function renderStart(){
         <button class="btn" id="gdriveSyncNowBtn">Jetzt synchronisieren</button>
       `}
     </div>
+
+    ${renderStoragePanel()}
 
     <div style="margin-top:14px; font-size:11px; color:var(--text-faint);">Version ${APP_VERSION}</div>
   `;

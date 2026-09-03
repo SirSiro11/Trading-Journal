@@ -40,6 +40,13 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
+  /* Scrollbalken dunkel/grau statt hellem Standard-Weiß (Vertikal + Horizontal). */
+  html{scrollbar-color:#3a3a42 #15151a; scrollbar-width:thin;}
+  ::-webkit-scrollbar{width:12px; height:12px;}
+  ::-webkit-scrollbar-track{background:#15151a;}
+  ::-webkit-scrollbar-thumb{background:#3a3a42; border-radius:8px; border:2px solid #15151a;}
+  ::-webkit-scrollbar-thumb:hover{background:#4a4a54;}
+  ::-webkit-scrollbar-corner{background:#15151a;}
   body{
     background:var(--bg);
     color:var(--text);
@@ -286,9 +293,7 @@
   .badge-open{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
   .badge-closed{background:var(--bg-card); color:var(--text-dim); border:1px solid var(--border);}
   .badge-eod-copied{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
-  .badge-session-london{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
-  .badge-session-newyork{background:#2a1e3c; color:#c084fc; border:1px solid #4a3369;}
-  .badge-session-out{background:var(--bg-card); color:var(--text-faint); border:1px solid var(--border);}
+  .badge-session{background:var(--bg-card); color:var(--text); border:1px solid var(--border-light);}
   .trade-r{font-family:var(--mono); font-weight:700; font-size:15px; text-align:right;}
   .trade-actions{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
   .empty-state{text-align:center; padding:60px 20px; color:var(--text-dim);}
@@ -505,7 +510,7 @@
     background:var(--bg-card); border:1px solid var(--border-light); color:var(--text);
     padding:12px 20px; border-radius:10px; font-size:14px; z-index:200;
     box-shadow:0 8px 30px rgba(0,0,0,.4);
-    display:flex; align-items:center; gap:14px; white-space:nowrap;
+    display:flex; align-items:center; gap:14px; white-space:normal; max-width:min(92vw, 560px); line-height:1.45;
   }
   .toast-undo{
     background:transparent; border:none; color:var(--green); font-weight:700;
@@ -653,7 +658,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.08.27";
+const APP_VERSION = "2026.09.03";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -773,7 +778,27 @@ function loadTrades(){
   }
   catch(e){ return []; }
 }
-function saveTrades(){ localStorage.setItem(LS_TRADES, JSON.stringify(STATE.trades)); markDataChanged(); }
+// Schreibt einen Wert in den localStorage und fängt den Fall ab, dass der Speicher voll
+// ist (Browser-Limit ~5 MB, wird v. a. durch eingebettete Screenshots erreicht). Ohne
+// diese Absicherung würde setItem eine QuotaExceededError werfen, der Eintrag bliebe nur
+// im Arbeitsspeicher und wäre nach dem nächsten Neuladen weg — obwohl "gespeichert"
+// gemeldet wurde. Gibt true zurück, wenn wirklich geschrieben wurde.
+let storageFullWarned = false;
+function safeSetItem(key, value){
+  try{
+    localStorage.setItem(key, value);
+    storageFullWarned = false;
+    return true;
+  }catch(err){
+    console.error("localStorage-Schreibfehler für " + key, err);
+    if(!storageFullWarned){
+      storageFullWarned = true;
+      toast("⚠ Lokaler Speicher voll — Änderung konnte NICHT gespeichert werden! Bitte Backup exportieren und Screenshots reduzieren (z. B. Bild-URLs statt Uploads).", null, null, 12000);
+    }
+    return false;
+  }
+}
+function saveTrades(){ if(safeSetItem(LS_TRADES, JSON.stringify(STATE.trades))) markDataChanged(); }
 
 function loadConfig(){
   try{
@@ -783,13 +808,13 @@ function loadConfig(){
     return Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), stored);
   }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
 }
-function saveConfig(){ localStorage.setItem(LS_CONFIG, JSON.stringify(STATE.config)); markDataChanged(); }
+function saveConfig(){ if(safeSetItem(LS_CONFIG, JSON.stringify(STATE.config))) markDataChanged(); }
 
 function loadInsights(){
   try{ return JSON.parse(localStorage.getItem(LS_INSIGHTS)) || []; }
   catch(e){ return []; }
 }
-function saveInsights(){ localStorage.setItem(LS_INSIGHTS, JSON.stringify(STATE.insights)); markDataChanged(); }
+function saveInsights(){ if(safeSetItem(LS_INSIGHTS, JSON.stringify(STATE.insights))) markDataChanged(); }
 
 // Tage, die manuell als "journaliert" bestätigt wurden, obwohl kein Trade/keine Erkenntnis
 // eingetragen wurde (z. B. "kein Setup heute, aber bewusst geprüft"). Liste von ISO-Daten.
@@ -799,7 +824,7 @@ function loadDayConfirmations(){
     return Array.isArray(v) ? v : [];
   }catch(e){ return []; }
 }
-function saveDayConfirmations(){ localStorage.setItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations)); markDataChanged(); }
+function saveDayConfirmations(){ if(safeSetItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations))) markDataChanged(); }
 
 /* =========================================================================
    DEMO-DATEN
@@ -1077,7 +1102,9 @@ const STATE = {
   insightDraft: null,
   insightEditingId: null,
   insightSearchQuery: "",
-  berichtAreas: { live:true, backtest:true, eod:true },
+  // Standard: nur Live — Backtest-/EOD-Zahlen mit Live in eine Kennzahl zu mischen ist
+  // analytisch selten sinnvoll; beide lassen sich weiterhin per Klick dazuschalten.
+  berichtAreas: { live:true, backtest:false, eod:false },
   berichtFilters: {}, // { markets:[], directions:[], ... }
   berichtDateFrom: "",
   berichtDateTo: "",
@@ -1120,7 +1147,7 @@ const STATE = {
 // diese überschreiben, statt sie korrekt herunterzuladen.
 if(STATE.trades.length === 0){
   STATE.trades = buildDemoTrades();
-  localStorage.setItem(LS_TRADES, JSON.stringify(STATE.trades));
+  safeSetItem(LS_TRADES, JSON.stringify(STATE.trades));
 }
 
 function currentYM(){
@@ -1164,7 +1191,7 @@ function uid(){
   return "id-" + Math.random().toString(36).slice(2) + Date.now();
 }
 
-function toast(msg, undoLabel, undoFn){
+function toast(msg, undoLabel, undoFn, durationMs){
   const root = document.getElementById("toastRoot");
   const el = document.createElement("div");
   el.className = "toast";
@@ -1181,7 +1208,7 @@ function toast(msg, undoLabel, undoFn){
   }
   root.innerHTML = "";
   root.appendChild(el);
-  setTimeout(()=>{ el.remove(); }, undoFn ? 5000 : 2400);
+  setTimeout(()=>{ el.remove(); }, durationMs || (undoFn ? 5000 : 2400));
 }
 
 /* =========================================================================
@@ -1505,22 +1532,40 @@ function render(){
    Begrüßung, Live-Datum/Uhrzeit und der Cloud-Status auf einen Blick, direkt
    beim Öffnen des Journals — statt den Drive-Status im Bericht suchen zu müssen.
    ========================================================================= */
-// Grobe Näherung der Handelssessions anhand der UTC-Uhrzeit (DST wird bewusst nicht
-// exakt nachgebildet, reicht für eine Orientierungsanzeige auf der Startseite).
+// Handelssessions anhand der echten Ortszeit in London bzw. New York (Intl berücksichtigt
+// die jeweilige Sommer-/Winterzeit automatisch — vorher war das eine feste UTC-Näherung,
+// die im Winter um eine Stunde daneben lag). Session = 8:00–17:00 Ortszeit, Mo–Fr.
 // Bei Überlappung (London + New York gleichzeitig) hat New York Vorrang, da dort meist
 // das höhere Volumen liegt.
-function getCurrentTradingSession(){
-  const h = new Date().getUTCHours() + new Date().getUTCMinutes()/60;
-  const inLondon = h >= 7 && h < 16;
-  const inNewYork = h >= 12 && h < 21;
-  if(inNewYork) return { label:"New York", cls:"badge-session-newyork" };
-  if(inLondon) return { label:"London", cls:"badge-session-london" };
-  return { label:"Out of Session", cls:"badge-session-out" };
+function localHourIn(timeZone, date){
+  try{
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour:"numeric", minute:"numeric", weekday:"short", hour12:false }).formatToParts(date);
+    const get = type => (parts.find(p=>p.type===type)||{}).value;
+    const hour = parseInt(get("hour"), 10) % 24; // "24" bei Mitternacht in manchen Engines
+    const minute = parseInt(get("minute"), 10) || 0;
+    const weekday = get("weekday") || "";
+    return { h: hour + minute/60, weekend: weekday === "Sat" || weekday === "Sun" };
+  }catch(e){
+    // Fallback ohne Zeitzonen-Unterstützung: alte UTC-Näherung
+    const h = date.getUTCHours() + date.getUTCMinutes()/60;
+    const d = date.getUTCDay();
+    return { h: timeZone === "Europe/London" ? h + 1 : h - 4, weekend: d === 0 || d === 6 };
+  }
+}
+function getCurrentTradingSession(now){
+  const d = now || new Date();
+  const ldn = localHourIn("Europe/London", d);
+  const nyc = localHourIn("America/New_York", d);
+  const inLondon = !ldn.weekend && ldn.h >= 8 && ldn.h < 17;
+  const inNewYork = !nyc.weekend && nyc.h >= 8 && nyc.h < 17;
+  if(inNewYork) return { label:"New York" };
+  if(inLondon) return { label:"London" };
+  return { label:"Out of Session" };
 }
 
 function renderSessionBadge(){
   const s = getCurrentTradingSession();
-  return `<span class="badge ${s.cls}" id="sessionBadge">${s.label}</span>`;
+  return `<span class="badge badge-session" id="sessionBadge">${s.label}</span>`;
 }
 
 function formatLiveDateTime(){
@@ -1565,7 +1610,7 @@ function startStartClock(){
     if(badgeEl){
       const s = getCurrentTradingSession();
       badgeEl.textContent = s.label;
-      badgeEl.className = "badge " + s.cls;
+      badgeEl.className = "badge badge-session";
     }
   }, 1000);
 }
@@ -1589,7 +1634,7 @@ function renderStart(){
     <div class="start-hero">
       <div class="page-head">
         <h1>Servus Clemens — heute schon journaliert?</h1>
-        <p style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <p style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
           <span id="liveClock">${formatLiveDateTime()}</span>
           ${renderSessionBadge()}
         </p>
@@ -2011,8 +2056,11 @@ function wireAreaView(area){
       STATE.eodReasonsQuery = e.target.value;
       const items = STATE.trades.filter(t=>t.area==="eod" && t.genommen===false && t.grundNichtGenommen && t.grundNichtGenommen.trim());
       const container = document.getElementById("eodReasonsListContainer");
-      if(container) container.innerHTML = eodReasonsListHtml(items, STATE.eodReasonsQuery);
-      document.querySelectorAll("[data-viewtrade]").forEach(el=>{
+      if(!container) return;
+      container.innerHTML = eodReasonsListHtml(items, STATE.eodReasonsQuery);
+      // Nur die neu gerenderten Einträge verdrahten — ein seitenweites querySelectorAll
+      // würde den Trade-Karten oben bei jedem Tastendruck einen weiteren Listener anhängen.
+      container.querySelectorAll("[data-viewtrade]").forEach(el=>{
         el.addEventListener("click", (e)=>{
           if(e.target.closest("button")) return;
           const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
@@ -2942,7 +2990,7 @@ function renderBericht(){
 
     ${compareActive ? compareSectionHtml() : `
     <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:16px;">
-      Alle Zahlen unten rechnen über <strong style="color:var(--text)">${filteredTrades.length} Trade${filteredTrades.length===1?"":"s"}</strong>.
+      Alle Zahlen unten rechnen über <strong style="color:var(--text)">${filteredTrades.length} Trade${filteredTrades.length===1?"":"s"}</strong>.${(()=>{ const n = countExcludedEodCopies(); return n ? ` <span style="color:var(--text-faint);">${n} EOD-Kopie${n===1?"":"n"} von Live-Trades ${n===1?"wird":"werden"} nur einmal gezählt.</span>` : ""; })()}
     </div>
 
     <div class="stat-grid">
@@ -3457,9 +3505,23 @@ function matchesBerichtFilters(t){
   return true;
 }
 
+// Sind Live und EOD gleichzeitig aktiv, existiert jeder nach EOD kopierte Live-Trade
+// zweimal (Original + Kopie) und würde in Netto-R, Trefferquote, Equity usw. doppelt
+// zählen. Die EOD-Kopie wird deshalb im Gesamt-Modus ausgelassen, solange ihr
+// Live-Original noch existiert (verwaiste Kopien bleiben drin, sonst ginge ein Trade verloren).
+function isDuplicateEodCopy(t){
+  if(t.area !== "eod" || !t.copiedFromLiveId) return false;
+  return STATE.trades.some(x=> x.id === t.copiedFromLiveId && x.area === "live");
+}
 function getBerichtFilteredTrades(){
   const activeAreas = Object.keys(STATE.berichtAreas).filter(a=>STATE.berichtAreas[a]);
-  return STATE.trades.filter(t=> activeAreas.includes(t.area) && matchesBerichtFilters(t));
+  const dedupe = STATE.berichtAreas.live && STATE.berichtAreas.eod;
+  return STATE.trades.filter(t=> activeAreas.includes(t.area) && matchesBerichtFilters(t) && !(dedupe && isDuplicateEodCopy(t)));
+}
+// Anzahl der im Gesamt-Modus ausgelassenen EOD-Kopien (für den Hinweistext im Bericht).
+function countExcludedEodCopies(){
+  if(!(STATE.berichtAreas.live && STATE.berichtAreas.eod)) return 0;
+  return STATE.trades.filter(t=> isDuplicateEodCopy(t) && matchesBerichtFilters(t)).length;
 }
 
 // Wie getBerichtFilteredTrades, aber auf genau einen Bereich beschränkt — unabhängig vom

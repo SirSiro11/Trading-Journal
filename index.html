@@ -345,6 +345,16 @@
     color:var(--text); font-size:13px; padding:8px 10px;
   }
   .shot-url-input:focus{outline:none; border-color:var(--green);}
+  .shot-url-hint{margin-top:6px; font-size:11px; color:var(--text-faint); line-height:1.45;}
+  /* Ersetzt ein per Link eingebundenes Bild, das nicht geladen werden kann
+     (offline, Link tot, Snapshot bei TradingView entfernt). */
+  .shot-broken{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px; height:160px; padding:10px; text-align:center; text-decoration:none;
+    background:rgba(255,255,255,.03); color:var(--amber); font-size:12px;
+  }
+  .shot-broken.lg{height:240px;}
+  .shot-broken-sub{color:var(--text-faint); font-size:11px; word-break:break-all;}
   .shot-filelabel{color:var(--green); text-decoration:underline; cursor:pointer;}
   .shot-gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:12px;}
   .shot-gallery-lg{grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
@@ -752,7 +762,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.09.03";
+const APP_VERSION = "2026.09.04";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -811,6 +821,7 @@ const LS_LASTCHANGE = "tj_lastchange_v1"; // Zeitstempel (ms) der letzten Daten�
 const LS_LASTBACKUP = "tj_lastbackup_v1"; // Zeitstempel (ms) des letzten JSON-Backups (Export oder Import)
 const LS_DRIVE_SEEN = "tj_driveseen_v1"; // savedAt des zuletzt gesehenen Cloud-Stands (Pull oder eigener Push) — Basis der Konfliktprüfung
 const LS_BERICHT_UI = "tj_berichtui_v1"; // gemerkte Bericht-Einstellungen (Bereiche, Filter, Zeitraum, Gruppierung, Modus)
+const LS_SHOTS = "tj_shots_v1"; // gemeinsamer Bild-Speicher: jedes Screenshot-Bild liegt hier genau EINMAL, Trades/Erkenntnisse verweisen nur darauf
 const LS_NEWS_CACHE = "tj_newscache_v1"; // { fetchedAt: ms, events: [...] } — Cache für High-Impact-News (siehe NEWS weiter unten)
 
 // Merkt sich, dass sich Daten geändert haben (wird von allen save*()-Funktionen aufgerufen).
@@ -867,9 +878,122 @@ function migrateTrades(trades){
   return trades;
 }
 
+/* =========================================================================
+   GEMEINSAMER BILD-SPEICHER (Deduplizierung)
+   Früher stand jedes Screenshot-Bild als Base64 direkt im jeweiligen Trade.
+   Dieselbe Grafik lag dadurch mehrfach im localStorage — vor allem, weil eine
+   EOD-Kopie eines Live-Trades dessen Screenshots komplett mitkopiert. Bei einem
+   Browser-Limit von rund 5 MB war das der größte Verschwender.
+   Jetzt: beim Speichern werden alle Bilder in tj_shots_v1 abgelegt (Schlüssel =
+   Prüfsumme des Bildinhalts, identische Bilder ergeben denselben Schlüssel),
+   in den Trades/Erkenntnissen steht nur noch "shot:<schlüssel>". Beim Laden
+   werden die Verweise wieder zu echten Bilddaten aufgelöst — der Rest des
+   Programms (Anzeige, Bearbeiten, Export, Drive-Sync) arbeitet unverändert mit
+   vollständigen Bilddaten und musste nicht angefasst werden.
+   Der Speicher wird bei jedem Schreiben komplett neu aufgebaut; nicht mehr
+   verwendete Bilder verschwinden dadurch automatisch.
+   ========================================================================= */
+const SHOT_REF_PREFIX = "shot:";
+
+// cyrb53: kurze, schnelle 53-Bit-Prüfsumme. Keine Kryptografie, aber fuer die
+// Wiedererkennung identischer Bilder mehr als ausreichend (zusaetzlich geht die
+// Länge in den Schlüssel ein).
+function shotKey(str){
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for(let i = 0, ch; i < str.length; i++){
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const n = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+  return n.toString(36) + "-" + str.length.toString(36);
+}
+
+// Ruft fn fuer jedes Screenshot-Array auf — Trades haben { htf, ltf, sonstige },
+// Erkenntnisse eine flache Liste.
+function forEachShotArray(list, fn){
+  (list || []).forEach(item=>{
+    if(!item || typeof item !== "object") return;
+    const sc = item.screenshots;
+    if(Array.isArray(sc)) fn(sc);
+    else if(sc && typeof sc === "object"){
+      Object.keys(sc).forEach(k=>{ if(Array.isArray(sc[k])) fn(sc[k]); });
+    }
+  });
+}
+
+// Liefert eine Kopie der Liste, in der alle Bilddaten durch Verweise ersetzt sind;
+// die Bilder selbst landen in store.
+function dedupeShots(list, store){
+  const copy = JSON.parse(JSON.stringify(list || []));
+  forEachShotArray(copy, arr=>{
+    for(let i = 0; i < arr.length; i++){
+      const u = arr[i];
+      if(typeof u === "string" && u.indexOf("data:") === 0){
+        const k = shotKey(u);
+        if(!store[k]) store[k] = u;
+        arr[i] = SHOT_REF_PREFIX + k;
+      }
+    }
+  });
+  return copy;
+}
+
+// Ersetzt Verweise wieder durch die echten Bilddaten (direkt in der Liste).
+function expandShots(list, store){
+  forEachShotArray(list, arr=>{
+    for(let i = arr.length - 1; i >= 0; i--){
+      const u = arr[i];
+      if(typeof u === "string" && u.indexOf(SHOT_REF_PREFIX) === 0){
+        const data = store[u.slice(SHOT_REF_PREFIX.length)];
+        if(data) arr[i] = data;
+        else arr.splice(i, 1); // Bild nicht mehr vorhanden — toten Verweis entfernen
+      }
+    }
+  });
+  return list;
+}
+
+function loadShotStore(){
+  try{ return JSON.parse(localStorage.getItem(LS_SHOTS)) || {}; }
+  catch(e){ return {}; }
+}
+
+// Schreibt Trades, Erkenntnisse und Bild-Speicher gemeinsam — sie gehören
+// zusammen, weil die Verweise sonst ins Leere zeigen würden. Die alten Stände
+// werden vorher entfernt, damit nicht kurzzeitig alter UND neuer Stand ins
+// 5-MB-Kontingent passen müssen. Schlägt ein Schreibvorgang fehl (Speicher
+// voll), wird der vorherige Stand wiederhergestellt.
+function persistLocalData(){
+  const store = {};
+  const trades = dedupeShots(STATE.trades, store);
+  const insights = dedupeShots(STATE.insights, store);
+  const prevShots = localStorage.getItem(LS_SHOTS);
+  const prevTrades = localStorage.getItem(LS_TRADES);
+  const prevInsights = localStorage.getItem(LS_INSIGHTS);
+  try{
+    localStorage.removeItem(LS_SHOTS);
+    localStorage.removeItem(LS_TRADES);
+    localStorage.removeItem(LS_INSIGHTS);
+  }catch(e){}
+  const ok = safeSetItem(LS_SHOTS, JSON.stringify(store))
+          && safeSetItem(LS_TRADES, JSON.stringify(trades))
+          && safeSetItem(LS_INSIGHTS, JSON.stringify(insights));
+  if(!ok){
+    try{
+      if(prevShots !== null) localStorage.setItem(LS_SHOTS, prevShots);
+      if(prevTrades !== null) localStorage.setItem(LS_TRADES, prevTrades);
+      if(prevInsights !== null) localStorage.setItem(LS_INSIGHTS, prevInsights);
+    }catch(e){}
+  }
+  return ok;
+}
+
 function loadTrades(){
   try{
-    const trades = JSON.parse(localStorage.getItem(LS_TRADES)) || [];
+    const trades = expandShots(JSON.parse(localStorage.getItem(LS_TRADES)) || [], loadShotStore());
     return migrateTrades(trades);
   }
   catch(e){ return []; }
@@ -894,7 +1018,7 @@ function safeSetItem(key, value){
     return false;
   }
 }
-function saveTrades(){ if(safeSetItem(LS_TRADES, JSON.stringify(STATE.trades))) markDataChanged(); }
+function saveTrades(){ if(persistLocalData()) markDataChanged(); }
 
 function loadConfig(){
   try{
@@ -907,10 +1031,10 @@ function loadConfig(){
 function saveConfig(){ if(safeSetItem(LS_CONFIG, JSON.stringify(STATE.config))) markDataChanged(); }
 
 function loadInsights(){
-  try{ return JSON.parse(localStorage.getItem(LS_INSIGHTS)) || []; }
+  try{ return expandShots(JSON.parse(localStorage.getItem(LS_INSIGHTS)) || [], loadShotStore()); }
   catch(e){ return []; }
 }
-function saveInsights(){ if(safeSetItem(LS_INSIGHTS, JSON.stringify(STATE.insights))) markDataChanged(); }
+function saveInsights(){ if(persistLocalData()) markDataChanged(); }
 
 // Tage, die manuell als "journaliert" bestätigt wurden, obwohl kein Trade/keine Erkenntnis
 // eingetragen wurde (z. B. "kein Setup heute, aber bewusst geprüft"). Liste von ISO-Daten.
@@ -1026,9 +1150,8 @@ function applyRemoteState(remote){
   if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
   if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
   STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
-  safeSetItem(LS_TRADES, JSON.stringify(STATE.trades));
+  persistLocalData(); // Trades + Erkenntnisse + Bild-Speicher gemeinsam
   safeSetItem(LS_CONFIG, JSON.stringify(STATE.config));
-  safeSetItem(LS_INSIGHTS, JSON.stringify(STATE.insights));
   safeSetItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations));
   const savedAt = remote.savedAt || Date.now();
   localStorage.setItem(LS_LASTCHANGE, String(savedAt));
@@ -1375,8 +1498,20 @@ loadBerichtUi();
 // diese überschreiben, statt sie korrekt herunterzuladen.
 if(STATE.trades.length === 0){
   STATE.trades = buildDemoTrades();
-  safeSetItem(LS_TRADES, JSON.stringify(STATE.trades));
+  persistLocalData();
 }
+
+// Einmalige Umstellung auf den gemeinsamen Bild-Speicher: solange in tj_trades_v1
+// oder tj_insights_v1 noch rohe Bilddaten stehen, wird einmal neu geschrieben —
+// danach liegt jedes Bild nur noch einmal im Speicher. Bewusst OHNE markDataChanged,
+// weil sich inhaltlich nichts ändert und sonst ein unnötiger Drive-Push liefe.
+(function migrateShotStore(){
+  try{
+    const raw = (localStorage.getItem(LS_TRADES) || "") + (localStorage.getItem(LS_INSIGHTS) || "");
+    if(raw.indexOf("data:") === -1) return;
+    persistLocalData();
+  }catch(e){}
+})();
 
 function currentYM(){
   const d = new Date();
@@ -1966,9 +2101,16 @@ function storageStats(){
       if(k && k.indexOf("tj_") === 0) appChars += chars;
     }
   }catch(e){}
+  // Identische Bilder liegen dank des gemeinsamen Bild-Speichers nur EINMAL im
+  // localStorage — deshalb wird hier nach Bildinhalt entdoppelt gezählt.
+  const seen = new Set();
+  let dupCount = 0, dupChars = 0;
   const addShot = (u)=>{
     if(typeof u !== "string" || !u) return;
-    if(u.indexOf("data:") === 0){ shotChars += u.length; shotCount++; }
+    if(u.indexOf("data:") !== 0) return;
+    if(seen.has(u)){ dupCount++; dupChars += u.length; return; }
+    seen.add(u);
+    shotChars += u.length; shotCount++;
   };
   try{
     (STATE.trades||[]).forEach(t=>{
@@ -1989,7 +2131,9 @@ function storageStats(){
     freeBytes,
     avgShotBytes,
     percent: Math.min(100, Math.round(usedBytes / LS_LIMIT_BYTES * 100)),
-    shotsLeft: Math.floor(freeBytes / avgShotBytes)
+    shotsLeft: Math.floor(freeBytes / avgShotBytes),
+    dupCount,
+    dupBytes: dupChars * 2
   };
 }
 
@@ -2017,6 +2161,7 @@ function renderStoragePanel(){
       <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 6px;">
         Frei: ${formatBytes(st.freeBytes)} — reicht noch für ca. <strong>${st.shotsLeft}</strong> weitere Screenshot${st.shotsLeft===1?"":"s"} dieser Größe.
       </p>
+      ${st.dupCount ? `<p style="font-size:12.5px; color:var(--green); margin:0 0 6px;">Mehrfach verwendete Bilder (z. B. Live-Trade und seine EOD-Kopie) werden nur einmal gespeichert — das spart aktuell ${formatBytes(st.dupBytes)} (${st.dupCount} Doppelverwendung${st.dupCount===1?"":"en"}).</p>` : ""}
       <p style="font-size:11.5px; color:var(--text-faint); margin:0;">${hint}</p>
     </div>
   `;
@@ -3026,6 +3171,7 @@ function renderModal(){
           <input type="text" class="shot-url-input" id="f_shoturl_${c.key}" placeholder="…oder Bild-URL einfügen (z. B. TradingView-Snapshot-Link) und Enter drücken">
           <button type="button" class="btn btn-sm" data-add-shot-url="${c.key}">Hinzufügen</button>
         </div>
+        <div class="shot-url-hint">Spart Speicher: ein Link braucht rund 80 Byte statt ~150 KB. TradingView-Links (…/x/ID/) werden automatisch in die direkte Bildadresse umgewandelt.</div>
         ${arr.length ? `
         <div class="shot-gallery">
           ${arr.map((src,i)=>`
@@ -3218,16 +3364,46 @@ function handlePasteEvent(e){
   }
 }
 
+/* Bereinigt eine eingefügte Bild-Adresse.
+   Wichtigster Fall: Ein TradingView-Snapshot-Link der Form
+   https://www.tradingview.com/x/KJFFRVLL/ ist KEINE Bilddatei, sondern eine
+   Webseite mit dem Bild darauf — als <img src> eingetragen bliebe die Kachel leer.
+   Die direkte Bildadresse lautet
+   https://s3.tradingview.com/snapshots/<erster Buchstabe der ID, klein>/<ID>.png
+   Genau das wird hier automatisch umgeschrieben, damit man einfach den Link
+   einfügen kann, den TradingView beim Teilen anbietet. */
+function normalizeShotUrl(url){
+  let u = String(url || "").trim();
+  if(!u) return "";
+  const m = u.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+  if(m){
+    const id = m[1];
+    return "https://s3.tradingview.com/snapshots/" + id.charAt(0).toLowerCase() + "/" + id + ".png";
+  }
+  return u;
+}
+
 // Hängt einen per URL eingefügten Screenshot (z.B. TradingView-Snapshot-Link) direkt als
 // Bild-Vorschau an die Screenshot-Liste der übergebenen Kategorie an. Die URL wird direkt
 // als src gespeichert (kein Download/Umwandeln nötig) — funktioniert mit jedem direkt
 // verlinkbaren Bild (z.B. "Bildadresse kopieren" auf einem TradingView-Snapshot).
 function addShotFromUrl(url, category){
+  const clean = normalizeShotUrl(url);
+  if(!clean) return;
   const cat = category || SHOT_CATEGORIES[0].key;
   if(!STATE.draft.screenshots) STATE.draft.screenshots = { htf:[], ltf:[], sonstige:[] };
   if(!Array.isArray(STATE.draft.screenshots[cat])) STATE.draft.screenshots[cat] = [];
-  STATE.draft.screenshots[cat].push(url);
+  STATE.draft.screenshots[cat].push(clean);
   renderModal();
+}
+
+// Dasselbe für Erkenntnisse (dort gibt es nur eine Screenshot-Liste ohne Kategorien).
+function addInsightShotFromUrl(url){
+  const clean = normalizeShotUrl(url);
+  if(!clean) return;
+  if(!Array.isArray(STATE.insightDraft.screenshots)) STATE.insightDraft.screenshots = [];
+  STATE.insightDraft.screenshots.push(clean);
+  renderInsightModal();
 }
 
 // Verarbeitet mehrere Bilder (Datei-Auswahl, Drag&Drop oder Paste) und hängt sie an die
@@ -5002,6 +5178,11 @@ function renderInsightModal(){
           </div>
         </div>
         <input type="file" id="i_shot" accept="image/*" multiple style="display:none;">
+        <div class="shot-url-row">
+          <input type="text" class="shot-url-input" id="i_shoturl" placeholder="…oder Bild-URL einfügen (z. B. TradingView-Snapshot-Link) und Enter drücken">
+          <button type="button" class="btn btn-sm" id="insightAddShotUrlBtn">Hinzufügen</button>
+        </div>
+        <div class="shot-url-hint">Spart Speicher: ein Link braucht rund 80 Byte statt ~150 KB. TradingView-Links (…/x/ID/) werden automatisch in die direkte Bildadresse umgewandelt.</div>
         ${(d.screenshots&&d.screenshots.length) ? `
         <div class="shot-gallery">
           ${d.screenshots.map((src,i)=>`
@@ -5054,6 +5235,20 @@ function wireInsightModal(){
       if(files.length) handleInsightImageFiles(files);
     });
   }
+  const iUrlInput = document.getElementById("i_shoturl");
+  const iUrlBtn = document.getElementById("insightAddShotUrlBtn");
+  const addInsightUrl = ()=>{
+    if(!iUrlInput) return;
+    const url = (iUrlInput.value||"").trim();
+    if(!url) return;
+    iUrlInput.value = "";
+    addInsightShotFromUrl(url);
+  };
+  if(iUrlBtn) iUrlBtn.addEventListener("click", addInsightUrl);
+  if(iUrlInput) iUrlInput.addEventListener("keydown",(e)=>{
+    if(e.key === "Enter"){ e.preventDefault(); addInsightUrl(); }
+  });
+
   document.addEventListener("paste", handleInsightPasteEvent);
 
   document.querySelectorAll("[data-insightremoveshot]").forEach(btn=>{
@@ -5198,6 +5393,33 @@ document.getElementById("lockPinInput").focus();
 // Seit dem automatischen Drive-Sync nur noch, wenn tatsächlich etwas verloren ginge:
 // ein Push steht noch aus, läuft gerade, ist fehlgeschlagen oder wartet auf eine
 // Konfliktentscheidung. Nach erfolgreichem Sync keine Warnung mehr.
+/* Ein per Link eingebundener Screenshot kann fehlschlagen: kein Netz, Link tot,
+   Snapshot beim Anbieter gelöscht. Statt eines kaputten Bild-Symbols zeigt die
+   Kachel dann einen anklickbaren Hinweis mit der Original-Adresse. error-Events
+   steigen nicht auf, deshalb wird hier in der Capture-Phase gelauscht — so
+   genügt ein einziger Listener für alle Ansichten. */
+document.addEventListener("error", (e)=>{
+  const img = e.target;
+  if(!img || img.tagName !== "IMG") return;
+  const src = img.getAttribute("src") || "";
+  if(!src || src.indexOf("data:") === 0) return; // eingebettete Bilder können nicht fehlen
+  const thumb = img.closest(".shot-thumb");
+  if(!thumb) return;
+  const box = document.createElement("a");
+  box.className = "shot-broken" + (thumb.classList.contains("lg") ? " lg" : "");
+  box.href = src;
+  box.target = "_blank";
+  box.rel = "noopener";
+  box.title = src;
+  const line1 = document.createElement("div");
+  line1.textContent = "⚠ Bild nicht ladbar";
+  const line2 = document.createElement("div");
+  line2.className = "shot-broken-sub";
+  line2.textContent = "Adresse im neuen Tab öffnen";
+  box.appendChild(line1); box.appendChild(line2);
+  img.replaceWith(box);
+}, true);
+
 window.addEventListener("beforeunload", (e)=>{
   const pushPending = !!gdrivePushTimer || gdriveBusy || STATE.driveStatus === "error" || STATE.driveStatus === "conflict";
   if(hasUnbackedChanges() && pushPending){

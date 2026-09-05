@@ -31,6 +31,8 @@
     --red:#f87171;
     --red-dim:#3c2222;
     --amber:#fbbf24;
+    --sess-ldn:#60a5fa;   /* London in der Session-Tagesleiste */
+    --sess-nyc:#34d399;   /* New York in der Session-Tagesleiste */
     --white:#ffffff;
     --radius:14px;
     --radius-sm:9px;
@@ -300,7 +302,25 @@
   .badge-result-SL{background:var(--red-dim); color:var(--red); border:1px solid #3c2222;}
   .badge-result-BE{background:#2a2410; color:var(--amber); border:1px solid #4a3d14;}
   .badge-eod-copied{background:#1c2e3c; color:#60a5fa; border:1px solid #294a63;}
-  .badge-session{background:var(--bg-card); color:var(--text); border:1px solid var(--border-light);}
+  /* Session-Tagesleiste auf der Startseite: der ganze Handelstag (00-24 Uhr Ortszeit
+     dieses Geräts) als Balken, London und New York als farbige Blöcke, die
+     Überlappung heller, dazu ein Marker für die aktuelle Uhrzeit. */
+  .sesstl{margin-top:14px; margin-bottom:16px; max-width:640px;}
+  .sesstl-bar{position:relative; height:26px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border); overflow:hidden;}
+  .sesstl-block{position:absolute; top:0; bottom:0; display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; letter-spacing:.4px; overflow:hidden; white-space:nowrap;}
+  .sesstl-ldn{background:rgba(96,165,250,.22); color:#a9ccfb;}
+  .sesstl-nyc{background:rgba(52,211,153,.22); color:#8fe6c4;}
+  .sesstl-overlap{background:rgba(255,255,255,.07);}
+  .sesstl-weekend .sesstl-block{filter:grayscale(1); opacity:.45;}
+  .sesstl-now{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--amber); box-shadow:0 0 6px rgba(251,191,36,.8);}
+  .sesstl-axis{position:relative; height:14px; margin-top:3px;}
+  .sesstl-axis span{position:absolute; transform:translateX(-50%); font-size:9.5px; color:var(--text-faint); font-family:var(--mono);}
+  .sesstl-cap{margin-top:6px; font-size:12.5px; color:var(--text-dim);}
+  .sesstl-cap b{font-weight:600; color:var(--text);}
+  @media (max-width: 760px){
+    .sesstl{max-width:none;}
+    .sesstl-block{font-size:9px; letter-spacing:0;}
+  }
   .trade-r{font-family:var(--mono); font-weight:700; font-size:16px; text-align:right;}
   .trade-actions{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
   .empty-state{text-align:center; padding:60px 20px; color:var(--text-dim);}
@@ -392,7 +412,6 @@
   }
   .area-toggle button.on{color:#0a0a0d;}
   .area-toggle button[data-area=live].on{background:var(--green); border-color:var(--green);}
-  .area-toggle button[data-area=backtest].on{background:#60a5fa; border-color:#60a5fa;}
   .area-toggle button[data-area=eod].on{background:var(--amber); border-color:var(--amber);}
 
   .equity-card{background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:26px;}
@@ -725,7 +744,6 @@
     <button data-view="start">Start</button>
     <button data-view="live">Live</button>
     <button data-view="eod">EOD</button>
-    <button data-view="backtest">Backtest</button>
     <button data-view="bericht">Bericht</button>
     <button data-view="erkenntnisse">Erkenntnisse</button>
     <span class="tabs-sep"></span>
@@ -762,7 +780,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.09.04";
+const APP_VERSION = "2026.09.05";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -771,7 +789,8 @@ const DEFAULT_CONFIG = {
   entryTypes:   ["CE","SE","Continuation","71er","Limit","Counter","Flip","Engulfing"],
   levels:       ["32","50","71","passiv"],
   trend:        ["Counter","pro"],
-  kriterien:    ["LQ davor","LQ n. davor"],
+  // Die sechs Zonen-Kriterien der Strategie (Mehrfachauswahl pro Trade)
+  kriterien:    ["BOS/ChoCh","IMB","EZ/IND","LQs","GB","LQ-Ziel"],
   invalidierung:["50%","v. Zone","kein B/C","Trendline"],
   timeframes:   ["m1","m2","m5","m15"],
   struktur:     ["Extern","intern"],
@@ -782,17 +801,19 @@ const DEFAULT_CONFIG = {
   // Gruppen zusammengeführter Begriffe: [{id, label, words:[...]}]
   noteWordGroups:    [],
   insightWordGroups: [],
+  // Vorbelegte Werte der Kategorie "Risiko %" (siehe migrateStrategyCategories)
+  custom_risiko: ["1 %","0,5 %"],
   // Frei vom Nutzer erstellte, zusätzliche Kategorien: [{key, label, multi}]
   // Die eigentlichen Auswahlwerte jeder solchen Kategorie liegen unter
   // config["custom_"+key], genau wie bei den fest eingebauten Kategorien oben.
-  customCategories: [],
+  customCategories: [{ key:"risiko", label:"Risiko %", multi:false }],
   // Umbenannte Überschriften für die FEST eingebauten Kategorien (Richtung, Session, ...).
   // Key = das Trade-Feld (z.B. "session"), Wert = der vom Nutzer vergebene neue Name.
   categoryLabelOverrides: {}
 };
 
-const AREA_LABEL  = { live:"Live", backtest:"Backtest", eod:"EOD" };
-const AREA_COLOR  = { live:"#34d399", backtest:"#60a5fa", eod:"#fbbf24" };
+const AREA_LABEL  = { live:"Live", eod:"EOD" };
+const AREA_COLOR  = { live:"#34d399", eod:"#fbbf24" };
 
 // Beschreibt, welche Kategorien im "Kategorien verwalten"-Bereich bearbeitbar sind
 // und in welchem Trade-Feld sie verwendet werden. SL/TP/BE (results) ist bewusst
@@ -845,7 +866,16 @@ function buildBackupPayload(){
 // Bringt Trades aus älteren Speicherständen (localStorage oder importiertes JSON-Backup)
 // auf die aktuelle Struktur. Wird sowohl von loadTrades() als auch von importJson()
 // aufgerufen, damit beide Wege denselben Stand garantieren.
+let backtestRemovedCount = 0; // wie viele Backtest-Einträge zuletzt entfernt wurden
+
 function migrateTrades(trades){
+  // Der Backtest-Bereich wurde entfernt (Version 2026.09.04). Hier — und damit auf
+  // BEIDEN Wegen (lokal laden und Cloud-Stand übernehmen) — fallen solche Einträge
+  // raus, sonst brächte sie der nächste Drive-Pull wieder zurück.
+  const beforeBacktest = trades.length;
+  trades = trades.filter(t=> !t || t.area !== "backtest");
+  backtestRemovedCount = beforeBacktest - trades.length;
+
   trades.forEach(t=>{
     // Ganz altes Einzelbild-Feld "screenshot" (Singular) -> Liste
     if(t.screenshots === undefined && t.screenshot){
@@ -1071,31 +1101,23 @@ function buildDemoTrades(){
 
   return [
     // ---- LIVE ----
-    mk({id:liveCeId, area:"live", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Sauberer CE nach Liquidity-Grab, Ausführung nach Plan.", copiedToEod:true}),
+    mk({id:liveCeId, area:"live", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Sauberer CE nach Liquidity-Grab, Ausführung nach Plan.", copiedToEod:true}),
     mk({area:"live", date:"2026-07-15", richtung:"Short", markt:"GBPUSD", session:"New York", art:"SE", level:"32", trend:"Counter", invalidierung:["v. Zone"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Zu früh eingestiegen, Setup war noch nicht fertig."}),
     mk({area:"live", date:"2026-07-17", richtung:"Long", markt:"XAUUSD", session:"London", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, notizen:"Bestes Setup der Woche, Geduld hat sich ausgezahlt."}),
     mk({area:"live", date:"2026-07-21", richtung:"Short", markt:"DAX", session:"New York", art:"Continuation", level:"50", trend:"pro", zeiteinheit:"m15", struktur:"Extern", ergebnis:"BE", r:0, notizen:"Auf BE nachgezogen, solide Entscheidung."}),
     mk({area:"live", date:"2026-07-24", richtung:"Long", markt:"BTCUSD", session:"Out of Session", art:"Limit", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Gegen den Trend gehandelt, Lehrgeld gezahlt."}),
-    mk({area:"live", date:"2026-07-29", richtung:"Long", markt:"GBPUSD", session:"London", art:"CE", level:"32", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Nach Plan, Einstieg etwas spät aber ok."}),
+    mk({area:"live", date:"2026-07-29", richtung:"Long", markt:"GBPUSD", session:"London", art:"CE", level:"32", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Nach Plan, Einstieg etwas spät aber ok."}),
     mk({area:"live", date:"2026-08-04", richtung:"Short", markt:"XAUUSD", session:"New York", art:"Flip", level:"50", trend:"Counter", invalidierung:["kein B/C"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"B/C hat gefehlt, trotzdem genommen — Fehler."}),
-    mk({area:"live", date:"2026-08-06", richtung:"Long", markt:"DAX", session:"London", art:"Counter", level:"71", trend:"pro", kriterien:["LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2.5, notizen:"Gutes Reversal-Setup, Timing hat gepasst."}),
-    mk({area:"live", date:"2026-08-12", richtung:"Long", markt:"XAUUSD", session:"New York", art:"CE", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", notizen:"Noch offen, laufe mit Teilgewinn."}),
+    mk({area:"live", date:"2026-08-06", richtung:"Long", markt:"DAX", session:"London", art:"Counter", level:"71", trend:"pro", kriterien:["BOS/ChoCh","EZ/IND","GB","LQ-Ziel"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2.5, notizen:"Gutes Reversal-Setup, Timing hat gepasst."}),
+    mk({area:"live", date:"2026-08-12", richtung:"Long", markt:"XAUUSD", session:"New York", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", notizen:"Noch offen, laufe mit Teilgewinn."}),
     mk({id:liveSeId, area:"live", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"intern", ergebnis:"TP", r:1.5, notizen:"Kleiner sauberer Trade zum Wochenausklang.", copiedToEod:true}),
 
-    // ---- BACKTEST ----
-    mk({area:"backtest", date:"2026-07-16", richtung:"Long", markt:"XAUUSD", session:"London", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, notizen:"Backtest: 71er-Setup funktioniert zuverlässig in London."}),
-    mk({area:"backtest", date:"2026-07-23", richtung:"Short", markt:"DAX", session:"New York", art:"CE", level:"50", trend:"Counter", invalidierung:["v. Zone"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Gegentrend-CE zu riskant ohne zusätzliche Bestätigung."}),
-    mk({area:"backtest", date:"2026-07-30", richtung:"Long", markt:"GBPUSD", session:"London", art:"Continuation", level:"32", trend:"pro", kriterien:["LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Continuation nach Pullback, sauber."}),
-    mk({area:"backtest", date:"2026-08-05", richtung:"Short", markt:"BTCUSD", session:"Out of Session", art:"Flip", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Flip zu früh erkannt, Struktur nicht bestätigt."}),
-    mk({area:"backtest", date:"2026-08-08", richtung:"Long", markt:"XAUUSD", session:"New York", art:"Limit", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Limit-Entry am Level hat gehalten."}),
-    mk({area:"backtest", date:"2026-08-13", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["kein B/C"], zeiteinheit:"m5", struktur:"intern", ergebnis:"BE", r:0, notizen:"Auf BE rausgenommen, B/C hat gefehlt."}),
-
     // ---- EOD ----
-    mk({area:"eod", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveCeId}),
+    mk({area:"eod", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveCeId}),
     mk({area:"eod", date:"2026-07-18", richtung:"Short", markt:"BTCUSD", session:"Out of Session", art:"Flip", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, genommen:false, grundNichtGenommen:"News-Risiko, Setup bewusst abgewartet."}),
-    mk({area:"eod", date:"2026-07-22", richtung:"Long", markt:"DAX", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["LQ n. davor"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"TP", r:2.5, genommen:false, grundNichtGenommen:"Zu spät gesehen, Zug war schon fast durch."}),
+    mk({area:"eod", date:"2026-07-22", richtung:"Long", markt:"DAX", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["BOS/ChoCh","EZ/IND","GB","LQ-Ziel"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"TP", r:2.5, genommen:false, grundNichtGenommen:"Zu spät gesehen, Zug war schon fast durch."}),
     mk({area:"eod", date:"2026-07-28", richtung:"Short", markt:"XAUUSD", session:"London", art:"Continuation", level:"50", trend:"Counter", zeiteinheit:"m5", struktur:"Extern", ergebnis:"SL", r:-1, genommen:true, notizen:"Sauber genommen, hat einfach nicht funktioniert."}),
-    mk({area:"eod", date:"2026-08-01", richtung:"Long", markt:"GBPUSD", session:"New York", art:"CE", level:"32", trend:"pro", kriterien:["LQ davor"], zeiteinheit:"m5", struktur:"intern", ergebnis:"TP", r:1.5, genommen:false, grundNichtGenommen:"Unsicher wegen anstehender News, ausgelassen."}),
+    mk({area:"eod", date:"2026-08-01", richtung:"Long", markt:"GBPUSD", session:"New York", art:"CE", level:"32", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"intern", ergebnis:"TP", r:1.5, genommen:false, grundNichtGenommen:"Unsicher wegen anstehender News, ausgelassen."}),
     mk({area:"eod", date:"2026-08-07", richtung:"Short", markt:"DAX", session:"London", art:"SE", level:"71", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"BE", r:0, genommen:true, notizen:"Auf BE rausgenommen."}),
     mk({area:"eod", date:"2026-08-11", richtung:"Long", markt:"XAUUSD", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, genommen:false, grundNichtGenommen:"Setup kam nachts, verpasst."}),
     mk({area:"eod", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"intern", ergebnis:"TP", r:1.5, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveSeId}),
@@ -1150,6 +1172,7 @@ function applyRemoteState(remote){
   if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
   if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
   STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
+  const cloudHadBacktest = backtestRemovedCount > 0;
   persistLocalData(); // Trades + Erkenntnisse + Bild-Speicher gemeinsam
   safeSetItem(LS_CONFIG, JSON.stringify(STATE.config));
   safeSetItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations));
@@ -1158,6 +1181,13 @@ function applyRemoteState(remote){
   setDriveSeenAt(savedAt);
   markBackedUp();
   if(gdrivePushTimer){ clearTimeout(gdrivePushTimer); gdrivePushTimer = null; }
+  // Lag in der Cloud noch ein Stand mit Backtest-Einträgen, wird der bereinigte
+  // Stand zurückgeschrieben — sonst würde jedes Gerät sie bei jedem Pull erneut
+  // wegwerfen und die Cloud-Datei bliebe dauerhaft aufgebläht.
+  if(cloudHadBacktest) markDataChanged();
+  // Ein Cloud-Stand von einem noch nicht aktualisierten Gerät bringt die alte
+  // Kategorien-Konfiguration mit — deshalb hier erneut angleichen.
+  migrateStrategyCategories();
 }
 
 // Schreibt den aktuellen lokalen Stand über den Proxy nach Google Drive.
@@ -1423,11 +1453,11 @@ const STATE = {
   insightDraft: null,
   insightEditingId: null,
   insightSearchQuery: "",
-  // Standard: nur Live — Backtest-/EOD-Zahlen mit Live in eine Kennzahl zu mischen ist
+  // Standard: nur Live — EOD-Zahlen mit Live in eine Kennzahl zu mischen ist
   // analytisch selten sinnvoll; beide lassen sich weiterhin per Klick dazuschalten.
   // Alle Bericht-Einstellungen werden gemerkt (siehe loadBerichtUi/saveBerichtUi) und
   // überleben damit ein Neuladen — vorher waren nach jedem Reload alle Filter weg.
-  berichtAreas: { live:true, backtest:false, eod:false },
+  berichtAreas: { live:true, eod:false },
   berichtFilters: {}, // { markets:[], directions:[], ... }
   berichtDateFrom: "",
   berichtDateTo: "",
@@ -1436,11 +1466,11 @@ const STATE = {
   berichtCompareMode: "gesamt", // "gesamt" | "vergleich" (nur bei Live+EOD gleichzeitig aktiv)
   notesSearchQuery: "",
   // Datums-Unterkategorien pro Bereich: "alles" | "monat" | "woche" | "heute"
-  areaDateFilter: { live:"alles", backtest:"alles", eod:"alles" },
+  areaDateFilter: { live:"alles", eod:"alles" },
   // per Kalender-Klick ausgewählter Einzeltag pro Bereich (überschreibt areaDateFilter)
-  areaSelectedDay: { live:null, backtest:null, eod:null },
+  areaSelectedDay: { live:null, eod:null },
   // welcher Monat im Kalender pro Bereich gerade angezeigt wird
-  areaCalendarMonth: { live: currentYM(), backtest: currentYM(), eod: currentYM() },
+  areaCalendarMonth: { live: currentYM(), eod: currentYM() },
   eodReasonsExpanded: false,
   eodReasonsQuery: "",
   hiddenNoteWordsExpanded: false,
@@ -1469,7 +1499,7 @@ function loadBerichtUi(){
   try{
     const u = JSON.parse(localStorage.getItem(LS_BERICHT_UI));
     if(!u || typeof u !== "object") return;
-    if(u.berichtAreas && typeof u.berichtAreas === "object") STATE.berichtAreas = Object.assign({ live:true, backtest:false, eod:false }, u.berichtAreas);
+    if(u.berichtAreas && typeof u.berichtAreas === "object") STATE.berichtAreas = Object.assign({ live:true, eod:false }, u.berichtAreas);
     if(u.berichtFilters && typeof u.berichtFilters === "object") STATE.berichtFilters = u.berichtFilters;
     if(typeof u.berichtDateFrom === "string") STATE.berichtDateFrom = u.berichtDateFrom;
     if(typeof u.berichtDateTo === "string") STATE.berichtDateTo = u.berichtDateTo;
@@ -1505,6 +1535,59 @@ if(STATE.trades.length === 0){
 // oder tj_insights_v1 noch rohe Bilddaten stehen, wird einmal neu geschrieben —
 // danach liegt jedes Bild nur noch einmal im Speicher. Bewusst OHNE markDataChanged,
 // weil sich inhaltlich nichts ändert und sonst ein unnötiger Drive-Push liefe.
+/* Der Backtest-Bereich wurde aus dem Journal entfernt (Version 2026.09.04).
+   Vorhandene Backtest-Einträge werden einmalig gelöscht — sonst blieben sie
+   unsichtbar im Speicher liegen und würden über den Drive-Sync auf jedem Gerät
+   wieder auftauchen. Bewusst über den normalen Speicherweg samt markDataChanged,
+   damit die Löschung auch in die Cloud und auf die anderen Geräte wandert. */
+/* Angleichung an die Strategie (Version 2026.09.05):
+   - "Kriterien" enthielt bisher nur die beiden LQ-Werte. Stattdessen stehen jetzt
+     die sechs Zonen-Kriterien zur Auswahl (Mehrfachauswahl wie bisher).
+     Alte Werte werden nur dann behalten, wenn noch ein Trade sie verwendet —
+     sonst verschwänden sie aus der Liste, blieben aber im Trade stehen.
+   - Neues Feld "Risiko %" (1 % / 0,5 %). Es wird als frei erstellte Kategorie
+     angelegt, weil dieser Mechanismus bereits überall greift: Formular, Listen,
+     Detailseite, Bericht-Filter und Aufschlüsselung, Umbenennen und Löschen.
+     Du kannst es also im Kategorien-Bereich umbenennen, erweitern oder entfernen.
+   Läuft genau einmal (Merker in der Konfiguration). */
+function migrateStrategyCategories(){
+  try{
+    const cfg = STATE.config;
+    if(cfg.strategieKategorienV1) return;
+    let changed = false;
+
+    const ZONEN_KRITERIEN = ["BOS/ChoCh","IMB","EZ/IND","LQs","GB","LQ-Ziel"];
+    const inUse = new Set();
+    STATE.trades.forEach(t=> (t.kriterien||[]).forEach(v=> inUse.add(v)));
+    const alteWerte = (cfg.kriterien||[]).filter(v=> !ZONEN_KRITERIEN.includes(v) && inUse.has(v));
+    const neueListe = ZONEN_KRITERIEN.concat(alteWerte);
+    if(JSON.stringify(neueListe) !== JSON.stringify(cfg.kriterien)){ cfg.kriterien = neueListe; changed = true; }
+
+    cfg.customCategories = cfg.customCategories || [];
+    if(!cfg.customCategories.some(c=> c.key === "risiko")){
+      cfg.customCategories.push({ key:"risiko", label:"Risiko %", multi:false });
+      changed = true;
+    }
+    if(!Array.isArray(cfg.custom_risiko) || !cfg.custom_risiko.length){
+      cfg.custom_risiko = ["1 %","0,5 %"];
+      changed = true;
+    }
+
+    cfg.strategieKategorienV1 = true;
+    if(changed) saveConfig(); else safeSetItem(LS_CONFIG, JSON.stringify(cfg));
+  }catch(e){}
+}
+migrateStrategyCategories();
+
+(function removeBacktestArea(){
+  try{
+    if(!backtestRemovedCount) return;
+    const removed = backtestRemovedCount;
+    saveTrades(); // mit markDataChanged, damit die Löschung auch in die Cloud wandert
+    setTimeout(()=> toast("Der Backtest-Bereich wurde entfernt — " + removed + " Backtest-" + (removed===1?"Eintrag":"Einträge") + " gelöscht.", null, null, 9000), 800);
+  }catch(e){}
+})();
+
 (function migrateShotStore(){
   try{
     const raw = (localStorage.getItem(LS_TRADES) || "") + (localStorage.getItem(LS_INSIGHTS) || "");
@@ -1972,20 +2055,100 @@ function localHourIn(timeZone, date){
     return { h: timeZone === "Europe/London" ? h + 1 : h - 4, weekend: d === 0 || d === 6 };
   }
 }
-function getCurrentTradingSession(now){
+/* ---------- Session-Tagesleiste ----------
+   Die beiden für die Strategie relevanten Sessions laufen von 08:00 bis 17:00
+   ORTSZEIT in London bzw. New York. Weil sich Sommer-/Winterzeit in Europa und
+   den USA an unterschiedlichen Tagen umstellen, wird die Lage der Blöcke nicht
+   fest verdrahtet, sondern jedes Mal aus der echten Ortszeit berechnet: Die
+   Differenz zwischen der Uhrzeit hier und der Uhrzeit dort verschiebt das
+   Fenster auf der Leiste automatisch mit. */
+const SESSION_DEFS = [
+  { key:"london",  label:"London",   tz:"Europe/London",     cls:"sesstl-ldn", color:"var(--sess-ldn)", open:8, close:17 },
+  { key:"newyork", label:"New York", tz:"America/New_York",  cls:"sesstl-nyc", color:"var(--sess-nyc)", open:8, close:17 }
+];
+
+function sessionTimeline(now){
   const d = now || new Date();
-  const ldn = localHourIn("Europe/London", d);
-  const nyc = localHourIn("America/New_York", d);
-  const inLondon = !ldn.weekend && ldn.h >= 8 && ldn.h < 17;
-  const inNewYork = !nyc.weekend && nyc.h >= 8 && nyc.h < 17;
-  if(inNewYork) return { label:"New York" };
-  if(inLondon) return { label:"London" };
-  return { label:"Out of Session" };
+  const deviceH = d.getHours() + d.getMinutes()/60 + d.getSeconds()/3600;
+  const blocks = SESSION_DEFS.map(def=>{
+    const z = localHourIn(def.tz, d);
+    let diff = deviceH - z.h;          // Zeitverschiebung zwischen hier und dort
+    while(diff > 12) diff -= 24;       // über die Datumsgrenze normalisieren
+    while(diff <= -12) diff += 24;
+    return Object.assign({}, def, {
+      start: def.open + diff,
+      end:   def.close + diff,
+      zoneH: z.h,
+      weekend: z.weekend,
+      open_: !z.weekend && z.h >= def.open && z.h < def.close
+    });
+  });
+  // Läuft beides, gewinnt New York — das ist die aktivere Session.
+  const openBlocks = blocks.filter(b=>b.open_);
+  const current = openBlocks.length ? openBlocks[openBlocks.length-1] : null;
+  const weekend = blocks.every(b=>b.weekend);
+
+  let next = null;
+  if(!current && !weekend){
+    blocks.forEach(b=>{
+      if(b.weekend) return;
+      const inHours = ((b.open - b.zoneH) + 24) % 24;
+      if(!next || inHours < next.inHours) next = { label:b.label, inHours };
+    });
+  }
+  return { blocks, current, next, weekend, nowH: deviceH };
 }
 
-function renderSessionBadge(){
-  const s = getCurrentTradingSession();
-  return `<span class="badge badge-session" id="sessionBadge">${s.label}</span>`;
+// "7:12 Std" — Stunden und Minuten, wie in der Restzeit-Anzeige gebraucht.
+function formatDurationHM(hours){
+  const total = Math.max(0, Math.round(hours * 60));
+  return Math.floor(total/60) + ":" + String(total % 60).padStart(2, "0") + " Std";
+}
+
+function renderSessionTimeline(){
+  const tl = sessionTimeline();
+  const pc = h => Math.max(0, Math.min(100, h / 24 * 100));
+  const clip = (a, b) => ({ left: pc(a), width: pc(b) - pc(a) });
+
+  const blockHtml = tl.blocks.map(b=>{
+    const g = clip(b.start, b.end);
+    if(g.width <= 0) return "";
+    return `<div class="sesstl-block ${b.cls}" style="left:${g.left}%; width:${g.width}%;">${b.label.toUpperCase()}</div>`;
+  }).join("");
+
+  // Überlappung beider Sessions (die aktivste Phase des Tages) etwas heller.
+  let overlapHtml = "";
+  if(tl.blocks.length === 2){
+    const a = tl.blocks[0], b = tl.blocks[1];
+    const from = Math.max(a.start, b.start), to = Math.min(a.end, b.end);
+    if(to > from){
+      const g = clip(from, to);
+      if(g.width > 0) overlapHtml = `<div class="sesstl-block sesstl-overlap" style="left:${g.left}%; width:${g.width}%;"></div>`;
+    }
+  }
+
+  let axis = "";
+  for(let h = 0; h <= 24; h += 4) axis += `<span style="left:${pc(h)}%">${String(h).padStart(2,"0")}</span>`;
+
+  let cap;
+  if(tl.weekend){
+    cap = `<b>Wochenende</b> · London öffnet Montag`;
+  }else if(tl.current){
+    cap = `<b style="color:${tl.current.color};">${tl.current.label} offen</b> · noch ${formatDurationHM(tl.current.close - tl.current.zoneH)}`;
+  }else if(tl.next){
+    cap = `<b>Keine Session</b> · ${tl.next.label} öffnet in ${formatDurationHM(tl.next.inHours)}`;
+  }else{
+    cap = `<b>Keine Session</b>`;
+  }
+
+  return `<div class="sesstl${tl.weekend?" sesstl-weekend":""}" id="sessionTimeline">
+      <div class="sesstl-bar">
+        ${blockHtml}${overlapHtml}
+        <div class="sesstl-now" style="left:${pc(tl.nowH)}%"></div>
+      </div>
+      <div class="sesstl-axis">${axis}</div>
+      <div class="sesstl-cap">${cap}</div>
+    </div>`;
 }
 
 function formatLiveDateTime(){
@@ -2026,12 +2189,9 @@ function startStartClock(){
     const el = document.getElementById("liveClock");
     if(!el){ stopStartClock(); return; }
     el.textContent = formatLiveDateTime();
-    const badgeEl = document.getElementById("sessionBadge");
-    if(badgeEl){
-      const s = getCurrentTradingSession();
-      badgeEl.textContent = s.label;
-      badgeEl.className = "badge badge-session";
-    }
+    // Die Tagesleiste wandert mit: Marker, Restzeit und Countdown neu berechnen.
+    const tlEl = document.getElementById("sessionTimeline");
+    if(tlEl) tlEl.outerHTML = renderSessionTimeline();
   }, 1000);
 }
 
@@ -2188,8 +2348,8 @@ function renderStart(){
         <h1>Servus Clemens — heute schon journaliert?</h1>
         <p style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
           <span id="liveClock">${formatLiveDateTime()}</span>
-          ${renderSessionBadge()}
         </p>
+        ${renderSessionTimeline()}
       </div>
       ${statusLine}
       <div class="start-quick">
@@ -2310,11 +2470,10 @@ function wireStart(){
 }
 
 /* =========================================================================
-   LIVE / BACKTEST / EOD VIEW
+   LIVE / EOD VIEW
    ========================================================================= */
 const AREA_INTRO = {
   live: "Deine tatsächlich gehandelten Live-Trades.",
-  backtest: "Deine Backtesting-Trades — gleiche Kategorien wie Live.",
   eod: "Alle Setups, die du im Markt gesehen hast — genommen oder nicht."
 };
 
@@ -2682,7 +2841,7 @@ function wireAreaView(area){
 // Screenshot-Kategorien pro Trade. "key" ist der Feldname in t.screenshots,
 // "label" der Anzeigetext in Formular und Detailansicht.
 // Feste Kategorien-Spalten für die Trade-Tabellen-Darstellung — bewusst eine einzige,
-// gemeinsame Quelle für Übersicht (Live/EOD/Backtest) UND Detailansicht, damit beide
+// gemeinsame Quelle für Übersicht (Live/EOD) UND Detailansicht, damit beide
 // garantiert gleich aussehen. "multi" = mehrere Tags möglich (Kriterien/Invalidierung).
 const TRADE_CATEGORY_COLUMNS = [
   { key:"richtung", label:"Richtung" },
@@ -2703,7 +2862,7 @@ const TRADE_CATEGORY_COLUMNS = [
 // Die Anzahl Spalten ist nicht mehr fix — frei erstellte Kategorien (siehe
 // STATE.config.customCategories) werden automatisch angehängt, das Raster wird
 // entsprechend dynamisch neu berechnet statt einer festen Werteliste.
-const TRADE_CATEGORY_COL_WIDTH = 85; // px, Listen-Ansicht
+const TRADE_CATEGORY_COL_WIDTH = 96; // px, Listen-Ansicht (Platz für Werte wie "BOS/ChoCh")
 const TRADE_CATEGORY_COL_WIDTH_DETAIL = 140; // px, Detailseite (mehr Platz verfügbar)
 
 // Liefert die aktuell gültige Überschrift für ein Kategorie-Feld — vom Nutzer
@@ -2713,7 +2872,7 @@ function categoryLabel(field, defaultLabel){
   return (STATE.config.categoryLabelOverrides && STATE.config.categoryLabelOverrides[field]) || defaultLabel;
 }
 
-// EOD-Trades bekommen zusätzlich die "Genommen"-Spalte — bei Live/Backtest gibt es
+// EOD-Trades bekommen zusätzlich die "Genommen"-Spalte — bei Live gibt es
 // dieses Feld gar nicht, dort bleibt die Spalte entsprechend komplett weg (nicht nur
 // leer). Frei erstellte Kategorien werden danach angehängt, gelten für alle Bereiche.
 function tradeCategoryColumns(area){
@@ -2773,7 +2932,7 @@ function tradeCategoryHeaderHtml(area){
   </div></div>`;
 }
 
-// Für die Listen-Übersicht (Live/EOD/Backtest): EIN einziges Zeilenraster, das Markt,
+// Für die Listen-Übersicht (Live/EOD): EIN einziges Zeilenraster, das Markt,
 // Datum, EOD-Bezug, alle Kategorien, Status, Ergebnis und Buttons in einer einzigen
 // Zeile pro Trade unterbringt — nutzt dieselbe Kategorien-Spaltenbreite wie oben, ergänzt
 // um feste Spalten links (Markt/Datum/EOD) und rechts (Status/Ergebnis/Buttons).
@@ -2915,7 +3074,7 @@ function closeModal(){
 // Öffnet die Trade-Detailansicht als eigene, vollbreite Seite (statt eines kleinen
 // Modals) — überschreibt in render() vorübergehend die normale Ansicht, ohne
 // STATE.view selbst zu ändern. Dadurch bleibt beim Zurückgehen (closeTradeDetail)
-// automatisch genau die vorherige Ansicht (Live/EOD/Backtest/Bericht) erhalten,
+// automatisch genau die vorherige Ansicht (Live/EOD/Bericht) erhalten,
 // inklusive markiertem Nav-Tab — ganz ohne eigene "return view"-Verwaltung.
 function openTradeDetail(t){
   STATE.viewingTrade = t;
@@ -3406,9 +3565,37 @@ function addInsightShotFromUrl(url){
   renderInsightModal();
 }
 
+/* Bremse vor dem Hochladen: Ein eingebettetes Bild kostet rund 70-150 KB vom
+   5-MB-Kontingent, ein Link dagegen etwa 80 Byte. Ist der Speicher schon stark
+   gefüllt, wird einmal pro Sitzung nachgefragt, statt den Nutzer später vom
+   "Speicher voll"-Hinweis überraschen zu lassen. */
+const STORAGE_WARN_PERCENT = 80;
+let storageWarnAccepted = false; // einmal bewusst bestätigt -> in dieser Sitzung nicht mehr fragen
+
+async function confirmImageUpload(){
+  if(storageWarnAccepted) return true;
+  let st;
+  try{ st = storageStats(); }catch(e){ return true; }
+  if(st.percent < STORAGE_WARN_PERCENT) return true;
+  const ok = await uiConfirm(
+    "Der lokale Speicher ist zu " + st.percent + " % belegt (" + formatBytes(st.usedBytes) +
+    " von ca. " + formatBytes(LS_LIMIT_BYTES) + "). " +
+    (st.shotsLeft <= 0
+      ? "Vermutlich passt kein weiteres Bild mehr hinein."
+      : "Es passen noch etwa " + st.shotsLeft + " hochgeladene Bild" + (st.shotsLeft===1?"":"er") + " hinein.") +
+    "\n\nEin per Link eingebundener Screenshot braucht dagegen fast " +
+    "keinen Speicher — das Feld dafür ist direkt unter dem Einfügebereich. TradingView-Links " +
+    "werden automatisch umgewandelt.",
+    { title:"Speicher fast voll", okText:"Trotzdem hochladen", cancelText:"Abbrechen", danger:true }
+  );
+  if(ok) storageWarnAccepted = true;
+  return ok;
+}
+
 // Verarbeitet mehrere Bilder (Datei-Auswahl, Drag&Drop oder Paste) und hängt sie an die
 // Screenshot-Liste der übergebenen Kategorie (htf/ltf/sonstige) an.
-function handleImageFiles(files, category){
+async function handleImageFiles(files, category){
+  if(!(await confirmImageUpload())) return;
   const cat = category || SHOT_CATEGORIES[0].key;
   if(!STATE.draft.screenshots) STATE.draft.screenshots = { htf:[], ltf:[], sonstige:[] };
   if(!Array.isArray(STATE.draft.screenshots[cat])) STATE.draft.screenshots[cat] = [];
@@ -3573,7 +3760,7 @@ function renderBericht(){
   const filteredTrades = getBerichtFilteredTrades();
   const stats = computeStats(filteredTrades);
 
-  const areaBtns = ["live","eod","backtest"].map(a=>{
+  const areaBtns = ["live","eod"].map(a=>{
     const on = STATE.berichtAreas[a];
     return `<button data-area="${a}" class="${on?"on":""}">${AREA_LABEL[a]}</button>`;
   }).join("");
@@ -3593,7 +3780,7 @@ function renderBericht(){
   return `
     <div class="page-head">
       <h1>Bericht</h1>
-      <p>Statistik & Performance über Live, Backtest und EOD.</p>
+      <p>Statistik & Performance über Live und EOD.</p>
     </div>
 
     <div class="row-between" style="align-items:flex-start;">
@@ -4162,7 +4349,7 @@ function countExcludedEodCopies(){
 }
 
 // Wie getBerichtFilteredTrades, aber auf genau einen Bereich beschränkt — unabhängig vom
-// Live/Backtest/EOD-Umschalter. Wird für die Gegenüberstellung und die mehrfarbige
+// Live/EOD-Umschalter. Wird für die Gegenüberstellung und die mehrfarbige
 // Equity-Kurve gebraucht, damit jede Linie/Spalte nur "ihre eigenen" Trades zeigt.
 function getBerichtFilteredTradesForArea(area){
   return STATE.trades.filter(t=> t.area===area && matchesBerichtFilters(t));
@@ -4478,7 +4665,7 @@ function renderCharts(){
   const canvas = document.getElementById("chart_equity");
   if(!canvas) return;
   const wrap = canvas.closest(".chart-wrap");
-  const activeAreas = ["live","eod","backtest"].filter(a=>STATE.berichtAreas[a]);
+  const activeAreas = ["live","eod"].filter(a=>STATE.berichtAreas[a]);
 
   if(!activeAreas.length){
     if(wrap) wrap.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-faint); font-size:12.5px;">Wähle mindestens einen Bereich oben aus.</div>`;
@@ -5285,7 +5472,8 @@ function handleInsightPasteEvent(e){
   if(files.length){ e.preventDefault(); handleInsightImageFiles(files); }
 }
 
-function handleInsightImageFiles(files){
+async function handleInsightImageFiles(files){
+  if(!(await confirmImageUpload())) return;
   if(!STATE.insightDraft.screenshots) STATE.insightDraft.screenshots = [];
   let remaining = files.length;
   files.forEach(file=>{

@@ -780,7 +780,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.09.05";
+const APP_VERSION = "2026.09.06";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -793,7 +793,6 @@ const DEFAULT_CONFIG = {
   kriterien:    ["BOS/ChoCh","IMB","EZ/IND","LQs","GB","LQ-Ziel"],
   invalidierung:["50%","v. Zone","kein B/C","Trendline"],
   timeframes:   ["m1","m2","m5","m15"],
-  struktur:     ["Extern","intern"],
   results:      ["SL","TP","BE"],
   // manuell ausgeblendete Begriffe für die Stichwort-Wolken (Notizen im Bericht / Erkenntnisse)
   hiddenNoteWords:    [],
@@ -828,7 +827,6 @@ const CATEGORY_META = [
   {cfgKey:"kriterien",     field:"kriterien",     label:"Kriterien",          multi:true},
   {cfgKey:"invalidierung", field:"invalidierung", label:"Invalidierungskriterien", multi:true},
   {cfgKey:"timeframes",    field:"zeiteinheit",   label:"Zeiteinheit",        multi:false},
-  {cfgKey:"struktur",      field:"struktur",      label:"Struktur",           multi:false},
 ];
 
 /* =========================================================================
@@ -866,12 +864,19 @@ function buildBackupPayload(){
 // Bringt Trades aus älteren Speicherständen (localStorage oder importiertes JSON-Backup)
 // auf die aktuelle Struktur. Wird sowohl von loadTrades() als auch von importJson()
 // aufgerufen, damit beide Wege denselben Stand garantieren.
-let backtestRemovedCount = 0; // wie viele Backtest-Einträge zuletzt entfernt wurden
+let backtestRemovedCount = 0;  // wie viele Backtest-Einträge zuletzt entfernt wurden
+let strukturRemovedCount = 0;  // in wie vielen Trades zuletzt das alte Feld "struktur" steckte
 
 function migrateTrades(trades){
   // Der Backtest-Bereich wurde entfernt (Version 2026.09.04). Hier — und damit auf
   // BEIDEN Wegen (lokal laden und Cloud-Stand übernehmen) — fallen solche Einträge
   // raus, sonst brächte sie der nächste Drive-Pull wieder zurück.
+  // Die Kategorie "Struktur" wurde aus dem Journal entfernt (Version 2026.09.06).
+  // Das Feld fällt hier aus allen Trades — auch aus denen, die per Drive-Sync
+  // von einem noch nicht aktualisierten Gerät hereinkommen.
+  strukturRemovedCount = 0;
+  trades.forEach(t=>{ if(t && "struktur" in t){ delete t.struktur; strukturRemovedCount++; } });
+
   const beforeBacktest = trades.length;
   trades = trades.filter(t=> !t || t.area !== "backtest");
   backtestRemovedCount = beforeBacktest - trades.length;
@@ -1088,7 +1093,7 @@ function buildDemoTrades(){
   const mk = (o) => Object.assign({
     id: "demo-" + Math.random().toString(36).slice(2),
     richtung:null, markt:null, session:null, art:null, level:null, trend:null,
-    kriterien:[], invalidierung:[], zeiteinheit:null, struktur:null,
+    kriterien:[], invalidierung:[], zeiteinheit:null,
     ergebnis:null, r:null, genommen:undefined, grundNichtGenommen:"",
     notizen:"", screenshots:{ htf:[], ltf:[], sonstige:[] }
   }, o, {
@@ -1101,26 +1106,26 @@ function buildDemoTrades(){
 
   return [
     // ---- LIVE ----
-    mk({id:liveCeId, area:"live", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Sauberer CE nach Liquidity-Grab, Ausführung nach Plan.", copiedToEod:true}),
-    mk({area:"live", date:"2026-07-15", richtung:"Short", markt:"GBPUSD", session:"New York", art:"SE", level:"32", trend:"Counter", invalidierung:["v. Zone"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Zu früh eingestiegen, Setup war noch nicht fertig."}),
-    mk({area:"live", date:"2026-07-17", richtung:"Long", markt:"XAUUSD", session:"London", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, notizen:"Bestes Setup der Woche, Geduld hat sich ausgezahlt."}),
-    mk({area:"live", date:"2026-07-21", richtung:"Short", markt:"DAX", session:"New York", art:"Continuation", level:"50", trend:"pro", zeiteinheit:"m15", struktur:"Extern", ergebnis:"BE", r:0, notizen:"Auf BE nachgezogen, solide Entscheidung."}),
-    mk({area:"live", date:"2026-07-24", richtung:"Long", markt:"BTCUSD", session:"Out of Session", art:"Limit", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, notizen:"Gegen den Trend gehandelt, Lehrgeld gezahlt."}),
-    mk({area:"live", date:"2026-07-29", richtung:"Long", markt:"GBPUSD", session:"London", art:"CE", level:"32", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, notizen:"Nach Plan, Einstieg etwas spät aber ok."}),
-    mk({area:"live", date:"2026-08-04", richtung:"Short", markt:"XAUUSD", session:"New York", art:"Flip", level:"50", trend:"Counter", invalidierung:["kein B/C"], zeiteinheit:"m15", struktur:"intern", ergebnis:"SL", r:-1, notizen:"B/C hat gefehlt, trotzdem genommen — Fehler."}),
-    mk({area:"live", date:"2026-08-06", richtung:"Long", markt:"DAX", session:"London", art:"Counter", level:"71", trend:"pro", kriterien:["BOS/ChoCh","EZ/IND","GB","LQ-Ziel"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2.5, notizen:"Gutes Reversal-Setup, Timing hat gepasst."}),
-    mk({area:"live", date:"2026-08-12", richtung:"Long", markt:"XAUUSD", session:"New York", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", notizen:"Noch offen, laufe mit Teilgewinn."}),
-    mk({id:liveSeId, area:"live", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"intern", ergebnis:"TP", r:1.5, notizen:"Kleiner sauberer Trade zum Wochenausklang.", copiedToEod:true}),
+    mk({id:liveCeId, area:"live", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", ergebnis:"TP", r:2, notizen:"Sauberer CE nach Liquidity-Grab, Ausführung nach Plan.", copiedToEod:true}),
+    mk({area:"live", date:"2026-07-15", richtung:"Short", markt:"GBPUSD", session:"New York", art:"SE", level:"32", trend:"Counter", invalidierung:["v. Zone"], zeiteinheit:"m15", ergebnis:"SL", r:-1, notizen:"Zu früh eingestiegen, Setup war noch nicht fertig."}),
+    mk({area:"live", date:"2026-07-17", richtung:"Long", markt:"XAUUSD", session:"London", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", ergebnis:"TP", r:3, notizen:"Bestes Setup der Woche, Geduld hat sich ausgezahlt."}),
+    mk({area:"live", date:"2026-07-21", richtung:"Short", markt:"DAX", session:"New York", art:"Continuation", level:"50", trend:"pro", zeiteinheit:"m15", ergebnis:"BE", r:0, notizen:"Auf BE nachgezogen, solide Entscheidung."}),
+    mk({area:"live", date:"2026-07-24", richtung:"Long", markt:"BTCUSD", session:"Out of Session", art:"Limit", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", ergebnis:"SL", r:-1, notizen:"Gegen den Trend gehandelt, Lehrgeld gezahlt."}),
+    mk({area:"live", date:"2026-07-29", richtung:"Long", markt:"GBPUSD", session:"London", art:"CE", level:"32", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", ergebnis:"TP", r:2, notizen:"Nach Plan, Einstieg etwas spät aber ok."}),
+    mk({area:"live", date:"2026-08-04", richtung:"Short", markt:"XAUUSD", session:"New York", art:"Flip", level:"50", trend:"Counter", invalidierung:["kein B/C"], zeiteinheit:"m15", ergebnis:"SL", r:-1, notizen:"B/C hat gefehlt, trotzdem genommen — Fehler."}),
+    mk({area:"live", date:"2026-08-06", richtung:"Long", markt:"DAX", session:"London", art:"Counter", level:"71", trend:"pro", kriterien:["BOS/ChoCh","EZ/IND","GB","LQ-Ziel"], zeiteinheit:"m5", ergebnis:"TP", r:2.5, notizen:"Gutes Reversal-Setup, Timing hat gepasst."}),
+    mk({area:"live", date:"2026-08-12", richtung:"Long", markt:"XAUUSD", session:"New York", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", notizen:"Noch offen, laufe mit Teilgewinn."}),
+    mk({id:liveSeId, area:"live", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", ergebnis:"TP", r:1.5, notizen:"Kleiner sauberer Trade zum Wochenausklang.", copiedToEod:true}),
 
     // ---- EOD ----
-    mk({area:"eod", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:2, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveCeId}),
-    mk({area:"eod", date:"2026-07-18", richtung:"Short", markt:"BTCUSD", session:"Out of Session", art:"Flip", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", struktur:"intern", ergebnis:"SL", r:-1, genommen:false, grundNichtGenommen:"News-Risiko, Setup bewusst abgewartet."}),
-    mk({area:"eod", date:"2026-07-22", richtung:"Long", markt:"DAX", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["BOS/ChoCh","EZ/IND","GB","LQ-Ziel"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"TP", r:2.5, genommen:false, grundNichtGenommen:"Zu spät gesehen, Zug war schon fast durch."}),
-    mk({area:"eod", date:"2026-07-28", richtung:"Short", markt:"XAUUSD", session:"London", art:"Continuation", level:"50", trend:"Counter", zeiteinheit:"m5", struktur:"Extern", ergebnis:"SL", r:-1, genommen:true, notizen:"Sauber genommen, hat einfach nicht funktioniert."}),
-    mk({area:"eod", date:"2026-08-01", richtung:"Long", markt:"GBPUSD", session:"New York", art:"CE", level:"32", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", struktur:"intern", ergebnis:"TP", r:1.5, genommen:false, grundNichtGenommen:"Unsicher wegen anstehender News, ausgelassen."}),
-    mk({area:"eod", date:"2026-08-07", richtung:"Short", markt:"DAX", session:"London", art:"SE", level:"71", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"Extern", ergebnis:"BE", r:0, genommen:true, notizen:"Auf BE rausgenommen."}),
-    mk({area:"eod", date:"2026-08-11", richtung:"Long", markt:"XAUUSD", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", struktur:"Extern", ergebnis:"TP", r:3, genommen:false, grundNichtGenommen:"Setup kam nachts, verpasst."}),
-    mk({area:"eod", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", struktur:"intern", ergebnis:"TP", r:1.5, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveSeId}),
+    mk({area:"eod", date:"2026-07-14", richtung:"Long", markt:"XAUUSD", session:"London", art:"CE", level:"50", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", ergebnis:"TP", r:2, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveCeId}),
+    mk({area:"eod", date:"2026-07-18", richtung:"Short", markt:"BTCUSD", session:"Out of Session", art:"Flip", level:"passiv", trend:"Counter", invalidierung:["50%"], zeiteinheit:"m1", ergebnis:"SL", r:-1, genommen:false, grundNichtGenommen:"News-Risiko, Setup bewusst abgewartet."}),
+    mk({area:"eod", date:"2026-07-22", richtung:"Long", markt:"DAX", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["BOS/ChoCh","EZ/IND","GB","LQ-Ziel"], zeiteinheit:"m15", ergebnis:"TP", r:2.5, genommen:false, grundNichtGenommen:"Zu spät gesehen, Zug war schon fast durch."}),
+    mk({area:"eod", date:"2026-07-28", richtung:"Short", markt:"XAUUSD", session:"London", art:"Continuation", level:"50", trend:"Counter", zeiteinheit:"m5", ergebnis:"SL", r:-1, genommen:true, notizen:"Sauber genommen, hat einfach nicht funktioniert."}),
+    mk({area:"eod", date:"2026-08-01", richtung:"Long", markt:"GBPUSD", session:"New York", art:"CE", level:"32", trend:"pro", kriterien:["BOS/ChoCh","IMB","LQs"], zeiteinheit:"m5", ergebnis:"TP", r:1.5, genommen:false, grundNichtGenommen:"Unsicher wegen anstehender News, ausgelassen."}),
+    mk({area:"eod", date:"2026-08-07", richtung:"Short", markt:"DAX", session:"London", art:"SE", level:"71", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", ergebnis:"BE", r:0, genommen:true, notizen:"Auf BE rausgenommen."}),
+    mk({area:"eod", date:"2026-08-11", richtung:"Long", markt:"XAUUSD", session:"New York", art:"71er", level:"71", trend:"pro", kriterien:["LQ davor","LQ n. davor"], zeiteinheit:"m5", ergebnis:"TP", r:3, genommen:false, grundNichtGenommen:"Setup kam nachts, verpasst."}),
+    mk({area:"eod", date:"2026-08-14", richtung:"Short", markt:"GBPUSD", session:"London", art:"SE", level:"32", trend:"Counter", invalidierung:["Trendline"], zeiteinheit:"m15", ergebnis:"TP", r:1.5, genommen:true, notizen:"Wie live gehandelt.", copiedFromLiveId:liveSeId}),
   ];
 }
 
@@ -1172,7 +1177,7 @@ function applyRemoteState(remote){
   if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
   if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
   STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
-  const cloudHadBacktest = backtestRemovedCount > 0;
+  const cloudHadAltlasten = backtestRemovedCount > 0 || strukturRemovedCount > 0;
   persistLocalData(); // Trades + Erkenntnisse + Bild-Speicher gemeinsam
   safeSetItem(LS_CONFIG, JSON.stringify(STATE.config));
   safeSetItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations));
@@ -1181,10 +1186,10 @@ function applyRemoteState(remote){
   setDriveSeenAt(savedAt);
   markBackedUp();
   if(gdrivePushTimer){ clearTimeout(gdrivePushTimer); gdrivePushTimer = null; }
-  // Lag in der Cloud noch ein Stand mit Backtest-Einträgen, wird der bereinigte
-  // Stand zurückgeschrieben — sonst würde jedes Gerät sie bei jedem Pull erneut
-  // wegwerfen und die Cloud-Datei bliebe dauerhaft aufgebläht.
-  if(cloudHadBacktest) markDataChanged();
+  // Lagen in der Cloud noch Altlasten (Backtest-Einträge oder das entfernte Feld
+  // "struktur"), wird der bereinigte Stand zurückgeschrieben — sonst würde jedes
+  // Gerät sie bei jedem Pull erneut wegwerfen und die Cloud-Datei bliebe alt.
+  if(cloudHadAltlasten) markDataChanged();
   // Ein Cloud-Stand von einem noch nicht aktualisierten Gerät bringt die alte
   // Kategorien-Konfiguration mit — deshalb hier erneut angleichen.
   migrateStrategyCategories();
@@ -1553,6 +1558,14 @@ if(STATE.trades.length === 0){
 function migrateStrategyCategories(){
   try{
     const cfg = STATE.config;
+    // "Struktur" ist entfernt — Werteliste und ggf. umbenannte Überschrift mit
+    // aufräumen. Bewusst bei JEDEM Aufruf, weil ein Cloud-Stand von einem alten
+    // Gerät die Liste sonst wieder mitbringt.
+    if(cfg.struktur || (cfg.categoryLabelOverrides && cfg.categoryLabelOverrides.struktur)){
+      delete cfg.struktur;
+      if(cfg.categoryLabelOverrides) delete cfg.categoryLabelOverrides.struktur;
+      saveConfig();
+    }
     if(cfg.strategieKategorienV1) return;
     let changed = false;
 
@@ -1579,12 +1592,14 @@ function migrateStrategyCategories(){
 }
 migrateStrategyCategories();
 
-(function removeBacktestArea(){
+(function cleanUpRemovedFeatures(){
   try{
-    if(!backtestRemovedCount) return;
     const removed = backtestRemovedCount;
-    saveTrades(); // mit markDataChanged, damit die Löschung auch in die Cloud wandert
-    setTimeout(()=> toast("Der Backtest-Bereich wurde entfernt — " + removed + " Backtest-" + (removed===1?"Eintrag":"Einträge") + " gelöscht.", null, null, 9000), 800);
+    if(!removed && !strukturRemovedCount) return;
+    // Einmal neu speichern, damit die Bereinigung wirklich auf der Platte landet
+    // und über den Sync auch auf den anderen Geräten ankommt.
+    saveTrades();
+    if(removed) setTimeout(()=> toast("Der Backtest-Bereich wurde entfernt — " + removed + " Backtest-" + (removed===1?"Eintrag":"Einträge") + " gelöscht.", null, null, 9000), 800);
   }catch(e){}
 })();
 
@@ -2850,7 +2865,6 @@ const TRADE_CATEGORY_COLUMNS = [
   { key:"level", label:"Level" },
   { key:"trend", label:"Trend" },
   { key:"zeiteinheit", label:"Zeiteinheit" },
-  { key:"struktur", label:"Struktur" },
   { key:"kriterien", label:"Kriterien", multi:true },
   { key:"invalidierung", label:"Invalidierung", multi:true }
 ];
@@ -2998,7 +3012,6 @@ function emptyTrade(area){
     kriterien: [],
     invalidierung: [],
     zeiteinheit: null,
-    struktur: null,
     ergebnis: null,
     r: null,
     genommen: area==="eod" ? null : undefined,
@@ -3029,7 +3042,6 @@ function copyTradeToEod(liveTrade){
     kriterien: [...(liveTrade.kriterien||[])],
     invalidierung: [...(liveTrade.invalidierung||[])],
     zeiteinheit: liveTrade.zeiteinheit,
-    struktur: liveTrade.struktur,
     ergebnis: liveTrade.ergebnis,
     r: liveTrade.r,
     genommen: true, // war ein echter Live-Trade, wurde also genommen
@@ -3227,11 +3239,6 @@ function renderModal(){
       <div class="field-group">
         <label class="fg-label">${categoryLabel("art","Entry-Art")}</label>
         ${chipGroupHtml("art", cfg.entryTypes, d.art)}
-      </div>
-
-      <div class="field-group">
-        <label class="fg-label">${categoryLabel("struktur","Struktur")}</label>
-        ${chipGroupHtml("struktur", cfg.struktur, d.struktur)}
       </div>
 
       <div class="two-col">
@@ -3666,7 +3673,6 @@ const FILTER_DIMENSIONS_BASE = [
   {key:"level", label:"Level", cfgKey:"levels", field:"level"},
   {key:"trend", label:"Trend", cfgKey:"trend", field:"trend"},
   {key:"zeiteinheit", label:"Zeiteinheit", cfgKey:"timeframes", field:"zeiteinheit"},
-  {key:"struktur", label:"Struktur", cfgKey:"struktur", field:"struktur"},
   {key:"kriterien", label:"Kriterien", cfgKey:"kriterien", field:"kriterien", multi:true},
   {key:"invalidierung", label:"Invalidierung", cfgKey:"invalidierung", field:"invalidierung", multi:true},
 ];
@@ -4710,7 +4716,6 @@ function tradesToRows(trades){
     Kriterien: (t.kriterien||[]).join(" | "),
     Invalidierung: (t.invalidierung||[]).join(" | "),
     Zeiteinheit: t.zeiteinheit || "",
-    Struktur: t.struktur || "",
     Ergebnis: t.ergebnis || "",
     R: t.r===null||t.r===undefined ? "" : t.r,
     Status: t.ergebnis ? "geschlossen" : "offen",

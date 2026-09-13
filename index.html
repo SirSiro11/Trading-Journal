@@ -142,6 +142,7 @@
   .chip.selected.result-SL{background:var(--red); border-color:var(--red); color:#2b0a0a;}
   .chip.selected.result-BE{background:var(--amber); border-color:var(--amber); color:#2b2205;}
   .chip-add{border-style:dashed;}
+  .cal-market-filter{padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--border);}
   .market-chip-wrap{position:relative; display:inline-flex; align-items:center;}
   .market-chip-label{padding-right:46px;}
   .market-chip-edit{
@@ -780,7 +781,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.09.06";
+const APP_VERSION = "2026.09.13";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -1476,6 +1477,8 @@ const STATE = {
   areaSelectedDay: { live:null, eod:null },
   // welcher Monat im Kalender pro Bereich gerade angezeigt wird
   areaCalendarMonth: { live: currentYM(), eod: currentYM() },
+  // Markt-Filter des Kalenders pro Bereich (leer = alle Märkte)
+  areaCalendarMarkets: { live: [], eod: [] },
   eodReasonsExpanded: false,
   eodReasonsQuery: "",
   hiddenNoteWordsExpanded: false,
@@ -2516,7 +2519,10 @@ function renderAreaView(area){
     </div>
     <div class="row-between" style="align-items:flex-start;">
       <div class="subtab-row" id="subtabRow">${subtabs}</div>
-      <button class="btn btn-primary" id="btnAddTrade">+ Trade hinzufügen</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+        <button class="btn" id="btnJumpCalendar">Kalender</button>
+        <button class="btn btn-primary" id="btnAddTrade">+ Trade hinzufügen</button>
+      </div>
     </div>
     <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:14px;">${trades.length} Trade${trades.length===1?"":"s"}</div>
     <div class="trade-list-scroll"><div class="trade-list">${list}</div></div>
@@ -2537,7 +2543,7 @@ function emptyStateHtml(area){
 function dayDetailHtml(area){
   const date = STATE.areaSelectedDay[area];
   if(!date) return "";
-  const trades = STATE.trades.filter(t=>t.area===area && t.date===date)
+  const trades = STATE.trades.filter(t=>t.area===area && t.date===date && tradeMatchesCalendarMarkets(area, t))
     .sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
   return `
     <div class="row-between" style="margin-top:26px; margin-bottom:0;">
@@ -2635,6 +2641,42 @@ function eodReasonsListHtml(items, query){
 }
 
 /* ---------- Kalender (à la FXReplay) ---------- */
+// Auswahlliste für den Markt-Filter des Kalenders: die konfigurierten Märkte in ihrer
+// Reihenfolge, aber nur die, zu denen es im jeweiligen Bereich auch Trades gibt —
+// plus eventuelle Altbestände, die nicht mehr in der Konfiguration stehen.
+function calendarMarketOptions(area){
+  const used = new Set(STATE.trades.filter(t=>t.area===area && t.markt).map(t=>t.markt));
+  const opts = (STATE.config.markets||[]).filter(m=>used.has(m));
+  used.forEach(m=>{ if(!opts.includes(m)) opts.push(m); });
+  return opts;
+}
+
+// Leere Auswahl = alle Märkte. Bereinigt nebenbei Märkte, die es nicht mehr gibt.
+function calendarMarketFilter(area){
+  const sel = STATE.areaCalendarMarkets[area] || [];
+  const opts = calendarMarketOptions(area);
+  return sel.filter(m=>opts.includes(m));
+}
+
+function tradeMatchesCalendarMarkets(area, t){
+  const sel = calendarMarketFilter(area);
+  return !sel.length || sel.includes(t.markt);
+}
+
+function calendarMarketChipsHtml(area){
+  const opts = calendarMarketOptions(area);
+  if(!opts.length) return "";
+  const sel = calendarMarketFilter(area);
+  const chips = [`<button type="button" class="chip ${sel.length?"":"selected"}" data-calmarket="__alle__">Alle</button>`]
+    .concat(opts.map(m=>`<button type="button" class="chip ${sel.includes(m)?"selected":""}" data-calmarket="${escAttr(m)}">${escHtml(m)}</button>`));
+  return `
+    <div class="cal-market-filter">
+      <div style="color:var(--text-faint); font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">${categoryLabel("markt","Markt")}</div>
+      <div class="chip-group">${chips.join("")}</div>
+    </div>
+  `;
+}
+
 function calendarHtml(area){
   const cal = STATE.areaCalendarMonth[area];
   const year = cal.year, month = cal.month;
@@ -2644,7 +2686,7 @@ function calendarHtml(area){
   const monthLabel = firstOfMonth.toLocaleDateString("de-DE", {month:"long", year:"numeric"});
 
   const byDate = {};
-  STATE.trades.filter(t=>t.area===area && t.r!==null && t.r!==undefined).forEach(t=>{
+  STATE.trades.filter(t=>t.area===area && t.r!==null && t.r!==undefined && tradeMatchesCalendarMarkets(area, t)).forEach(t=>{
     (byDate[t.date] = byDate[t.date] || []).push(t.r);
   });
 
@@ -2693,8 +2735,9 @@ function calendarHtml(area){
   const monthCls = monthHasData ? (monthTotal>0?"pos":(monthTotal<0?"neg":"")) : "";
 
   return `
-    <div class="section-title">Kalender</div>
+    <div class="section-title" id="calendarAnchor">Kalender</div>
     <div class="panel cal-panel">
+      ${calendarMarketChipsHtml(area)}
       <div class="cal-header">
         <button type="button" class="btn btn-sm btn-ghost" data-calnav="-1">‹</button>
         <div class="cal-month-label">${monthLabel}</div>
@@ -2738,6 +2781,29 @@ function formatBackupTimestamp(ts){
 
 function wireAreaView(area){
   document.getElementById("btnAddTrade").addEventListener("click", ()=> openTradeModal(area, null));
+
+  // Springt direkt zum Kalender weiter unten auf derselben Seite (Live bzw. EOD).
+  const jumpCalBtn = document.getElementById("btnJumpCalendar");
+  if(jumpCalBtn) jumpCalBtn.addEventListener("click", ()=>{
+    const anchor = document.getElementById("calendarAnchor");
+    if(anchor) anchor.scrollIntoView({ behavior:"smooth", block:"start" });
+  });
+
+  // Markt-Filter des Kalenders: Mehrfachauswahl, "Alle" setzt zurück.
+  document.querySelectorAll("[data-calmarket]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const m = b.dataset.calmarket;
+      if(m === "__alle__"){
+        STATE.areaCalendarMarkets[area] = [];
+      } else {
+        const cur = calendarMarketFilter(area);
+        STATE.areaCalendarMarkets[area] = cur.includes(m) ? cur.filter(x=>x!==m) : cur.concat([m]);
+      }
+      render();
+      const anchor = document.getElementById("calendarAnchor");
+      if(anchor) anchor.scrollIntoView({ block:"start" });
+    });
+  });
   document.querySelectorAll("[data-edit]").forEach(b=>{
     b.addEventListener("click", ()=>{
       const t = STATE.trades.find(x=>x.id===b.dataset.edit);

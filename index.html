@@ -25,7 +25,8 @@
     --border-light:#34353f;
     --text:#eceef2;
     --text-dim:#8b8d99;
-    --text-faint:#5c5e6b;
+    --text-faint:#7d7f8d;  /* vorher #5c5e6b — lag mit ~2,9:1 unter der Lesbarkeitsgrenze (WCAG 4,5:1) */
+    --focus:#34d399;
     --green:#34d399;
     --green-dim:#1c3c30;
     --red:#f87171;
@@ -64,7 +65,15 @@
   }
   a{color:inherit;}
   button{font-family:inherit;cursor:pointer;}
+  button:disabled,.btn:disabled{opacity:.45; cursor:not-allowed;}
   input,textarea,select{font-family:inherit;}
+  /* Einheitlicher, gut sichtbarer Tastatur-Fokus für alle bedienbaren Elemente
+     (nur bei Tastaturbedienung, nicht beim Klicken — :focus-visible). */
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+  .trade-card:focus-visible, .cal-cell:focus-visible, .note-item:focus-visible, .day-detail-item:focus-visible, .strat-entry-card:focus-visible{outline-offset:-1px;}
+  /* Solange ein Modal offen ist, scrollt der Hintergrund nicht mit (v. a. iPhone). */
+  body.modal-open{overflow:hidden;}
+  .num{font-family:var(--mono); font-variant-numeric:tabular-nums;}
 
   /* ---------- Layout ---------- */
   header.topnav{
@@ -201,7 +210,7 @@
      statt großem Desktop-Monitor) rechts über den Bildschirmrand hinausragen — die
      Tabelle bekommt stattdessen bei Bedarf einen horizontalen Scrollbalken. */
   .trade-list-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
-  .trade-list-scroll .trade-list{min-width:max-content;}
+  .trade-list-scroll .trade-list{min-width:var(--list-min, max-content);}
   .subtab-row{display:flex; gap:4px; background:var(--bg-panel); padding:4px; border-radius:12px; flex-wrap:wrap;}
   .subtab{background:transparent; border:none; color:var(--text-dim); padding:8px 15px; border-radius:9px; font-size:13.5px; font-weight:600; white-space:nowrap;}
   .subtab:hover{color:var(--text);}
@@ -279,7 +288,8 @@
   }
   .trade-card:hover{border-color:var(--border-light);}
   .trade-market{font-weight:700; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .eod-inline-btn{font-size:11px; padding:5px 9px; white-space:nowrap;}
+  .eod-inline-btn{font-size:11px; padding:5px 9px; white-space:nowrap; background:transparent; color:var(--text-dim); border-color:var(--border);}
+  .eod-inline-btn:hover{color:var(--text);}
   .trade-tags{display:block;}
   .cat-table-header-bar{border:1px solid transparent;}
   .cat-table-header{display:grid; gap:10px; padding:0 16px 8px; justify-content:start;}
@@ -289,7 +299,7 @@
   .cat-col-mobile-label{display:none;}
   .cat-table-standalone{border-bottom:1px solid var(--border); margin-bottom:14px; padding-bottom:14px;}
   .trade-date-badge{color:var(--text-dim); font-size:12.5px;}
-  .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600; white-space:normal; word-break:break-word; min-width:0; text-align:center;}
+  .tag{background:var(--bg-card); border:1px solid var(--border); color:var(--text-dim); padding:3px 9px; border-radius:6px; font-size:11.5px; font-weight:600; white-space:normal; word-break:normal; overflow-wrap:anywhere; -webkit-hyphens:auto; hyphens:auto; min-width:0; text-align:center;}
   .tag.tag-taken{border-color:#1c3c30; color:var(--green);}
   .tag.tag-nottaken{border-color:#3c2222; color:var(--red);}
   /* Richtung farblich: Long grün, Short rot — schneller zu scannen als lauter graue Pillen */
@@ -322,9 +332,30 @@
     .sesstl{max-width:none;}
     .sesstl-block{font-size:9px; letter-spacing:0;}
   }
-  .trade-r{font-family:var(--mono); font-weight:700; font-size:16px; text-align:right;}
-  .trade-actions{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;}
+  .trade-r{font-family:var(--mono); font-weight:700; font-size:16px; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .trade-actions{display:flex; gap:6px; flex-wrap:nowrap; justify-content:flex-end;}
+  /* Bearbeiten/Löschen als kompakte Symbol-Buttons: spart ~75 px pro Zeile (die Liste passt
+     damit auch auf Laptop-Breite ohne Querscrollen) und nimmt dem Löschen-Knopf die rote
+     Dauer-Signalfarbe, die mit den roten SL-Ergebnissen konkurrierte. Rot erst beim Hover. */
+  .icon-action{
+    width:32px; height:32px; padding:0; flex:0 0 auto;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text-dim);
+    transition:.13s;
+  }
+  .icon-action svg{width:15px; height:15px; display:block;}
+  .icon-action:hover{color:var(--text); background:var(--bg-card-hover); border-color:var(--text-faint);}
+  .icon-action.is-danger:hover{color:var(--red); background:var(--red-dim); border-color:#5a2b2b;}
+  /* Falls es doch einmal eng wird (viele eigene Kategorien): Aktionen bleiben rechts
+     sichtbar, statt aus dem Bild zu scrollen. */
+  .trade-list-scroll .trade-card .trade-actions{position:sticky; right:0; z-index:1; background:var(--bg-panel); box-shadow:-12px 0 12px -8px var(--bg-panel);}
+  .trade-list-scroll .trade-card:hover .trade-actions{background:var(--bg-panel);}
+  .list-toolbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+  .list-toolbar .search-input{max-width:320px; padding:8px 12px; font-size:13.5px;}
+  .list-summary{color:var(--text-dim); font-size:13.5px;}
+  .list-summary b{font-family:var(--mono); font-variant-numeric:tabular-nums;}
   .empty-state{text-align:center; padding:60px 20px; color:var(--text-dim);}
+  .empty-state .btn{margin-top:16px;}
   .empty-state .big{font-size:40px; margin-bottom:10px;}
 
   /* ---------- Modal ---------- */
@@ -441,10 +472,16 @@
   table.breakdown tr:hover td{background:var(--bg-card);}
 
   .export-bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:26px; padding-top:20px; border-top:1px solid var(--border);}
-  #notesSearchInput{
+  /* Alle Such-/Textfelder außerhalb von Formularen im selben Stil (vorher war z. B. die
+     Erkenntnis-Suche ein weißes Browser-Standardfeld). */
+  #notesSearchInput, #insightSearchInput, #eodReasonsSearchInput, .search-input{
     width:100%; background:var(--bg-card); border:1px solid var(--border-light); color:var(--text);
     padding:10px 12px; border-radius:9px; font-size:14px;
   }
+  #notesSearchInput:focus, #insightSearchInput:focus, #eodReasonsSearchInput:focus, .search-input:focus,
+  .field-group input:focus, .field-group textarea:focus, .filter-date:focus{outline:none; border-color:var(--green);}
+  .filter-date{background:var(--bg-card); border:1px solid var(--border-light); color:var(--text); padding:8px 10px; border-radius:8px; color-scheme:dark;}
+  .field-group input[type=date]{color-scheme:dark;}
   .word-chip{display:inline-flex; align-items:center; gap:6px;}
   .word-count{color:var(--text-faint); font-size:10.5px; background:var(--bg-panel); border-radius:5px; padding:1px 6px;}
   .word-menu-wrap{position:relative; display:inline-block; margin-left:auto;}
@@ -719,6 +756,45 @@
   }
   .lock-pin-input:focus{outline:none; border-color:var(--border-light);}
   .lock-error{color:var(--red); font-size:12.5px; margin-top:12px;}
+
+  /* ---------- UX-Review 2026.09.22 ---------- */
+  /* Speichern/Abbrechen bleiben im langen Trade-Formular immer erreichbar,
+     statt erst nach allen Screenshot-Feldern ganz unten. */
+  .modal-footer.is-sticky{
+    position:sticky; bottom:0; z-index:3; background:var(--bg-panel);
+    margin:22px -26px -26px; padding:14px 26px calc(14px + env(safe-area-inset-bottom));
+    border-radius:0 0 var(--radius) var(--radius); box-shadow:0 -10px 18px -10px rgba(0,0,0,.6);
+  }
+  .modal-footer .footer-hint{color:var(--text-faint); font-size:12px;}
+  .field-error{color:var(--red); font-size:12px; margin-top:6px;}
+  .field-group input.has-error, .field-group textarea.has-error{border-color:var(--red);}
+  .modal .required-hint{color:var(--amber); font-weight:600; text-transform:none; letter-spacing:0; margin-left:6px; font-size:11px;}
+
+  /* Bericht: Zeitraum-Schnellwahl direkt über den Kennzahlen */
+  .period-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .period-row .subtab-row{flex-wrap:wrap;}
+  .period-label{color:var(--text-dim); font-size:13px;}
+  .filter-panel.is-collapsed{padding:12px 20px;}
+  .filter-panel.is-collapsed .filter-panel-title-row{margin-bottom:0;}
+  .table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  table.breakdown th.num{text-align:right;}
+  table.breakdown td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap;}
+  .row-between > .area-toggle{margin-bottom:0;}
+  .mini-stat-value.is-key{font-size:18px;}
+  .stat-card .value, .start-stat .value, .mini-stat-value, .cal-r, .cal-week-total, .ratio-label, .compare-table td{font-variant-numeric:tabular-nums;}
+
+  /* Session-Achse auf dem Foto-Hintergrund lesbar machen */
+  .sesstl-axis span{color:var(--text-dim); text-shadow:0 1px 3px rgba(0,0,0,.9);}
+
+  @media (max-width:640px){
+    header.topnav nav.tabs button{padding:8px 0; font-size:10px; letter-spacing:-.2px; text-overflow:clip;}
+    .modal-footer.is-sticky{margin:18px -14px -18px; padding:12px 14px calc(12px + env(safe-area-inset-bottom));}
+    .list-toolbar .search-input{max-width:none; flex:1 1 100%;}
+    .icon-action{width:34px; height:34px;}
+    .trade-list-scroll .trade-card .trade-actions{position:static; box-shadow:none; background:transparent;}
+    table.breakdown{font-size:12.5px;}
+    table.breakdown th, table.breakdown td{padding:8px 6px;}
+  }
 </style>
 </head>
 <body>
@@ -781,7 +857,7 @@
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.09.13";
+const APP_VERSION = "2026.09.22";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -1473,6 +1549,8 @@ const STATE = {
   notesSearchQuery: "",
   // Datums-Unterkategorien pro Bereich: "alles" | "monat" | "woche" | "heute"
   areaDateFilter: { live:"alles", eod:"alles" },
+  // Schnellsuche in der Live-/EOD-Liste (reiner Anzeige-Filter)
+  areaSearch: { live:"", eod:"" },
   // per Kalender-Klick ausgewählter Einzeltag pro Bereich (überschreibt areaDateFilter)
   areaSelectedDay: { live:null, eod:null },
   // welcher Monat im Kalender pro Bereich gerade angezeigt wird
@@ -2239,12 +2317,12 @@ function renderStartStats(){
     <div class="start-stat">
       <div class="label">Diese Woche · Live</div>
       <div class="value ${rCls(w.sum)}">${w.closed ? formatR(w.sum) : "—"}</div>
-      <div class="sub">${w.count} Trade${w.count===1?"":"s"}${w.open?` · ${w.open} offen`:""}${w.winrate!==null?` · ${w.winrate}% Treffer`:""}</div>
+      <div class="sub">${w.count} Trade${w.count===1?"":"s"}${w.open?` · ${w.open} offen`:""}${w.winrate!==null?` · ${w.winrate} % Trefferquote`:""}</div>
     </div>
     <div class="start-stat">
       <div class="label">Dieser Monat · Live</div>
       <div class="value ${rCls(m.sum)}">${m.closed ? formatR(m.sum) : "—"}</div>
-      <div class="sub">${m.count} Trade${m.count===1?"":"s"}${m.open?` · ${m.open} offen`:""}${m.winrate!==null?` · ${m.winrate}% Treffer`:""}</div>
+      <div class="sub">${m.count} Trade${m.count===1?"":"s"}${m.open?` · ${m.open} offen`:""}${m.winrate!==null?` · ${m.winrate} % Trefferquote`:""}</div>
     </div>
     <div class="start-stat">
       <div class="label">Aktuelle Serie</div>
@@ -2392,7 +2470,8 @@ function renderStart(){
           <button class="btn btn-danger" id="gdriveUseLocalBtn">Lokalen Stand hochladen (Cloud überschreiben)</button>
         </div>
       ` : STATE.driveStatus === "error" ? `
-        <p style="color:var(--red); font-size:13.5px; margin:0 0 12px;">⚠ Fehler bei der Synchronisierung: ${STATE.driveError||""}</p>
+        <p style="color:var(--red); font-size:13.5px; margin:0 0 4px;">⚠ Synchronisierung fehlgeschlagen${/fetch|network|load/i.test(STATE.driveError||"") ? " — keine Verbindung zum Sync-Dienst" : ""}.</p>
+        <p style="color:var(--text-dim); font-size:12.5px; margin:0 0 12px;">Deine Änderungen sind auf diesem Gerät gespeichert und gehen nicht verloren. Sobald die Verbindung wieder steht, einfach erneut versuchen.${STATE.driveError ? ` <span style="color:var(--text-faint);">(Details: ${escHtml(STATE.driveError)})</span>` : ""}</p>
         <button class="btn" id="gdriveRetryBtn">Erneut versuchen</button>
       ` : `
         <p style="color:var(--green); font-size:13.5px; margin:0 0 12px;">✓ Synchronisiert · Zuletzt: ${formatBackupTimestamp(STATE.driveLastSyncAt)}</p>
@@ -2499,12 +2578,42 @@ function getAreaFilteredTrades(area){
   let trades = STATE.trades.filter(t=>t.area===area);
   const filter = STATE.areaDateFilter[area] || "alles";
   trades = trades.filter(t=> dateMatchesFilter(t.date, filter));
+  const q = ((STATE.areaSearch && STATE.areaSearch[area]) || "").trim().toLowerCase();
+  if(q) trades = trades.filter(t=> tradeSearchText(t).includes(q));
   return trades.sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
+}
+
+// Durchsuchbarer Text eines Trades für die Schnellsuche in Live/EOD: Markt, Datum,
+// alle Kategorien-Werte (inkl. eigener Kategorien), Ergebnis, Notizen und der Grund
+// für "nicht genommen". Reine Anzeige-Filterung, am Trade selbst ändert sich nichts.
+function tradeSearchText(t){
+  const parts = [t.markt, formatDateDE(t.date), t.date, t.ergebnis || "offen", t.notizen, t.grundNichtGenommen];
+  tradeCategoryColumns(t.area).forEach(col=> tradeCategoryCellValues(t, col).forEach(v=> parts.push(v.text)));
+  return parts.filter(Boolean).join(" \u0001 ").toLowerCase();
+}
+
+// Kurzbilanz der gerade sichtbaren Trades (Zeitraum + Suche) — damit sich ein Tag oder
+// eine Woche direkt in der Liste auswerten lässt, ohne in den Bericht zu wechseln.
+function areaSummaryHtml(trades){
+  if(!trades.length) return `<span class="list-summary">0 Trades</span>`;
+  const st = startPeriodStatsFromList(trades);
+  const rCls = st.sum>0?"pos":(st.sum<0?"neg":"");
+  return `<span class="list-summary">${trades.length} Trade${trades.length===1?"":"s"}${st.open?` · ${st.open} offen`:""}${st.closed?` · Summe <b class="${rCls}">${formatR(st.sum)}</b>`:""}${st.winrate!==null?` · Trefferquote <b>${st.winrate} %</b>`:""}</span>`;
+}
+function startPeriodStatsFromList(trades){
+  const closed = trades.filter(t=> t.r!==null && t.r!==undefined);
+  const sum = closed.reduce((a,t)=>a+t.r, 0);
+  const wins = closed.filter(t=>t.r>0).length, losses = closed.filter(t=>t.r<0).length;
+  return { closed:closed.length, open:trades.length-closed.length, sum, winrate:(wins+losses)?Math.round(wins/(wins+losses)*100):null };
+}
+
+function tradeListInnerHtml(area, trades){
+  return trades.length ? tradeListHeaderHtml(area) + trades.map(t=>tradeListRowHtml(t)).join("") : emptyStateHtml(area);
 }
 
 function renderAreaView(area){
   const trades = getAreaFilteredTrades(area);
-  const list = trades.length ? tradeListHeaderHtml(area) + trades.map(t=>tradeListRowHtml(t)).join("") : emptyStateHtml(area);
+  const list = tradeListInnerHtml(area, trades);
   const filterVal = STATE.areaDateFilter[area] || "alles";
 
   const subtabs = ["alles","monat","woche","heute"].map(f=>{
@@ -2524,8 +2633,11 @@ function renderAreaView(area){
         <button class="btn btn-primary" id="btnAddTrade">+ Trade hinzufügen</button>
       </div>
     </div>
-    <div style="color:var(--text-dim); font-size:13.5px; margin-bottom:14px;">${trades.length} Trade${trades.length===1?"":"s"}</div>
-    <div class="trade-list-scroll"><div class="trade-list">${list}</div></div>
+    <div class="list-toolbar">
+      <input type="search" class="search-input" id="areaSearchInput" placeholder="Suchen: Markt, Tag, Notiz …" value="${escAttr((STATE.areaSearch && STATE.areaSearch[area]) || "")}" aria-label="Trades durchsuchen">
+      <span id="areaSummary">${areaSummaryHtml(trades)}</span>
+    </div>
+    <div class="trade-list-scroll" id="tradeListScroll"><div class="trade-list" id="tradeListContainer" style="--list-min:${tradeListMinWidth(area)}px">${list}</div></div>
     ${area==="eod" ? eodReasonsSectionHtml() : ""}
     ${calendarHtml(area)}
     ${dayDetailHtml(area)}
@@ -2533,9 +2645,14 @@ function renderAreaView(area){
 }
 
 function emptyStateHtml(area){
+  const q = ((STATE.areaSearch && STATE.areaSearch[area]) || "").trim();
+  const filtered = q || (STATE.areaDateFilter[area] && STATE.areaDateFilter[area] !== "alles");
   return `<div class="empty-state panel">
     <div class="big">◇</div>
-    <div>Keine Einträge für diesen Zeitraum in ${AREA_LABEL[area]}.</div>
+    <div>${q ? `Keine Trades gefunden für „${escHtml(q)}“.` : `Keine Einträge für diesen Zeitraum in ${AREA_LABEL[area]}.`}</div>
+    ${filtered
+      ? `<button type="button" class="btn btn-sm btn-ghost" data-resetareafilter="1">Suche &amp; Zeitraum zurücksetzen</button>`
+      : `<button type="button" class="btn btn-primary" data-emptyadd="1">+ Ersten Trade erfassen</button>`}
   </div>`;
 }
 
@@ -2564,7 +2681,7 @@ function dayDetailItemHtml(t){
     const genommenTag = t.genommen===true ? `<span class="tag" style="color:var(--green);">genommen</span>`
       : t.genommen===false ? `<span class="tag" style="color:var(--red);">nicht genommen</span>`
       : `<span class="tag">—</span>`;
-    return `<div class="day-detail-item" data-viewtrade="${t.id}">
+    return `<div class="day-detail-item" data-viewtrade="${t.id}" tabindex="0" role="button">
       <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
       <div class="trade-tags" style="flex:1;">${genommenTag}</div>
       <span class="badge ${t.ergebnis?resultBadgeClass(t.ergebnis):"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
@@ -2573,7 +2690,7 @@ function dayDetailItemHtml(t){
   }
 
   const subtags = [t.richtung, t.session, t.art].filter(Boolean);
-  return `<div class="day-detail-item" data-viewtrade="${t.id}">
+  return `<div class="day-detail-item" data-viewtrade="${t.id}" tabindex="0" role="button">
     <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
     <div class="trade-tags" style="flex:1;">${subtags.map(x=>`<span class="tag">${escHtml(x)}</span>`).join("")}</div>
     <span class="badge ${t.ergebnis?resultBadgeClass(t.ergebnis):"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
@@ -2628,7 +2745,7 @@ function eodReasonsListHtml(items, query){
   return `<div class="notes-list">${sorted.map(t=>{
     const rDisplay = (t.r===null || t.r===undefined) ? "" : formatR(t.r);
     const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
-    return `<div class="note-item" data-viewtrade="${t.id}">
+    return `<div class="note-item" data-viewtrade="${t.id}" tabindex="0" role="button">
       <div class="note-item-head">
         <span class="tag">${formatDateDE(t.date)}</span>
         <span class="tag">${escHtml(t.markt||"—")}</span>
@@ -2724,7 +2841,7 @@ function calendarHtml(area){
       }
       if(dateStr === todayISO()) cls += " cal-today";
       if(STATE.areaSelectedDay[area] === dateStr) cls += " cal-selected";
-      rowCells += `<div class="${cls}" data-caldate="${dateStr}">${inner}</div>`;
+      rowCells += `<div class="${cls}" data-caldate="${dateStr}" tabindex="0" role="button" aria-label="${formatDateDE(dateStr)}${rs&&rs.length?": "+formatR(rs.reduce((a,b)=>a+b,0)):""}">${inner}</div>`;
     });
 
     const weekCls = "cal-week-total" + (weekHasData ? (weekSum>0?" cal-pos":(weekSum<0?" cal-neg":" cal-neutral")) : "");
@@ -2739,9 +2856,9 @@ function calendarHtml(area){
     <div class="panel cal-panel">
       ${calendarMarketChipsHtml(area)}
       <div class="cal-header">
-        <button type="button" class="btn btn-sm btn-ghost" data-calnav="-1">‹</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-calnav="-1" aria-label="Vorheriger Monat" title="Vorheriger Monat">‹</button>
         <div class="cal-month-label">${monthLabel}</div>
-        <button type="button" class="btn btn-sm btn-ghost" data-calnav="1">›</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-calnav="1" aria-label="Nächster Monat" title="Nächster Monat">›</button>
       </div>
       <div class="cal-weekdays"><div>Mo</div><div>Di</div><div>Mi</div><div>Do</div><div>Fr</div><div>Sa</div><div>So</div><div>Σ Woche</div></div>
       <div class="cal-grid">${rowsHtml}</div>
@@ -2762,6 +2879,11 @@ function formatR(r){
   const n = Number(r);
   const s = n.toFixed(2).replace(".", ",");
   return (n>0?"+":"") + s + "R";
+}
+
+// Zahl mit deutschem Dezimalkomma (z. B. Profit-Faktor 3,67 statt 3.67).
+function formatNumberDE(n, digits){
+  return Number(n).toFixed(digits).replace(".", ",");
 }
 
 // ISO-Datum (JJJJ-MM-TT, so wird intern gespeichert) -> deutsche Anzeige TT.MM.JJJJ.
@@ -2804,39 +2926,15 @@ function wireAreaView(area){
       if(anchor) anchor.scrollIntoView({ block:"start" });
     });
   });
-  document.querySelectorAll("[data-edit]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const t = STATE.trades.find(x=>x.id===b.dataset.edit);
-      openTradeModal(area, t);
-    });
-  });
-  document.querySelectorAll("[data-del]").forEach(b=>{
-    b.addEventListener("click", async ()=>{
-      if(!await uiConfirm("Das kann nicht rückgängig gemacht werden.", { title:"Diesen Trade löschen?", okText:"Löschen", danger:true })) return;
-      const deleted = STATE.trades.find(x=>x.id===b.dataset.del);
-      STATE.trades = STATE.trades.filter(x=>x.id!==b.dataset.del);
-      // War das ein EOD-Trade, der aus einem Live-Trade kopiert wurde? Dann den
-      // Live-Trade wieder freigeben, damit "→ EOD kopieren" dort erneut möglich ist.
-      if(deleted && deleted.copiedFromLiveId){
-        const source = STATE.trades.find(x=>x.id===deleted.copiedFromLiveId);
-        if(source) source.copiedToEod = false;
-      }
-      saveTrades();
-      render();
-      toast("Trade gelöscht.");
-    });
-  });
+  wireTradeListRows(document.getElementById("tradeListContainer"), area);
 
-  document.querySelectorAll("[data-copy-eod]").forEach(b=>{
-    b.addEventListener("click", ()=>{
-      const t = STATE.trades.find(x=>x.id===b.dataset.copyEod);
-      if(!t) return;
-      const copy = copyTradeToEod(t);
-      render();
-      toast("In EOD kopiert.");
-      openTradeModal("eod", copy);
-    });
+  // Schnellsuche: nur Liste + Kurzbilanz neu zeichnen, damit der Fokus im Feld bleibt.
+  const searchInput = document.getElementById("areaSearchInput");
+  if(searchInput) searchInput.addEventListener("input", (e)=>{
+    STATE.areaSearch[area] = e.target.value;
+    refreshAreaList(area);
   });
+  wireEmptyStateButtons(area);
 
   const subtabRow = document.getElementById("subtabRow");
   if(subtabRow) subtabRow.addEventListener("click",(e)=>{
@@ -2876,6 +2974,7 @@ function wireAreaView(area){
   // und die "Gründe nicht genommen"-Suche als auch für die Trade-Karten selbst (dort
   // aber NICHT, wenn auf einen der Buttons wie "Bearbeiten"/"Löschen" geklickt wurde).
   document.querySelectorAll("[data-viewtrade]").forEach(el=>{
+    if(el.closest("#tradeListContainer")) return; // Listenzeilen: siehe wireTradeListRows
     el.addEventListener("click", (e)=>{
       if(e.target.closest("button")) return;
       const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
@@ -2913,6 +3012,86 @@ function wireAreaView(area){
       STATE.eodReasonsQuery = chip.dataset.eodreasonword;
       render();
     });
+  });
+}
+
+// Verdrahtet Bearbeiten/Löschen/→EOD und den Klick auf die Zeile (Detailseite) für alle
+// Trade-Zeilen innerhalb von root — getrennt ausgelagert, damit die Schnellsuche nur die
+// Liste neu zeichnen kann, ohne der restlichen Seite doppelte Listener anzuhängen.
+function wireTradeListRows(root, area){
+  if(!root) return;
+  root.querySelectorAll("[data-edit]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const t = STATE.trades.find(x=>x.id===b.dataset.edit);
+      openTradeModal(area, t);
+    });
+  });
+  root.querySelectorAll("[data-del]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      if(!await uiConfirm("Direkt danach kannst du das Löschen noch einige Sekunden rückgängig machen.", { title:"Diesen Trade löschen?", okText:"Löschen", danger:true })) return;
+      const idx = STATE.trades.findIndex(x=>x.id===b.dataset.del);
+      if(idx < 0) return;
+      const deleted = STATE.trades[idx];
+      STATE.trades.splice(idx, 1);
+      // War das ein EOD-Trade, der aus einem Live-Trade kopiert wurde? Dann den
+      // Live-Trade wieder freigeben, damit "→ EOD kopieren" dort erneut möglich ist.
+      let source = null, sourceWasCopied = false;
+      if(deleted.copiedFromLiveId){
+        source = STATE.trades.find(x=>x.id===deleted.copiedFromLiveId);
+        if(source){ sourceWasCopied = !!source.copiedToEod; source.copiedToEod = false; }
+      }
+      saveTrades();
+      render();
+      toast("Trade gelöscht.", "Rückgängig", ()=>{
+        if(STATE.trades.some(x=>x.id===deleted.id)) return;
+        STATE.trades.splice(Math.min(idx, STATE.trades.length), 0, deleted);
+        if(source) source.copiedToEod = sourceWasCopied;
+        saveTrades();
+        render();
+        toast("Trade wiederhergestellt.");
+      }, 7000);
+    });
+  });
+  root.querySelectorAll("[data-copy-eod]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const t = STATE.trades.find(x=>x.id===b.dataset.copyEod);
+      if(!t) return;
+      const copy = copyTradeToEod(t);
+      render();
+      toast("In EOD kopiert.");
+      openTradeModal("eod", copy);
+    });
+  });
+  root.querySelectorAll("[data-viewtrade]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      if(e.target.closest("button")) return;
+      const t = STATE.trades.find(x=>x.id===el.dataset.viewtrade);
+      if(t) openTradeDetail(t);
+    });
+  });
+}
+
+function refreshAreaList(area){
+  const container = document.getElementById("tradeListContainer");
+  if(!container) return;
+  const trades = getAreaFilteredTrades(area);
+  container.innerHTML = tradeListInnerHtml(area, trades);
+  const sum = document.getElementById("areaSummary");
+  if(sum) sum.innerHTML = areaSummaryHtml(trades);
+  wireTradeListRows(container, area);
+  wireEmptyStateButtons(area);
+}
+
+function wireEmptyStateButtons(area){
+  const c = document.getElementById("tradeListContainer");
+  if(!c) return;
+  const add = c.querySelector("[data-emptyadd]");
+  if(add) add.addEventListener("click", ()=> openTradeModal(area, null));
+  const reset = c.querySelector("[data-resetareafilter]");
+  if(reset) reset.addEventListener("click", ()=>{
+    STATE.areaSearch[area] = "";
+    STATE.areaDateFilter[area] = "alles";
+    render();
   });
 }
 
@@ -2963,8 +3142,23 @@ function tradeCategoryColumns(area){
   });
   return cols;
 }
+// Listen-Ansicht: alle Kategorien-Spalten weiterhin exakt gleich breit (Kopfzeile und
+// Zeilen nutzen dieselbe Vorlage, die Ausrichtung bleibt also identisch) — sie dürfen
+// aber bei schmaleren Fenstern gemeinsam bis auf TRADE_CATEGORY_COL_MIN schrumpfen.
+// Vorher waren sie starr 96 px breit, wodurch auf Laptop-Breite (1280–1440 px) die
+// Bearbeiten-/Löschen-Buttons und teils das Ergebnis aus dem sichtbaren Bereich ragten.
+const TRADE_CATEGORY_COL_MIN = 70;
 function tradeCategoryGrid(area){
-  return Array(tradeCategoryColumns(area).length).fill(TRADE_CATEGORY_COL_WIDTH+"px").join(" ");
+  return Array(tradeCategoryColumns(area).length).fill(`minmax(${TRADE_CATEGORY_COL_MIN}px, ${TRADE_CATEGORY_COL_WIDTH}px)`).join(" ");
+}
+// Mindestbreite der Liste, ab der horizontal gescrollt wird (Summe aller Mindestspalten).
+const TRADE_LIST_ACTIONS_MIN = 76;
+function tradeListMinWidth(area){
+  const n = tradeCategoryColumns(area).length;
+  const eodCol = area === "eod" ? 0 : 1;
+  const colCount = 2 + eodCol + n + 3;
+  const fixed = 78 + 76 + (eodCol ? 88 : 0) + 50 + 56 + TRADE_LIST_ACTIONS_MIN;
+  return fixed + n * TRADE_CATEGORY_COL_MIN + (colCount - 1) * 10 + 32 + 2;
 }
 function tradeCategoryGridDetail(area){
   return Array(tradeCategoryColumns(area).length).fill(TRADE_CATEGORY_COL_WIDTH_DETAIL+"px").join(" ");
@@ -3021,7 +3215,7 @@ function tradeListGrid(area){
   // komplett weglassen statt nur leer zu lassen, damit der Freiraum den Kategorien
   // und Buttons zugutekommt statt ungenutzt zu bleiben.
   const eodExtraCol = area === "eod" ? "" : "88px ";
-  return `78px 76px ${eodExtraCol}${tradeCategoryGrid(area)} 50px 56px minmax(145px,1fr)`;
+  return `78px 76px ${eodExtraCol}${tradeCategoryGrid(area)} 50px 56px minmax(${TRADE_LIST_ACTIONS_MIN}px,1fr)`;
 }
 function tradeListHeaderHtml(area){
   const catLabels = tradeCategoryColumns(area).map(c=>`<div class="cat-col-label">${c.label}</div>`).join("");
@@ -3044,7 +3238,7 @@ function tradeListRowHtml(t){
     return `<div class="cat-col-value${values.length?"":" cat-col-empty"}">${values.length?`<span class="cat-col-mobile-label">${col.label}</span>`:""}${chips}</div>`;
   }).join("");
 
-  return `<div class="trade-card" data-id="${t.id}" data-viewtrade="${t.id}" style="grid-template-columns:${tradeListGrid(t.area)}">
+  return `<div class="trade-card" data-id="${t.id}" data-viewtrade="${t.id}" tabindex="0" role="button" aria-label="${escAttr((t.markt||"Trade")+" vom "+formatDateDE(t.date)+" öffnen")}" style="grid-template-columns:${tradeListGrid(t.area)}">
     <div class="trade-market" title="${escAttr(t.markt||"")}">${escHtml(t.markt||"—")}</div>
     <div class="trade-date-badge">${formatDateDE(t.date)}</div>
     ${eodExtraSlot}
@@ -3052,11 +3246,15 @@ function tradeListRowHtml(t){
     <div class="badge ${isOpen?"badge-open":resultBadgeClass(t.ergebnis)}">${isOpen?"offen":(t.ergebnis)}</div>
     <div class="trade-r ${rClass}">${rDisplay}</div>
     <div class="trade-actions">
-      <button class="btn btn-sm" data-edit="${t.id}">Bearbeiten</button>
-      <button class="btn btn-sm btn-danger" data-del="${t.id}">Löschen</button>
+      <button type="button" class="icon-action" data-edit="${t.id}" title="Bearbeiten" aria-label="Bearbeiten">${ICON_EDIT}</button>
+      <button type="button" class="icon-action is-danger" data-del="${t.id}" title="Löschen" aria-label="Löschen">${ICON_DELETE}</button>
     </div>
   </div>`;
 }
+
+// Kleine Strich-Symbole (erben die Textfarbe) für die kompakten Aktions-Buttons.
+const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+const ICON_DELETE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>`;
 
 const SHOT_CATEGORIES = [
   { key:"htf",      label:"HTF (Higher Time Frame)" },
@@ -3135,13 +3333,34 @@ function openTradeModal(area, existing){
   STATE.modalFreshOpen = true;
   const d = STATE.draft;
   d._rMagnitudeInput = (d.r !== null && d.r !== undefined) ? String(Math.abs(d.r)).replace(".", ",") : "";
+  STATE.draftSnapshot = draftFingerprint(d);
   renderModal();
+}
+
+// Vergleichswert für "wurde im Formular etwas geändert?" — UI-Hilfsfelder (_…) zählen nicht,
+// der eingetippte R-Betrag aber schon.
+function draftFingerprint(d){
+  if(!d) return "";
+  return JSON.stringify(d, (k, v)=> (k && k.charAt(0) === "_" && k !== "_rMagnitudeInput") ? undefined : v);
+}
+
+// Schließen über ✕, Abbrechen, Klick daneben oder Escape: bei ungespeicherten Eingaben
+// erst nachfragen — vorher genügte ein versehentlicher Klick neben das Formular, und
+// alle Eingaben inkl. eingefügter Screenshots waren weg.
+async function requestCloseTradeModal(){
+  if(!STATE.draft){ closeModal(); return; }
+  if(draftFingerprint(STATE.draft) !== STATE.draftSnapshot){
+    const ok = await uiConfirm("Deine Eingaben in diesem Formular wurden noch nicht gespeichert.", { title:"Änderungen verwerfen?", okText:"Verwerfen", cancelText:"Weiter bearbeiten", danger:true });
+    if(!ok) return;
+  }
+  closeModal();
 }
 
 function closeModal(){
   document.removeEventListener("paste", handlePasteEvent);
   document.getElementById("modalRoot").innerHTML = "";
   STATE.draft = null;
+  STATE.draftSnapshot = null;
   STATE.editingId = null;
 }
 
@@ -3243,7 +3462,7 @@ function openLightbox(src){
   const lb = document.createElement("div");
   lb.className = "lightbox-backdrop";
   lb.innerHTML = `
-    <button type="button" class="lightbox-close" title="Schließen">✕</button>
+    <button type="button" class="lightbox-close" title="Schließen (Esc)" aria-label="Schließen">✕</button>
     <img src="${src}">
   `;
   document.body.appendChild(lb);
@@ -3277,13 +3496,13 @@ function renderModal(){
   const prevScroll = prevBackdrop ? prevBackdrop.scrollTop : 0;
   root.innerHTML = `
   <div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="${isEdit?"Trade bearbeiten":"Trade hinzufügen"}">
       <div class="modal-header-row">
         <div>
           <h2>${isEdit?"Trade bearbeiten":"Trade hinzufügen"}</h2>
           <div class="modal-sub">${AREA_LABEL[d.area]}</div>
         </div>
-        <button class="icon-btn" id="modalCloseBtn">✕</button>
+        <button class="icon-btn" id="modalCloseBtn" title="Schließen" aria-label="Schließen">✕</button>
       </div>
 
       <div class="two-col">
@@ -3370,7 +3589,8 @@ function renderModal(){
       </div>` : (d.ergebnis === "TP" || d.ergebnis === "SL") ? `
       <div class="field-group">
         <label class="fg-label">R-Ergebnis (Betrag, z.B. 2 oder 1,5)</label>
-        <input type="text" id="f_r" inputmode="decimal" placeholder="z.B. 2,3" value="${escAttr(d._rMagnitudeInput||"")}">
+        <input type="text" id="f_r" inputmode="decimal" placeholder="z.B. 2,3" value="${escAttr(d._rMagnitudeInput||"")}" class="${d._rError?"has-error":""}">
+        ${d._rError ? `<div class="field-error">Bitte eine Zahl eingeben, z. B. 2 oder 1,5.</div>` : ""}
         <div style="color:var(--text-dim); font-size:12px; margin-top:6px;">
           Wird automatisch als ${d.ergebnis==="TP" ? '<span class="pos">+R</span>' : '<span class="neg">-R</span>'} verbucht — Vorzeichen musst du nicht eintippen.
         </div>
@@ -3416,7 +3636,7 @@ function renderModal(){
       </div>`;
       }).join("")}
 
-      <div class="modal-footer">
+      <div class="modal-footer is-sticky">
         <button class="btn btn-ghost" id="modalCancelBtn">Abbrechen</button>
         <button class="btn btn-primary" id="modalSaveBtn">${isEdit?"Speichern":"Trade speichern"}</button>
       </div>
@@ -3431,9 +3651,9 @@ function renderModal(){
 
 function wireModal(){
   const backdrop = document.getElementById("modalBackdrop");
-  backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) closeModal(); });
-  document.getElementById("modalCloseBtn").addEventListener("click", closeModal);
-  document.getElementById("modalCancelBtn").addEventListener("click", closeModal);
+  backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) requestCloseTradeModal(); });
+  document.getElementById("modalCloseBtn").addEventListener("click", requestCloseTradeModal);
+  document.getElementById("modalCancelBtn").addEventListener("click", requestCloseTradeModal);
 
   // chip clicks (single + multi select)
   document.querySelectorAll("[data-chipgroup]").forEach(group=>{
@@ -3575,7 +3795,16 @@ function wireModal(){
   if(grundInput) grundInput.addEventListener("input", (e)=>{ STATE.draft.grundNichtGenommen = e.target.value; });
 
   const rInput = document.getElementById("f_r");
-  if(rInput) rInput.addEventListener("input", (e)=>{ STATE.draft._rMagnitudeInput = e.target.value; });
+  if(rInput) rInput.addEventListener("input", (e)=>{
+    STATE.draft._rMagnitudeInput = e.target.value;
+    if(STATE.draft._rError){
+      STATE.draft._rError = false;
+      rInput.classList.remove("has-error");
+      const err = rInput.parentElement.querySelector(".field-error");
+      if(err) err.remove();
+    }
+  });
+  if(rInput) rInput.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); saveDraft(); } });
 
   document.getElementById("modalSaveBtn").addEventListener("click", saveDraft);
 }
@@ -3711,13 +3940,25 @@ function saveDraft(){
     if(rRaw===""){
       d.r = null;
     }else{
-      const magnitude = Math.abs(parseFloat(rRaw.replace(",", ".")));
-      d.r = isNaN(magnitude) ? null : (d.ergebnis === "TP" ? magnitude : -magnitude);
+      // Nur echte Zahlen akzeptieren — vorher wurde z. B. "2x" still als "kein R"
+      // gespeichert und der Trade tauchte ohne Meldung als offen auf.
+      const normalized = rRaw.replace(",", ".");
+      const magnitude = Math.abs(Number(normalized));
+      if(!/^[+-]?\d*\.?\d+$/.test(normalized) || isNaN(magnitude)){
+        d._rError = true;
+        d._rMagnitudeInput = rRaw;
+        renderModal();
+        const el = document.getElementById("f_r");
+        if(el){ el.focus(); el.scrollIntoView({ block:"center" }); }
+        return;
+      }
+      d.r = d.ergebnis === "TP" ? magnitude : -magnitude;
     }
   }else{
     d.r = null;
   }
   delete d._rMagnitudeInput; // nur ein UI-Hilfsfeld, nicht mit abspeichern
+  delete d._rError;
   d.updatedAt = Date.now();
 
   const idx = STATE.trades.findIndex(t=>t.id===d.id);
@@ -3753,6 +3994,44 @@ function getFilterDimensions(){
   return [...base, ...custom];
 }
 
+// Zeitraum-Schnellwahl im Bericht. Setzt nur Von/Bis des bestehenden Zeitraum-Filters
+// (berichtDateFrom/To) — dieselben Felder wie im Filterbereich, daher bleibt alles
+// kompatibel und wird wie gehabt gemerkt.
+function isoOfDate(d){
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function berichtPeriodPresets(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const mon = startOfWeek(today);
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const lastMon = new Date(mon); lastMon.setDate(mon.getDate()-7);
+  const lastSun = new Date(mon); lastSun.setDate(mon.getDate()-1);
+  const m1 = new Date(today.getFullYear(), today.getMonth(), 1);
+  const mEnd = new Date(today.getFullYear(), today.getMonth()+1, 0);
+  const lm1 = new Date(today.getFullYear(), today.getMonth()-1, 1);
+  const lmEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  return [
+    { key:"alles", label:"Alles", from:"", to:"" },
+    { key:"heute", label:"Heute", from:isoOfDate(today), to:isoOfDate(today) },
+    { key:"woche", label:"Diese Woche", from:isoOfDate(mon), to:isoOfDate(sun) },
+    { key:"vorwoche", label:"Letzte Woche", from:isoOfDate(lastMon), to:isoOfDate(lastSun) },
+    { key:"monat", label:"Dieser Monat", from:isoOfDate(m1), to:isoOfDate(mEnd) },
+    { key:"vormonat", label:"Letzter Monat", from:isoOfDate(lm1), to:isoOfDate(lmEnd) }
+  ];
+}
+function berichtPeriodRowHtml(){
+  const presets = berichtPeriodPresets();
+  const active = presets.find(p=> p.from === (STATE.berichtDateFrom||"") && p.to === (STATE.berichtDateTo||""));
+  const custom = !active;
+  return `<div class="period-row">
+    <span class="period-label">Zeitraum</span>
+    <div class="subtab-row" id="periodPresetRow">
+      ${presets.map(p=>`<button type="button" class="subtab ${active && active.key===p.key ? "active" : ""}" data-period="${p.key}">${p.label}</button>`).join("")}
+      ${custom ? `<button type="button" class="subtab active" data-period="__custom__" title="Im Filterbereich eingestellt">${formatDateDE(STATE.berichtDateFrom)||"…"} – ${formatDateDE(STATE.berichtDateTo)||"…"}</button>` : ""}
+    </div>
+  </div>`;
+}
+
 function activeFilterCountLabel(){
   let count = 0;
   if(STATE.berichtDateFrom || STATE.berichtDateTo) count++;
@@ -3781,8 +4060,8 @@ function compareSectionHtml(){
   const fmt = (v, kind, suffix)=>{
     if(v===null || v===undefined) return `<span style="color:var(--text-faint);">—</span>`;
     if(kind==="r") return `<span class="${v>0?"pos":(v<0?"neg":"")}">${formatR(v)}</span>`;
-    if(kind==="pct") return `${Math.round(v*100)}%`;
-    if(kind==="factor") return (v===Infinity ? "–" : v.toFixed(2));
+    if(kind==="pct") return `${Math.round(v*100)} %`;
+    if(kind==="factor") return (v===Infinity ? "∞" : formatNumberDE(v, 2));
     return `${v}${suffix||""}`;
   };
 
@@ -3864,7 +4143,9 @@ function renderBericht(){
       </div>` : ""}
     </div>
 
-    <div class="panel filter-panel">
+    ${berichtPeriodRowHtml()}
+
+    <div class="panel filter-panel${STATE.berichtFiltersExpanded ? "" : " is-collapsed"}">
       <div class="filter-panel-title-row">
         <div class="filter-panel-title">FILTER${!STATE.berichtFiltersExpanded ? activeFilterCountLabel() : ""}</div>
         <button type="button" class="btn btn-sm btn-ghost" id="toggleFiltersBtn">${STATE.berichtFiltersExpanded ? "Filter ausblenden" : "Filter einblenden"}</button>
@@ -3873,9 +4154,9 @@ function renderBericht(){
       <div class="filter-row">
         <div class="filter-label">Zeitraum</div>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <input type="date" id="f_dateFrom" value="${STATE.berichtDateFrom}" style="background:var(--bg-card); border:1px solid var(--border-light); color:var(--text); padding:8px 10px; border-radius:8px;">
+          <input type="date" id="f_dateFrom" class="filter-date" value="${STATE.berichtDateFrom}" aria-label="Von">
           <span style="color:var(--text-dim);">bis</span>
-          <input type="date" id="f_dateTo" value="${STATE.berichtDateTo}" style="background:var(--bg-card); border:1px solid var(--border-light); color:var(--text); padding:8px 10px; border-radius:8px;">
+          <input type="date" id="f_dateTo" class="filter-date" value="${STATE.berichtDateTo}" aria-label="Bis">
           <button class="btn btn-sm btn-ghost" id="clearFiltersBtn">Filter zurücksetzen</button>
         </div>
       </div>
@@ -3900,9 +4181,10 @@ function renderBericht(){
 
     <div class="mini-stat-row">
       <div><span class="mini-stat-label">Trades gesamt</span><span class="mini-stat-value">${stats.count}</span><span class="mini-stat-sub">${stats.open} offen</span></div>
-      <div><span class="mini-stat-label">Größter Gewinner</span><span class="mini-stat-value pos">${stats.best===null?"—":formatR(stats.best)}</span></div>
-      <div><span class="mini-stat-label">Größter Verlierer</span><span class="mini-stat-value neg">${stats.worst===null?"—":formatR(stats.worst)}</span></div>
-      <div><span class="mini-stat-label">Längste Verlustserie</span><span class="mini-stat-value neg">${stats.longestSlStreak}</span><span class="mini-stat-sub">SL in Folge</span></div>
+      <div><span class="mini-stat-label">Max. Drawdown</span><span class="mini-stat-value is-key ${stats.maxDrawdown ? "neg" : ""}">${stats.maxDrawdown===null?"—":formatR(-Math.abs(stats.maxDrawdown))}</span><span class="mini-stat-sub">größter Rückgang vom Hoch</span></div>
+      <div><span class="mini-stat-label">Größter Gewinner</span><span class="mini-stat-value ${stats.best>0?"pos":""}">${stats.best===null?"—":formatR(stats.best)}</span></div>
+      <div><span class="mini-stat-label">Größter Verlierer</span><span class="mini-stat-value ${stats.worst<0?"neg":""}">${stats.worst===null?"—":formatR(stats.worst)}</span></div>
+      <div><span class="mini-stat-label">Längste Verlustserie</span><span class="mini-stat-value ${stats.longestSlStreak?"neg":""}">${stats.longestSlStreak}</span><span class="mini-stat-sub">SL in Folge</span></div>
     </div>
     `}
 
@@ -3929,10 +4211,8 @@ function renderBericht(){
       <button class="btn" id="exportCsvBtn">CSV exportieren</button>
       <button class="btn" id="exportXlsxBtn">Excel (.xlsx) exportieren</button>
       <button class="btn" id="exportJsonBtn">Backup exportieren (JSON)</button>
-      <label class="btn" style="margin:0;">
-        Backup importieren
-        <input type="file" id="importJsonInput" accept="application/json" style="display:none;">
-      </label>
+      <button type="button" class="btn" id="importJsonBtn">Backup importieren</button>
+      <input type="file" id="importJsonInput" accept="application/json,.json" style="display:none;">
     </div>
     <div style="margin-top:8px; font-size:12.5px; color:${hasUnbackedChanges() ? "var(--amber)" : "var(--text-faint)"};">
       ${hasUnbackedChanges() ? "⚠ " : "✓ "}Zuletzt gesichert: ${formatBackupTimestamp(getLastBackupAt())}${(hasUnbackedChanges() && getLastBackupAt()) ? " — es gibt Änderungen seitdem" : ""}
@@ -3958,13 +4238,13 @@ function nettoCardHtml(stats){
   const negPct = Math.round((Math.abs(stats.sumNeg)/maxMag)*100);
   return `<div class="stat-card">
     <div class="label">Netto-Ergebnis in R</div>
-    <div class="value ${stats.totalR>=0?"pos":"neg"}">${formatR(stats.totalR)}</div>
+    <div class="value ${stats.totalR>0?"pos":(stats.totalR<0?"neg":"")}">${stats.closed ? formatR(stats.totalR) : "—"}</div>
     <div class="sub">${formatR(stats.avgR)} je Trade · ${stats.closed} Trade${stats.closed===1?"":"s"}</div>
     <div class="ratio-bars">
       <div class="ratio-bar-row"><span class="ratio-label pos">${formatR(stats.sumPos)}</span><div class="ratio-track"><div class="ratio-fill seg-pos" style="width:${posPct}%"></div></div></div>
       <div class="ratio-bar-row"><span class="ratio-label neg">${formatR(stats.sumNeg)}</span><div class="ratio-track"><div class="ratio-fill seg-neg" style="width:${negPct}%"></div></div></div>
     </div>
-    <div class="sub" style="margin-top:12px;">größter Rückgang ${stats.maxDrawdown===null?"—":formatR(-Math.abs(stats.maxDrawdown))}</div>
+    <div class="sub" style="margin-top:12px;">Max. Drawdown ${stats.maxDrawdown===null?"—":formatR(-Math.abs(stats.maxDrawdown))}</div>
   </div>`;
 }
 
@@ -3983,9 +4263,9 @@ function winrateCardHtml(stats){
 
 function profitFactorCardHtml(stats){
   const pf = stats.profitFactor;
-  const display = (pf===null || pf===Infinity) ? "–" : pf.toFixed(2);
+  const display = pf===null ? "—" : (pf===Infinity ? "∞" : formatNumberDE(pf, 2));
   return `<div class="stat-card">
-    <div class="label">Profit-Faktor <span class="label-sub">Gewinn + Verlust</span></div>
+    <div class="label">Profit-Faktor <span class="label-sub">Gewinne ÷ Verluste</span></div>
     <div class="gauge-wrap">
       <div class="gauge gauge-outline">${display}</div>
       <div class="sub" style="margin-top:0;">
@@ -4295,7 +4575,7 @@ function notesListHtml(trades, query){
     </div>`;
   }
   return `<div class="notes-list">${sorted.map(t=>`
-    <div class="note-item" data-noteedit="${t.id}">
+    <div class="note-item" data-noteedit="${t.id}" tabindex="0" role="button">
       <div class="note-item-head">
         <span class="tag">${AREA_LABEL[t.area]}</span>
         <span class="tag">${formatDateDE(t.date)}</span>
@@ -4371,18 +4651,18 @@ function breakdownTableHtml(trades){
 
   if(!rows.length) return `<div style="color:var(--text-dim); padding:20px 0;">Noch keine geschlossenen Trades mit Ergebnis in diesem Filter.</div>`;
 
-  return `<table class="breakdown">
-    <thead><tr><th>${dimDef.label}</th><th>Trades</th><th>Winrate</th><th>Ø R</th><th>Gesamt-R</th></tr></thead>
+  return `<div class="table-scroll"><table class="breakdown">
+    <thead><tr><th>${escHtml(dimDef.label)}</th><th class="num">Trades</th><th class="num">Trefferquote</th><th class="num">Ø R</th><th class="num">Summe R</th></tr></thead>
     <tbody>
       ${rows.map(r=>`<tr>
         <td>${escHtml(r.k)}</td>
-        <td>${r.n}</td>
-        <td>${r.winrate===null?"—":Math.round(r.winrate*100)+"%"}</td>
-        <td class="${r.avg>0?"pos":(r.avg<0?"neg":"")}">${formatR(r.avg)}</td>
-        <td class="${r.sum>0?"pos":(r.sum<0?"neg":"")}">${formatR(r.sum)}</td>
+        <td class="num">${r.n}</td>
+        <td class="num">${r.winrate===null?"—":Math.round(r.winrate*100)+" %"}</td>
+        <td class="num ${r.avg>0?"pos":(r.avg<0?"neg":"")}">${formatR(r.avg)}</td>
+        <td class="num ${r.sum>0?"pos":(r.sum<0?"neg":"")}">${formatR(r.sum)}</td>
       </tr>`).join("")}
     </tbody>
-  </table>`;
+  </table></div>`;
 }
 
 function matchesBerichtFilters(t){
@@ -4549,6 +4829,17 @@ function wireBericht(){
     });
   });
 
+  const periodRow = document.getElementById("periodPresetRow");
+  if(periodRow) periodRow.addEventListener("click",(e)=>{
+    const btn = e.target.closest("button[data-period]");
+    if(!btn) return;
+    if(btn.dataset.period === "__custom__"){ STATE.berichtFiltersExpanded = true; render(); return; }
+    const p = berichtPeriodPresets().find(x=>x.key===btn.dataset.period);
+    if(!p) return;
+    STATE.berichtDateFrom = p.from; STATE.berichtDateTo = p.to;
+    render();
+  });
+
   const dateFromInput = document.getElementById("f_dateFrom");
   if(dateFromInput) dateFromInput.addEventListener("change",(e)=>{ STATE.berichtDateFrom = e.target.value; render(); });
   const dateToInput = document.getElementById("f_dateTo");
@@ -4602,6 +4893,8 @@ function wireBericht(){
   if(jsonBtn) jsonBtn.addEventListener("click", exportJson);
   const importInput = document.getElementById("importJsonInput");
   if(importInput) importInput.addEventListener("change", importJson);
+  const importBtn = document.getElementById("importJsonBtn");
+  if(importBtn && importInput) importBtn.addEventListener("click", ()=> importInput.click());
 }
 
 function wireNoteItemClicks(){
@@ -4660,8 +4953,15 @@ function drawEquityChart(canvas, labels, datasets){
   if(!allVals.length) allVals = [0];
   let yMin = Math.min(0, ...allVals), yMax = Math.max(0, ...allVals);
   if(yMin === yMax){ yMin -= 1; yMax += 1; }
-  const yPad = (yMax - yMin) * 0.08;
-  yMin -= yPad; yMax += yPad;
+  // "Runde" Achsenschritte (0,5 / 1 / 2 / 5 R …) statt krummer Werte wie 6,8R oder -0,6R.
+  const rawStep = (yMax - yMin) / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const yStep = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  yMin = Math.floor(yMin / yStep) * yStep;
+  yMax = Math.ceil(yMax / yStep) * yStep;
+  if(yMax - yMin < yStep * 2){ yMax += yStep; }
+  const yDecimals = yStep < 1 ? 1 : 0;
 
   const xForIndex = i => padL + (labels.length <= 1 ? plotW / 2 : (i / (labels.length - 1)) * plotW);
   const yForVal = v => padT + plotH - ((v - yMin) / (yMax - yMin)) * plotH;
@@ -4672,21 +4972,20 @@ function drawEquityChart(canvas, labels, datasets){
   ctx.textBaseline = "middle";
   ctx.textAlign = "right";
   ctx.lineWidth = 1;
-  const yTicks = 5;
-  for(let i = 0; i <= yTicks; i++){
-    const v = yMin + (yMax - yMin) * i / yTicks;
+  for(let v = yMin; v <= yMax + yStep/2; v += yStep){
     const y = yForVal(v);
     ctx.beginPath();
     ctx.moveTo(padL, y);
     ctx.lineTo(padL + plotW, y);
     ctx.stroke();
-    ctx.fillText(v.toFixed(1).replace(".", ",") + "R", padL - 8, y);
+    const vv = Math.abs(v) < yStep/1000 ? 0 : v;
+    ctx.fillText((vv>0?"+":"") + vv.toFixed(yDecimals).replace(".", ",") + "R", padL - 8, y);
   }
 
   // X-Achsenbeschriftung, höchstens ~8 Labels über die volle Breite verteilt
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  const maxXLabels = 8;
+  const maxXLabels = Math.max(3, Math.min(8, Math.floor(plotW / 70)));
   const step = Math.max(1, Math.ceil(labels.length / maxXLabels));
   for(let i = 0; i < labels.length; i += step){
     ctx.fillText(labels[i], xForIndex(i), padT + plotH + 8);
@@ -4823,6 +5122,7 @@ function exportJson(){
 
 function importJson(e){
   const file = e.target.files[0];
+  e.target.value = ""; // dieselbe Datei später erneut auswählbar
   if(!file) return;
   const reader = new FileReader();
   reader.onload = async (ev)=>{
@@ -4915,16 +5215,17 @@ function insightListHtml(insights, query){
     return `<div class="empty-state panel">
       <div class="big">◇</div>
       <div>${q ? `Keine Erkenntnisse gefunden für „${escHtml(query)}“.` : "Noch keine Erkenntnisse eingetragen."}</div>
+      ${q ? "" : `<button type="button" class="btn btn-primary" data-emptyaddinsight="1">+ Erste Erkenntnis festhalten</button>`}
     </div>`;
   }
 
   return `<div class="notes-list">${sorted.map(i=>`
-    <div class="note-item" data-insightedit="${i.id}">
+    <div class="note-item" data-insightedit="${i.id}" tabindex="0" role="button">
       ${i.titel ? `<div class="note-item-title">${highlightQuery(i.titel, q)}</div>` : ""}
       <div class="note-item-head">
         <span class="tag">${formatDateDE(i.date)}</span>
         ${(i.screenshots&&i.screenshots.length) ? `<span class="tag">${i.screenshots.length} Screenshot${i.screenshots.length===1?"":"s"}</span>` : ""}
-        <button type="button" class="btn btn-sm btn-danger" data-insightdel="${i.id}" style="margin-left:auto;">Löschen</button>
+        <button type="button" class="icon-action is-danger" data-insightdel="${i.id}" style="margin-left:auto;" title="Löschen" aria-label="Erkenntnis löschen">${ICON_DELETE}</button>
       </div>
       <div class="note-item-text">${highlightQuery(i.text, q)}</div>
       ${(i.screenshots&&i.screenshots.length) ? `
@@ -5146,7 +5447,7 @@ function renderStrategie(){
     <div class="section-title" id="strat-entries" style="margin-top:0;">Entry-Arten</div>
     <div class="strat-entry-grid">
       ${STRATEGY_ENTRIES.map(e => `
-        <div class="strat-entry-card" data-stratentry="${e.key}" data-stratjump="strat-entry-detail">
+        <div class="strat-entry-card" data-stratentry="${e.key}" data-stratjump="strat-entry-detail" tabindex="0" role="button">
           <div class="strat-entry-thumb">${e.thumb ? `<img src="${e.thumb}" alt="${escAttr(e.name)}">` : e.icon}</div>
           <div class="strat-entry-card-body">
             <div class="strat-entry-name">${e.name}</div>
@@ -5356,6 +5657,8 @@ function closeStrategyEntryModal(){
 }
 
 function wireInsightListClicks(){
+  const emptyAdd = document.querySelector("[data-emptyaddinsight]");
+  if(emptyAdd) emptyAdd.addEventListener("click", ()=> openInsightModal(null));
   document.querySelectorAll("[data-insightedit]").forEach(el=>{
     el.addEventListener("click", ()=>{
       const ins = STATE.insights.find(x=>x.id===el.dataset.insightedit);
@@ -5365,11 +5668,20 @@ function wireInsightListClicks(){
   document.querySelectorAll("[data-insightdel]").forEach(btn=>{
     btn.addEventListener("click", async (e)=>{
       e.stopPropagation();
-      if(!await uiConfirm("Das kann nicht rückgängig gemacht werden.", { title:"Diese Erkenntnis löschen?", okText:"Löschen", danger:true })) return;
-      STATE.insights = STATE.insights.filter(x=>x.id!==btn.dataset.insightdel);
+      if(!await uiConfirm("Direkt danach kannst du das Löschen noch einige Sekunden rückgängig machen.", { title:"Diese Erkenntnis löschen?", okText:"Löschen", danger:true })) return;
+      const idx = STATE.insights.findIndex(x=>x.id===btn.dataset.insightdel);
+      if(idx < 0) return;
+      const deleted = STATE.insights[idx];
+      STATE.insights.splice(idx, 1);
       saveInsights();
       render();
-      toast("Erkenntnis gelöscht.");
+      toast("Erkenntnis gelöscht.", "Rückgängig", ()=>{
+        if(STATE.insights.some(x=>x.id===deleted.id)) return;
+        STATE.insights.splice(Math.min(idx, STATE.insights.length), 0, deleted);
+        saveInsights();
+        render();
+        toast("Erkenntnis wiederhergestellt.");
+      }, 7000);
     });
   });
   document.querySelectorAll("[data-insightshotref]").forEach(el=>{
@@ -5386,7 +5698,16 @@ function wireInsightListClicks(){
 function openInsightModal(existing){
   STATE.insightEditingId = existing ? existing.id : null;
   STATE.insightDraft = existing ? JSON.parse(JSON.stringify(existing)) : emptyInsight();
+  STATE.insightDraftSnapshot = JSON.stringify(STATE.insightDraft);
   renderInsightModal();
+}
+
+async function requestCloseInsightModal(){
+  if(STATE.insightDraft && JSON.stringify(STATE.insightDraft) !== STATE.insightDraftSnapshot){
+    const ok = await uiConfirm("Deine Eingaben in diesem Formular wurden noch nicht gespeichert.", { title:"Änderungen verwerfen?", okText:"Verwerfen", cancelText:"Weiter bearbeiten", danger:true });
+    if(!ok) return;
+  }
+  closeInsightModal();
 }
 
 function closeInsightModal(){
@@ -5408,7 +5729,7 @@ function renderInsightModal(){
           <h2>${isEdit?"Erkenntnis bearbeiten":"Erkenntnis hinzufügen"}</h2>
           <div class="modal-sub">Learning aus dem Markt festhalten</div>
         </div>
-        <button class="icon-btn" id="insightCloseBtn">✕</button>
+        <button class="icon-btn" id="insightCloseBtn" title="Schließen" aria-label="Schließen">✕</button>
       </div>
 
       <div class="field-group">
@@ -5452,7 +5773,7 @@ function renderInsightModal(){
         </div>` : ""}
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer is-sticky">
         <button class="btn btn-ghost" id="insightCancelBtn">Abbrechen</button>
         <button class="btn btn-primary" id="insightSaveBtn">${isEdit?"Speichern":"Erkenntnis speichern"}</button>
       </div>
@@ -5463,9 +5784,9 @@ function renderInsightModal(){
 
 function wireInsightModal(){
   const backdrop = document.getElementById("insightBackdrop");
-  backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeInsightModal(); });
-  document.getElementById("insightCloseBtn").addEventListener("click", closeInsightModal);
-  document.getElementById("insightCancelBtn").addEventListener("click", closeInsightModal);
+  backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) requestCloseInsightModal(); });
+  document.getElementById("insightCloseBtn").addEventListener("click", requestCloseInsightModal);
+  document.getElementById("insightCancelBtn").addEventListener("click", requestCloseInsightModal);
 
   document.getElementById("i_titel").addEventListener("input",(e)=>{ STATE.insightDraft.titel = e.target.value; });
   document.getElementById("i_date").addEventListener("input",(e)=>{ STATE.insightDraft.date = e.target.value; });
@@ -5574,6 +5895,12 @@ function saveInsightDraft(){
   d.titel = document.getElementById("i_titel").value || "";
   d.date = document.getElementById("i_date").value || d.date;
   d.text = document.getElementById("i_text").value;
+  if(!d.titel.trim() && !d.text.trim() && !(d.screenshots && d.screenshots.length)){
+    const ta = document.getElementById("i_text");
+    if(ta){ ta.focus(); ta.classList.add("has-error"); }
+    toast("Bitte zuerst eine Erkenntnis, einen Titel oder einen Screenshot eintragen.");
+    return;
+  }
   d.updatedAt = Date.now();
   const idx = STATE.insights.findIndex(x=>x.id===d.id);
   if(idx>-1) STATE.insights[idx] = d; else STATE.insights.push(d);
@@ -5678,6 +6005,41 @@ document.addEventListener("error", (e)=>{
   box.appendChild(line1); box.appendChild(line2);
   img.replaceWith(box);
 }, true);
+
+/* Tastatur: Escape schließt die oberste Ebene (Bild-Vollansicht → Formular/Modal →
+   Trade-Detailseite), Enter/Leertaste öffnet anklickbare Karten (Trade-Zeilen,
+   Kalendertage, Notizen …), die per Tab erreichbar sind. Eigene Dialoge (uiDialog)
+   behandeln ihre Tasten selbst und haben Vorrang. */
+document.addEventListener("keydown", (e)=>{
+  if(document.getElementById("dialogRoot").children.length) return;
+  if(e.key === "Escape"){
+    const lb = document.querySelector(".lightbox-backdrop");
+    if(lb){ e.preventDefault(); lb.remove(); if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); return; }
+    if(document.getElementById("modalRoot").children.length){
+      e.preventDefault();
+      if(STATE.draft) requestCloseTradeModal();
+      else if(STATE.insightDraft) requestCloseInsightModal();
+      else if(document.getElementById("settingsBackdrop")) closeSettingsModal();
+      else closeStrategyEntryModal();
+      return;
+    }
+    if(STATE.viewingTrade){ e.preventDefault(); closeTradeDetail(); }
+    return;
+  }
+  if(e.key === "Enter" || e.key === " "){
+    const el = document.activeElement;
+    if(el && el.getAttribute("role") === "button" && el.tagName !== "BUTTON" && e.target === el){
+      e.preventDefault();
+      el.click();
+    }
+  }
+});
+
+// Hintergrund-Scrollen sperren, solange ein Modal offen ist (iPhone: sonst scrollt die
+// Liste hinter dem Formular mit).
+new MutationObserver(()=>{
+  document.body.classList.toggle("modal-open", document.getElementById("modalRoot").children.length > 0);
+}).observe(document.getElementById("modalRoot"), { childList:true });
 
 window.addEventListener("beforeunload", (e)=>{
   const pushPending = !!gdrivePushTimer || gdriveBusy || STATE.driveStatus === "error" || STATE.driveStatus === "conflict";

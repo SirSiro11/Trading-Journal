@@ -855,6 +855,34 @@ table.breakdown td.num{text-align:right; font-family:var(--mono); font-variant-n
 .news-title{font-size:14.5px; font-weight:600; color:var(--text);}
 .news-country{color:var(--text-faint); font-weight:600; font-size:11px; letter-spacing:.02em; margin-left:7px;}
 .news-meta{color:var(--text-faint); font-size:12.5px; margin-top:2px;}
+.news-head{margin-bottom:14px; gap:10px; flex-wrap:wrap;}
+.news-row-next .news-time{color:var(--accent);}
+.news-next{display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; background:var(--accent-dim); color:var(--accent); font-size:11px; font-weight:700; vertical-align:1px;}
+.news-row-compact{padding:7px 4px;}
+.news-row-compact .news-title{font-size:13.5px;}
+.news-week{display:flex; flex-direction:column; gap:14px;}
+.news-day-head{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.02em; color:var(--text-dim); padding:0 4px 4px; border-bottom:1px solid var(--separator);}
+.news-day-today .news-day-head{color:var(--text);}
+.news-day-past{opacity:.55;}
+.news-today-tag{padding:1px 7px; border-radius:999px; background:var(--accent-fill); color:#fff; font-size:10.5px;}
+.news-day-count{margin-left:auto; font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--text-faint); font-weight:600;}
+.news-empty-day{color:var(--text-faint); font-size:12.5px; padding:7px 4px;}
+.news-hint{margin-top:12px; padding:9px 12px; border-radius:10px; background:var(--fill); color:var(--amber); font-size:12.5px; font-weight:600;}
+.news-foot{margin-top:12px; font-size:11px; color:var(--text-faint);}
+.linklike{background:none; border:none; padding:0; color:var(--accent); font:inherit; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
+.news-steps{margin:0 0 18px; padding-left:20px; color:var(--text); font-size:13.5px; line-height:1.6;}
+.news-steps li{margin-bottom:6px;}
+.news-steps a{color:var(--accent);}
+.news-steps .btn{margin-right:4px;}
+.field-group select{width:100%; background:var(--bg-card); border:1px solid transparent; color:var(--text); padding:10px 13px; border-radius:10px; font-size:14px;}
+#newsImportInput{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12.5px;}
+.news-preview{margin:0 0 18px; padding:14px 16px; border-radius:12px; background:var(--fill);}
+.news-preview-error{color:var(--red); font-size:13.5px;}
+.news-preview-sum{font-size:14px;}
+.news-preview-warn{color:var(--amber); font-size:12.5px; margin-bottom:10px;}
+.news-preview-list{display:flex; flex-direction:column; gap:12px; max-height:340px; overflow:auto; padding-right:4px;}
+.trade-news-block{margin-top:16px; padding-top:12px; border-top:1px solid var(--separator);}
+.news-list-trade .news-row{padding:7px 4px;}
 
 /* ---------- 19 Strategie --------------------------------------------------- */
 .strat-entry-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:28px;}
@@ -1236,7 +1264,7 @@ table.strat-table tr:last-child td{border-bottom:none;}
 // HEUTIGE Datum setzen (Format JJJJ.MM.TT) — das war schon zweimal vergessen worden.
 // Diese Zeile IMMER als Erstes prüfen, bevor irgendetwas anderes an trading-journal.html
 // bearbeitet wird, egal wie klein die eigentliche Änderung ist.
-const APP_VERSION = "2026.09.25";
+const APP_VERSION = "2026.09.26";
 
 const DEFAULT_CONFIG = {
   markets:      ["XAUUSD","GBPUSD","DAX","BTCUSD","EURUSD"],
@@ -1264,7 +1292,9 @@ const DEFAULT_CONFIG = {
   customCategories: [{ key:"risiko", label:"Risiko %", multi:false }],
   // Umbenannte Überschriften für die FEST eingebauten Kategorien (Richtung, Session, ...).
   // Key = das Trade-Feld (z.B. "session"), Wert = der vom Nutzer vergebene neue Name.
-  categoryLabelOverrides: {}
+  categoryLabelOverrides: {},
+  // High-Impact-News zusätzlich in der Kalender-Tagesansicht und auf der Trade-Detailseite zeigen
+  newsBeiTrades: false
 };
 
 const AREA_LABEL  = { live:"Live", eod:"EOD" };
@@ -1298,7 +1328,8 @@ const LS_LASTBACKUP = "tj_lastbackup_v1"; // Zeitstempel (ms) des letzten JSON-B
 const LS_DRIVE_SEEN = "tj_driveseen_v1"; // savedAt des zuletzt gesehenen Cloud-Stands (Pull oder eigener Push) — Basis der Konfliktprüfung
 const LS_BERICHT_UI = "tj_berichtui_v1"; // gemerkte Bericht-Einstellungen (Bereiche, Filter, Zeitraum, Gruppierung, Modus)
 const LS_SHOTS = "tj_shots_v1"; // gemeinsamer Bild-Speicher: jedes Screenshot-Bild liegt hier genau EINMAL, Trades/Erkenntnisse verweisen nur darauf
-const LS_NEWS_CACHE = "tj_newscache_v1"; // { fetchedAt: ms, events: [...] } — Cache für High-Impact-News (siehe NEWS weiter unten)
+const LS_NEWS = "tj_news_v1"; // importierte High-Impact-News { events, ranges, importedAt } — wird mit Backup/Drive synchronisiert (siehe NEWS weiter unten)
+const LS_NEWS_VIEW = "tj_newsview_v1"; // gemerkte Ansicht der News-Kachel: "heute" | "woche" (reine UI-Präferenz, kein Sync)
 
 // Merkt sich, dass sich Daten geändert haben (wird von allen save*()-Funktionen aufgerufen).
 function markDataChanged(){
@@ -1315,7 +1346,7 @@ function hasUnbackedChanges(){ return getLastChangeAt() > (getLastBackupAt() || 
 
 // Baut den kompletten Datenstand für Backup/Export/Cloud-Sync zusammen.
 function buildBackupPayload(){
-  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, savedAt: Date.now(), exportedAt: new Date().toISOString() };
+  return { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, news: STATE.news, savedAt: Date.now(), exportedAt: new Date().toISOString() };
 }
 
 // Bringt Trades aus älteren Speicherständen (localStorage oder importiertes JSON-Backup)
@@ -1634,10 +1665,13 @@ function applyRemoteState(remote){
   if(remote.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), remote.config);
   if(Array.isArray(remote.insights)) STATE.insights = remote.insights;
   STATE.dayConfirmations = Array.isArray(remote.dayConfirmations) ? remote.dayConfirmations : [];
+  // Cloud-Stand eines noch nicht aktualisierten Geräts hat kein "news"-Feld — dann lokale News behalten.
+  if(remote.news && Array.isArray(remote.news.events)) STATE.news = pruneNewsStore(sanitizeNewsStore(remote.news));
   const cloudHadAltlasten = backtestRemovedCount > 0 || strukturRemovedCount > 0;
   persistLocalData(); // Trades + Erkenntnisse + Bild-Speicher gemeinsam
   safeSetItem(LS_CONFIG, JSON.stringify(STATE.config));
   safeSetItem(LS_DAYCONFIRM, JSON.stringify(STATE.dayConfirmations));
+  safeSetItem(LS_NEWS, JSON.stringify(STATE.news));
   const savedAt = remote.savedAt || Date.now();
   localStorage.setItem(LS_LASTCHANGE, String(savedAt));
   setDriveSeenAt(savedAt);
@@ -1777,126 +1811,263 @@ document.addEventListener("visibilitychange", ()=>{
 });
 
 /* =========================================================================
-   NEWS — High-Impact-Wirtschaftstermine ("3 Sterne") auf der Startseite
-   Investing.com selbst bietet keine öffentliche API und blockt Cross-Origin-
-   Anfragen aus dem Browser (CORS) — ein direkter fetch() von dort scheitert
-   deshalb technisch. Stattdessen nutzen wir den öffentlichen JSON-Feed von
-   ForexFactory (nfs.faireconomy.media), der dieselben Impact-Stufen
-   (Low/Medium/High) führt und von vielen Trading-Tools/EAs für genau diesen
-   Zweck verwendet wird. "High" entspricht Investings 3-Sterne-/rotem
-   High-Impact-Symbol.
-   Falls der Feed selbst (je nach Browser/Netzwerk) keine CORS-Freigabe
-   liefert, greifen wir automatisch über einen öffentlichen CORS-Proxy als
-   Fallback zu — beides schlägt in der freien Wildbahn gelegentlich mal fehl
-   (Rate-Limits, Ausfälle), daher mehrere Versuche der Reihe nach.
+   NEWS — High-Impact-Wirtschaftstermine ("3 Sterne") per Import
+   Seit 2026.09.26 kein automatischer Abruf mehr (Feed + CORS-Proxy-Kette war
+   dauerhaft unzuverlässig). Stattdessen:
+     1. Screenshot vom Investing.com-Wirtschaftskalender machen
+     2. Screenshot + NEWS_PROMPT (Button "Prompt kopieren") an Claude geben
+     3. Claudes Antwort (enthält einen JSON-Block) im News-Dialog einfügen
+   Die Termine liegen danach lokal (LS_NEWS) und reisen über Backup/Drive-Sync
+   mit — die Startseite funktioniert damit komplett ohne Internet.
+
+   Speicherformat (bewusst kompakt, leere Felder werden weggelassen):
+     STATE.news = {
+       events: [{ ts: <ms UTC> | undefined, d: "YYYY-MM-DD" (Wiener Datum),
+                  c: "USD", n: "Titel", f: "Prognose", p: "Vorher" }],
+       ranges: [["YYYY-MM-DD","YYYY-MM-DD"], ...],  // abgedeckte Zeiträume
+       importedAt: <ms>
+     }
+   Termine ohne ts sind ganztägig. Ein neuer Import ersetzt nur die Tage, die
+   er selbst abdeckt; alles älter als NEWS_KEEP_PAST_DAYS wird entfernt, damit
+   der 5-MB-localStorage und die Cloud-Datei nicht dauerhaft wachsen.
    ========================================================================= */
-const NEWS_FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
-// Mehrere Quellen der Reihe nach probieren: direkter Aufruf zuerst (schnellster Weg,
-// funktioniert aber nur wenn der Server CORS erlaubt), danach mehrere unabhängige
-// CORS-Proxys als Fallback — deren Verfügbarkeit schwankt (Rate-Limits, Ausfälle,
-// gelegentlich 401/500), daher bewusst mehr als nur ein oder zwei Fallbacks.
-// "transform" wandelt die jeweilige Proxy-Antwort ins rohe Kalender-JSON-Array um.
-// Eigener Proxy-Endpunkt (derselbe Cloud-Run-Dienst wie für Google Drive Sync, siehe
-// GDRIVE_PROXY_URL weiter oben) — zuverlässiger als die öffentlichen Gratis-CORS-Proxys
-// weiter unten, die immer wieder gleichzeitig ausfallen/blockiert werden (401/403/429/
-// Timeouts/tote Domains — alles schon beobachtet). Erfordert einen zusätzlichen "/news"-
-// Endpunkt auf diesem Cloud-Run-Dienst, der serverseitig den Kalender-Feed abruft (dort
-// gibt es kein CORS-Problem) und mit CORS-Freigabe zurückgibt.
-const NEWS_OWN_PROXY_URL = GDRIVE_PROXY_URL + "/news";
+const NEWS_TZ = "Europe/Vienna";
+const NEWS_KEEP_PAST_DAYS = 90;
+const NEWS_CALENDAR_URL = "https://de.investing.com/economic-calendar/";
 
-const NEWS_FEED_SOURCES = [
-  { url: NEWS_OWN_PROXY_URL, headers: { "X-Journal-Key": GDRIVE_PROXY_KEY } },
-  { url: NEWS_FEED_URL },
-  {
-    url: "https://api.allorigins.win/get?url=" + encodeURIComponent(NEWS_FEED_URL),
-    transform: (data) => JSON.parse(data.contents)
-  },
-  { url: "https://api.allorigins.win/raw?url=" + encodeURIComponent(NEWS_FEED_URL) },
-  { url: "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(NEWS_FEED_URL) },
-  { url: "https://corsproxy.io/?url=" + encodeURIComponent(NEWS_FEED_URL) },
-  { url: "https://proxy.corsfix.com/?" + NEWS_FEED_URL },
-  { url: "https://cors.eu.org/" + NEWS_FEED_URL },
-  { url: "https://thingproxy.freeboard.io/fetch/" + NEWS_FEED_URL }
-];
-// Pro Quelle nicht ewig hängen bleiben (manche tote/überlastete Proxys antworten gar
-// nicht) — nach 8 Sekunden abbrechen und zur nächsten Quelle springen.
-const NEWS_FETCH_TIMEOUT_MS = 8000;
-async function fetchWithTimeout(url, ms, headers){
-  const controller = new AbortController();
-  const timer = setTimeout(()=> controller.abort(), ms);
-  try{
-    return await fetch(url, { method:"GET", signal: controller.signal, headers: headers || undefined });
-  }finally{
-    clearTimeout(timer);
+// Prompt für Claude — per Button "Prompt kopieren" in die Zwischenablage.
+const NEWS_PROMPT = `Du bekommst einen oder mehrere Screenshots des Wirtschaftskalenders von Investing.com. Erstelle daraus eine Importdatei für mein Trading-Journal.
+
+REGELN
+1. Übernimm AUSSCHLIESSLICH Termine mit Wichtigkeit 3 (drei Stern-/Stier-Symbole in der Spalte „Wichtigkeit“; die Symbole können grau dargestellt sein). Termine mit 1 oder 2 Symbolen ignorierst du, ebenso Feiertage (Zeilen mit „Feiertag“ statt Symbolen).
+2. Das Datum steht als Zwischenüberschrift über den Terminen (z. B. „Mittwoch, 2. September 2026“). Jeder Termin gehört zur letzten Datumsüberschrift darüber – auch wenn diese auf einem vorherigen Screenshot steht. Termine OBERHALB der ersten sichtbaren Datumsüberschrift (ohne eigene Überschrift) lässt du weg, weil ihr Datum nicht sicher ist, und nennst sie unter C.
+3. Uhrzeit exakt wie angezeigt übernehmen (HH:MM, 24 h) und NICHT umrechnen. Steht dort „Ganztags“, „Ganztägig“, „Tentative“ oder keine Uhrzeit: "zeit": "".
+4. Zeitzone: aus der Zeitangabe des Kalenders übernehmen (z. B. „GMT +2:00“ → "+02:00"). Ist keine erkennbar, nimm "+02:00".
+5. "land" = das Länderkürzel genau wie in der Spalte neben der Flagge (z. B. US, DE, EU, GB, JP, CA, NZ, CN). Titel so übernehmen, wie er auf der Seite steht, inkl. Zeitraum wie „(Aug)“ oder „(Q3)“, aber ohne Zusatzsymbole wie „P“ (vorläufig). Zeilenumbrüche im Titel durch ein Leerzeichen ersetzen.
+6. "prognose" und "vorher" als Text genau wie angezeigt (z. B. "0,3 %", "47K", "7,330M"). Die Spalte „Aktuell“ brauchst du nicht. Nicht lesbar oder leer → "".
+7. Nichts erfinden. Bist du bei der Anzahl der Symbole unsicher, nimm den Termin auf und ergänze "unsicher": true.
+8. "von" und "bis" = erster und letzter Kalendertag, der VOLLSTÄNDIG zu sehen ist (Datumsüberschrift sichtbar UND die nächste Datumsüberschrift bzw. das Tabellenende folgt). Auch Tage ohne 3-Sterne-Termin in diesem Zeitraum zählen dazu. Ist der letzte Tag unten abgeschnitten, lass ihn samt seinen Terminen weg und nenne ihn unter C.
+9. Chronologisch sortieren. Überlappen sich Screenshots, jeden Termin nur einmal aufnehmen.
+
+AUSGABE – genau in dieser Reihenfolge:
+A) EIN Codeblock \`\`\`json mit exakt diesem Aufbau (sonst nichts im Codeblock):
+{
+  "typ": "journal-news",
+  "version": 1,
+  "zeitzone": "+02:00",
+  "von": "2026-09-28",
+  "bis": "2026-10-02",
+  "termine": [
+    { "datum": "2026-09-29", "zeit": "16:00", "land": "US", "titel": "CB Verbrauchervertrauen (Sep)", "prognose": "", "vorher": "97,4" }
+  ]
+}
+B) Darunter eine kurze Kontrollübersicht: pro Tag eine Zeile mit Datum und Anzahl der 3-Sterne-Termine.
+C) Hinweise nur, falls etwas unklar war (abgeschnittene Zeilen, fehlende Datumsüberschrift, Lücken im Zeitraum).`;
+
+const NEWS_COUNTRY_FLAG = {
+  USD:"🇺🇸", EUR:"🇪🇺", GBP:"🇬🇧", JPY:"🇯🇵", CHF:"🇨🇭",
+  AUD:"🇦🇺", NZD:"🇳🇿", CAD:"🇨🇦", CNY:"🇨🇳"
+};
+
+/* ---------- Laden / Speichern ---------- */
+function emptyNewsStore(){ return { events: [], ranges: [], importedAt: null }; }
+
+function sanitizeNewsStore(v){
+  if(!v || typeof v !== "object" || !Array.isArray(v.events)) return emptyNewsStore();
+  return {
+    events: v.events.filter(e=> e && typeof e.d === "string" && typeof e.n === "string"),
+    ranges: Array.isArray(v.ranges) ? v.ranges.filter(r=> Array.isArray(r) && r.length===2 && r[0] <= r[1]) : [],
+    importedAt: v.importedAt || null
+  };
+}
+
+function loadNews(){
+  // Alter Feed-Cache (bis 2026.09.25) wird nicht mehr gebraucht — Platz freigeben.
+  try{ localStorage.removeItem("tj_newscache_v1"); }catch(e){}
+  try{ return pruneNewsStore(sanitizeNewsStore(JSON.parse(localStorage.getItem(LS_NEWS)))); }
+  catch(e){ return emptyNewsStore(); }
+}
+function saveNews(){ if(safeSetItem(LS_NEWS, JSON.stringify(STATE.news))) markDataChanged(); }
+
+/* ---------- Datum/Zeit (immer Wiener Ortszeit, unabhängig vom Gerät) ---------- */
+function viennaParts(ts){
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone:NEWS_TZ, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(new Date(ts));
+  const o = {}; parts.forEach(p=>{ o[p.type] = p.value; });
+  return o;
+}
+function viennaDateISO(ts){ const o = viennaParts(ts); return `${o.year}-${o.month}-${o.day}`; }
+function viennaTimeHM(ts){ const o = viennaParts(ts); return `${o.hour}:${o.minute}`; }
+function newsTodayISO(){ return viennaDateISO(Date.now()); }
+
+function isoAddDays(iso, n){
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m-1, d + n));
+  return dt.toISOString().slice(0,10);
+}
+function isoWeekday(iso){ // Mo=0 … So=6
+  const [y,m,d] = iso.split("-").map(Number);
+  return (new Date(Date.UTC(y, m-1, d)).getUTCDay() + 6) % 7;
+}
+function isoWeekdayShort(iso){ return ["Mo","Di","Mi","Do","Fr","Sa","So"][isoWeekday(iso)]; }
+function formatNewsDay(iso){ const [y,m,d] = iso.split("-"); return `${isoWeekdayShort(iso)} ${d}.${m}.`; }
+
+// Wandelt eine Wanduhrzeit (Datum + HH:MM) aus Zeitzone tz in einen UTC-Zeitstempel um.
+// tz: "+02:00" / "-05:00" (fester Versatz) oder "Europe/Vienna" (Sommer-/Winterzeit automatisch).
+function newsWallToTs(dateIso, hm, tz){
+  const [y,mo,d] = dateIso.split("-").map(Number);
+  const [h,mi] = hm.split(":").map(Number);
+  const wall = Date.UTC(y, mo-1, d, h, mi);
+  const fixed = /^([+-])(\d{2}):(\d{2})$/.exec(tz);
+  if(fixed){
+    const off = (parseInt(fixed[2],10)*60 + parseInt(fixed[3],10)) * (fixed[1]==="-" ? -1 : 1);
+    return wall - off*60000;
   }
-}
-const NEWS_CACHE_MAX_AGE_MS = 20 * 60 * 1000; // 20 Minuten — danach beim Start-Aufruf neu laden
-
-function loadNewsCache(){
-  try{ return JSON.parse(localStorage.getItem(LS_NEWS_CACHE)) || null; }
-  catch(e){ return null; }
-}
-function saveNewsCache(fetchedAt, events){
-  try{ localStorage.setItem(LS_NEWS_CACHE, JSON.stringify({ fetchedAt, events })); }catch(e){}
-}
-
-// true, wenn Datum d (JS Date) im lokalen Zeitzone-"heute" liegt — gleiche Logik wie todayISO().
-function isLocalToday(d){
-  const t = new Date();
-  return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
+  // Benannte Zeitzone: Versatz iterativ bestimmen (2 Runden genügen auch rund um die Zeitumstellung)
+  let ts = wall;
+  for(let i=0;i<2;i++){
+    const o = new Intl.DateTimeFormat("en-CA", { timeZone:tz, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(new Date(ts))
+      .reduce((a,p)=>{ a[p.type]=p.value; return a; }, {});
+    const asUtc = Date.UTC(+o.year, +o.month-1, +o.day, +o.hour, +o.minute);
+    ts = wall - (asUtc - ts);
+  }
+  return ts;
 }
 
-// Probiert die News-Quellen der Reihe nach (direkt, dann CORS-Proxys) und gibt
-// das erste erfolgreich geparste JSON-Array zurück. Wirft erst, wenn alle scheitern.
-async function fetchNewsRaw(){
-  let lastErr = null;
-  for(const source of NEWS_FEED_SOURCES){
+// Akzeptiert "+02:00", "+2", "GMT+2", "GMT +2:00", "UTC+01:00", "Europe/Vienna"
+function normalizeNewsTz(v){
+  if(!v) return "+02:00";
+  const s = String(v).trim();
+  if(/^[A-Za-z]+\/[A-Za-z_]+$/.test(s)) return s;
+  const m = /([+-])\s*(\d{1,2})(?::?(\d{2}))?/.exec(s);
+  if(m) return `${m[1]}${m[2].padStart(2,"0")}:${m[3]||"00"}`;
+  if(/^(gmt|utc)$/i.test(s)) return "+00:00";
+  return "+02:00";
+}
+function newsTzLabel(tz){
+  if(tz === NEWS_TZ) return "Wiener Ortszeit (keine Umrechnung)";
+  return "GMT" + tz.replace(/^([+-])0?(\d+):00$/, "$1$2").replace(/^([+-])0?(\d+):(\d{2})$/, "$1$2:$3");
+}
+
+/* ---------- Import: Text -> geprüfte Termine ---------- */
+// Holt das JSON aus beliebigem Text — ganze Claude-Antwort, nur der Codeblock oder eine .json-Datei.
+function extractNewsJson(text){
+  const tries = [];
+  const t = String(text||"").trim();
+  if(!t) return null;
+  tries.push(t);
+  const fenceRe = /```(?:json)?\s*([\s\S]*?)```/gi;
+  let m;
+  while((m = fenceRe.exec(t))) tries.push(m[1]);
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if(a >= 0 && b > a) tries.push(t.slice(a, b+1));
+  for(const s of tries){
     try{
-      const res = await fetchWithTimeout(source.url, NEWS_FETCH_TIMEOUT_MS, source.headers);
-      if(!res.ok) throw new Error("Antwort " + res.status);
-      const data = await res.json();
-      const raw = source.transform ? source.transform(data) : data;
-      if(Array.isArray(raw)) return raw;
-      throw new Error("Unerwartetes Antwortformat");
-    }catch(err){
-      lastErr = err;
-    }
+      const v = JSON.parse(s.replace(/[“”„]/g, '"')); // typografische Anführungszeichen tolerieren
+      if(Array.isArray(v)) return { termine: v };
+      if(v && typeof v === "object" && (Array.isArray(v.termine) || Array.isArray(v.events))) return v;
+    }catch(e){}
   }
-  throw lastErr || new Error("Keine Quelle erreichbar");
+  return null;
 }
 
-async function fetchHighImpactNews(force){
-  const cached = loadNewsCache();
-  if(cached && !force && (Date.now() - cached.fetchedAt) < NEWS_CACHE_MAX_AGE_MS){
-    STATE.newsEvents = cached.events.filter(e=>isLocalToday(new Date(e.date)));
-    STATE.newsStatus = "loaded";
-    STATE.newsFetchedAt = cached.fetchedAt;
-    return;
-  }
-  STATE.newsStatus = "loading";
-  if(STATE.view === "start") render();
-  try{
-    const raw = await fetchNewsRaw();
-    const high = raw
-      .filter(e => e.impact === "High")
-      .map(e => ({ title:e.title, country:e.country, date:e.date, forecast:e.forecast||"", previous:e.previous||"" }))
-      .sort((a,b)=> new Date(a.date) - new Date(b.date));
-    saveNewsCache(Date.now(), high);
-    STATE.newsEvents = high.filter(e=>isLocalToday(new Date(e.date)));
-    STATE.newsStatus = "loaded";
-    STATE.newsFetchedAt = Date.now();
-    STATE.newsError = "";
-  }catch(err){
-    // Fällt zurück auf einen evtl. vorhandenen (auch älteren) Cache, statt die Karte leer zu zeigen.
-    if(cached && Array.isArray(cached.events)){
-      STATE.newsEvents = cached.events.filter(e=>isLocalToday(new Date(e.date)));
-      STATE.newsFetchedAt = cached.fetchedAt;
+// Liefert { ok, error, events, from, to, tz, skipped, unsure } — tzOverride überschreibt die Zeitzone der Datei.
+function parseNewsImport(text, tzOverride){
+  const data = extractNewsJson(text);
+  if(!data) return { ok:false, error:"Kein gültiger News-Block gefunden. Bitte die komplette Antwort von Claude (mit dem ```json-Block) einfügen." };
+  const list = data.termine || data.events || [];
+  const fileTz = normalizeNewsTz(data.zeitzone || data.timezone || data.tz);
+  const tz = tzOverride || fileTz;
+  const events = [];
+  let skipped = 0, unsure = 0;
+  const seen = new Set();
+  list.forEach(r=>{
+    if(!r || typeof r !== "object"){ skipped++; return; }
+    const datum = String(r.datum || r.date || "").trim();
+    let zeit = String(r.zeit || r.time || "").trim();
+    const cur = String(r.land || r.waehrung || r.währung || r.currency || "").trim().toUpperCase().slice(0,6);
+    const title = String(r.titel || r.title || r.ereignis || "").trim().slice(0,120);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(datum) || !title){ skipped++; return; }
+    const tm = /^(\d{1,2})[:.](\d{2})$/.exec(zeit);
+    if(zeit && !tm){ zeit = ""; } // "Ganztägig", "Tentative" …
+    const ev = { d: datum, c: cur, n: title };
+    if(tm){
+      const hm = tm[1].padStart(2,"0") + ":" + tm[2];
+      ev.ts = newsWallToTs(datum, hm, tz);
+      ev.d = viennaDateISO(ev.ts); // kann sich durch die Umrechnung um einen Tag verschieben
     }
-    STATE.newsStatus = "error";
-    STATE.newsError = err.message || String(err);
-  }
-  if(STATE.view === "start") render();
+    const f = String(r.prognose ?? r.forecast ?? "").trim().slice(0,20);
+    const p = String(r.vorher ?? r.previous ?? "").trim().slice(0,20);
+    if(f) ev.f = f;
+    if(p) ev.p = p;
+    if(r.unsicher === true) unsure++;
+    const key = ev.d + "|" + (ev.ts||"") + "|" + ev.c + "|" + ev.n.toLowerCase();
+    if(seen.has(key)) return;
+    seen.add(key);
+    events.push(ev);
+  });
+  if(!events.length) return { ok:false, error: list.length ? "Keiner der Termine war gültig (Datum im Format JJJJ-MM-TT und Titel nötig)." : "Der News-Block enthält keine Termine." };
+  events.sort(newsSortFn);
+  const dates = events.map(e=>e.d).sort();
+  let from = /^\d{4}-\d{2}-\d{2}$/.test(data.von||"") ? data.von : dates[0];
+  let to = /^\d{4}-\d{2}-\d{2}$/.test(data.bis||"") ? data.bis : dates[dates.length-1];
+  if(from > to) [from, to] = [to, from];
+  if(dates[0] < from) from = dates[0];
+  if(dates[dates.length-1] > to) to = dates[dates.length-1];
+  return { ok:true, events, from, to, tz, fileTz, skipped, unsure };
 }
+
+function newsSortFn(a,b){
+  if(a.d !== b.d) return a.d < b.d ? -1 : 1;
+  const at = a.ts == null ? -Infinity : a.ts, bt = b.ts == null ? -Infinity : b.ts; // ganztägig zuerst
+  if(at !== bt) return at - bt;
+  return a.c.localeCompare(b.c);
+}
+
+/* ---------- Zusammenführen & Aufräumen ---------- */
+function mergeNewsRanges(ranges){
+  const sorted = ranges.slice().sort((a,b)=> a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+  const out = [];
+  sorted.forEach(r=>{
+    const last = out[out.length-1];
+    if(last && r[0] <= isoAddDays(last[1], 1)){ if(r[1] > last[1]) last[1] = r[1]; }
+    else out.push([r[0], r[1]]);
+  });
+  return out;
+}
+
+function pruneNewsStore(store){
+  const cutoff = isoAddDays(newsTodayISO(), -NEWS_KEEP_PAST_DAYS);
+  store.events = store.events.filter(e=> e.d >= cutoff);
+  // Prognose/Vorwert sind nach dem Termin wertlos — nach einer Woche entfernen (spart ~30 % Platz)
+  const slim = isoAddDays(newsTodayISO(), -7);
+  store.events.forEach(e=>{ if(e.d < slim){ delete e.f; delete e.p; } });
+  store.ranges = mergeNewsRanges(store.ranges.filter(r=> r[1] >= cutoff).map(r=> [r[0] < cutoff ? cutoff : r[0], r[1]]));
+  return store;
+}
+
+// Wie viele vorhandene Termine würde ein Import ersetzen?
+function newsReplacedCount(from, to){
+  return STATE.news.events.filter(e=> e.d >= from && e.d <= to).length;
+}
+
+function applyNewsImport(parsed){
+  const store = STATE.news;
+  store.events = store.events.filter(e=> e.d < parsed.from || e.d > parsed.to).concat(parsed.events).sort(newsSortFn);
+  store.ranges = mergeNewsRanges(store.ranges.concat([[parsed.from, parsed.to]]));
+  store.importedAt = Date.now();
+  pruneNewsStore(store);
+  saveNews();
+}
+
+/* ---------- Abfragen für die Anzeige ---------- */
+function newsForDate(iso){ return STATE.news.events.filter(e=> e.d === iso); }
+function newsCovers(iso){ return STATE.news.ranges.some(r=> iso >= r[0] && iso <= r[1]); }
+// Letzter abgedeckter Tag des zusammenhängenden Zeitraums, der heute enthält (oder null)
+function newsCoverageEndFrom(iso){
+  const r = STATE.news.ranges.find(r=> iso >= r[0] && iso <= r[1]);
+  return r ? r[1] : null;
+}
+function newsStoreBytes(){ return JSON.stringify(STATE.news).length * 2; }
 
 /* =========================================================================
    STATE
@@ -1950,12 +2121,8 @@ const STATE = {
   driveStatus: "syncing", // syncing|connected|error|conflict — kein "disconnected" mehr nötig, Proxy ist immer bereit
   driveConflictRemote: null, // bei "conflict": der neuere Cloud-Stand, zur Übernahme per Klick
   driveLastSyncAt: null,
-  // Direkt aus dem Cache vorbefüllt, damit der erste Render schon etwas zeigt,
-  // statt bis zur ersten fetchHighImpactNews()-Antwort leer/ladend zu wirken.
-  newsStatus: loadNewsCache() ? "loaded" : "idle",
-  newsEvents: (loadNewsCache()?.events || []).filter(e=>isLocalToday(new Date(e.date))),
-  newsFetchedAt: loadNewsCache()?.fetchedAt || null,
-  newsError: "",
+  news: loadNews(),           // importierte High-Impact-News (siehe NEWS)
+  newsView: loadNewsView(),   // "heute" | "woche"
   driveError: ""
 };
 
@@ -2674,6 +2841,8 @@ function startStartClock(){
     // Die Tagesleiste wandert mit: Marker, Restzeit und Countdown neu berechnen.
     const tlEl = document.getElementById("sessionTimeline");
     if(tlEl) tlEl.outerHTML = renderSessionTimeline();
+    // News-Kachel einmal pro Minute auffrischen (vergangene Termine ausgrauen, Countdown)
+    refreshNewsPanelTick();
   }, 1000);
 }
 
@@ -2859,51 +3028,353 @@ function renderStart(){
   `;
 }
 
-const NEWS_COUNTRY_FLAG = {
-  USD:"🇺🇸", EUR:"🇪🇺", GBP:"🇬🇧", JPY:"🇯🇵", CHF:"🇨🇭",
-  AUD:"🇦🇺", NZD:"🇳🇿", CAD:"🇨🇦", CNY:"🇨🇳"
-};
+/* ---------- News-Kachel (Startseite) ---------- */
+function loadNewsView(){ try{ return localStorage.getItem(LS_NEWS_VIEW) === "woche" ? "woche" : "heute"; }catch(e){ return "heute"; } }
+function saveNewsView(v){ try{ localStorage.setItem(LS_NEWS_VIEW, v); }catch(e){} }
+
+// Flagge aus Währung (USD …) oder Länderkürzel (US, DE, EU …). Zweistellige Kürzel werden
+// direkt in Flaggen-Emoji umgewandelt (Windows zeigt dafür nur die Buchstaben — passt trotzdem).
+function newsFlag(c){
+  if(NEWS_COUNTRY_FLAG[c]) return NEWS_COUNTRY_FLAG[c];
+  const code = c === "UK" ? "GB" : c;
+  if(/^[A-Z]{2}$/.test(code)) return String.fromCodePoint(...[...code].map(ch=> 0x1F1E6 + ch.charCodeAt(0) - 65));
+  return "🌐";
+}
+
+// Eine Terminzeile. opts.compact = ohne Prognose/Vorher; opts.nextTs = Zeitstempel des nächsten Termins
+function newsRowHtml(e, opts){
+  opts = opts || {};
+  const now = Date.now();
+  const past = e.ts != null ? e.ts < now : e.d < newsTodayISO();
+  const isNext = opts.nextTs != null && e.ts === opts.nextTs;
+  const time = e.ts != null ? viennaTimeHM(e.ts) : "ganzt.";
+  const meta = opts.compact ? "" : [e.f ? `Prognose ${escHtml(e.f)}` : "", e.p ? `Zuvor ${escHtml(e.p)}` : ""].filter(Boolean).join(" · ");
+  let soon = "";
+  if(isNext){
+    const mins = Math.round((e.ts - now) / 60000);
+    soon = `<span class="news-next">${mins <= 0 ? "jetzt" : mins < 60 ? `in ${mins} Min` : mins < 180 ? `in ${Math.floor(mins/60)} h ${String(mins%60).padStart(2,"0")} Min` : "als Nächstes"}</span>`;
+  }
+  return `
+    <div class="news-row${past ? " news-row-past" : ""}${isNext ? " news-row-next" : ""}${opts.compact ? " news-row-compact" : ""}">
+      <div class="news-time">${time}</div>
+      <div class="news-flag">${newsFlag(e.c)}</div>
+      <div class="news-body">
+        <div class="news-title">${escHtml(e.n)}<span class="news-country">${escHtml(e.c)}</span>${soon}</div>
+        ${meta ? `<div class="news-meta">${meta}</div>` : ""}
+      </div>
+    </div>`;
+}
+
+function newsNextTs(){
+  const now = Date.now();
+  const up = STATE.news.events.filter(e=> e.ts != null && e.ts >= now - 60000).sort((a,b)=> a.ts - b.ts)[0];
+  return up ? up.ts : null;
+}
+
+// Tage, die die Wochen-Vorschau zeigt: Mo–Fr der aktuellen Woche (am Wochenende: nächste Woche),
+// Samstag/Sonntag nur, wenn dort tatsächlich Termine liegen.
+function newsWeekDays(){
+  const today = newsTodayISO();
+  const wd = isoWeekday(today);
+  const monday = wd >= 5 ? isoAddDays(today, 7 - wd) : isoAddDays(today, -wd);
+  const days = [];
+  for(let i=0;i<7;i++){
+    const iso = isoAddDays(monday, i);
+    if(i >= 5 && !newsForDate(iso).length) continue;
+    days.push(iso);
+  }
+  return days;
+}
+
+function newsPanelBodyHtml(){
+  const store = STATE.news;
+  const today = newsTodayISO();
+  if(!store.events.length && !store.ranges.length){
+    return `
+      <p style="color:var(--text-dim); font-size:13.5px; margin:0 0 12px;">Noch keine Termine importiert. Screenshot vom Investing.com-Kalender machen, mit dem Prompt an Claude geben und die Antwort hier importieren.</p>
+      <button type="button" class="btn btn-sm btn-primary" data-newsaction="import">News importieren</button>`;
+  }
+  const nextTs = newsNextTs();
+  let body = "";
+  if(STATE.newsView === "woche"){
+    const days = newsWeekDays();
+    body = `<div class="news-week">` + days.map(iso=>{
+      const evs = newsForDate(iso);
+      const isToday = iso === today;
+      const past = iso < today;
+      const content = evs.length
+        ? evs.map(e=> newsRowHtml(e, { compact:true, nextTs })).join("")
+        : `<div class="news-empty-day">${newsCovers(iso) ? "Keine 3-Sterne-Termine" : "Keine Daten importiert"}</div>`;
+      return `
+        <div class="news-day${isToday ? " news-day-today" : ""}${past ? " news-day-past" : ""}">
+          <div class="news-day-head">${formatNewsDay(iso)}${isToday ? ` <span class="news-today-tag">Heute</span>` : ""}${evs.length ? `<span class="news-day-count">${evs.length}</span>` : ""}</div>
+          <div class="news-list">${content}</div>
+        </div>`;
+    }).join("") + `</div>`;
+  }else{
+    const evs = newsForDate(today);
+    const wd = isoWeekday(today);
+    body = evs.length
+      ? `<div class="news-list">${evs.map(e=> newsRowHtml(e, { nextTs })).join("")}</div>`
+      : `<p style="color:var(--text-dim); font-size:13.5px; margin:0;">${
+          wd >= 5 ? "Wochenende — keine High-Impact-Termine."
+          : !newsCovers(today) ? "Für heute sind keine News-Daten importiert."
+          : "Heute keine High-Impact-Termine."}</p>`;
+  }
+  // Hinweis, wenn die importierten Daten bald auslaufen
+  // Am Wochenende zählt der kommende Montag — Sa/So sind im Kalender meist gar nicht abgedeckt.
+  const wdRef = isoWeekday(today);
+  const refDay = wdRef >= 5 ? isoAddDays(today, 7 - wdRef) : today;
+  const end = newsCoverageEndFrom(refDay) || (wdRef >= 5 ? newsCoverageEndFrom(today) : null);
+  const lastRange = store.ranges[store.ranges.length-1];
+  const maxEnd = lastRange ? lastRange[1] : null;
+  let hint = "";
+  if(!end){
+    hint = `<div class="news-hint">⚠ ${refDay === today ? "Für heute" : "Für die kommende Woche"} fehlen News-Daten — <button type="button" class="linklike" data-newsaction="import">jetzt importieren</button></div>`;
+  }else if(end < isoAddDays(today, 2)){ // ab Donnerstag erinnern, wenn die Folgewoche fehlt
+    hint = `<div class="news-hint">⏳ Daten nur bis ${formatNewsDay(end)} — <button type="button" class="linklike" data-newsaction="import">neue Termine importieren</button></div>`;
+  }
+  return body + hint + `<div class="news-foot">Quelle: Investing.com (Import)${maxEnd ? ` · Daten bis ${formatDateDE(maxEnd)}` : ""} · Zeiten in Wiener Ortszeit</div>`;
+}
 
 function renderNewsPanel(){
-  const now = Date.now();
-  const body = STATE.newsStatus === "loading" && !STATE.newsEvents.length ? `
-      <p style="color:var(--text-dim); font-size:13.5px; margin:0;">⏳ Lade Termine …</p>
-    ` : STATE.newsStatus === "error" && !STATE.newsEvents.length ? `
-      <p style="color:var(--red); font-size:13.5px; margin:0 0 8px;">⚠ Termine konnten nicht geladen werden: ${escHtml(STATE.newsError||"")}</p>
-      <p style="color:var(--text-faint); font-size:11.5px; margin:0 0 12px;">Falls das dauerhaft passiert: eventuell blockiert ein Werbe-/Trackingblocker, ein DNS-Filter (z.B. NextDNS, Pi-hole) oder eine Firewall die genutzten Proxy-Domains (allorigins.win, corsproxy.io, codetabs.com u.a.).</p>
-      <button class="btn btn-sm" id="newsRetryBtn">Erneut versuchen</button>
-    ` : !STATE.newsEvents.length ? `
-      <p style="color:var(--text-dim); font-size:13.5px; margin:0;">Heute keine High-Impact-Termine.</p>
-    ` : `
-      <div class="news-list">
-        ${STATE.newsEvents.map(e=>{
-          const d = new Date(e.date);
-          const past = d.getTime() < now;
-          const time = d.toLocaleTimeString("de-DE", { hour:"2-digit", minute:"2-digit" });
-          const flag = NEWS_COUNTRY_FLAG[e.country] || "🏳";
-          const meta = [e.forecast ? `Prognose ${escHtml(e.forecast)}` : "", e.previous ? `Zuvor ${escHtml(e.previous)}` : ""].filter(Boolean).join(" · ");
-          return `
-          <div class="news-row${past?" news-row-past":""}">
-            <div class="news-time">${time}</div>
-            <div class="news-flag">${flag}</div>
-            <div class="news-body">
-              <div class="news-title">${escHtml(e.title)}<span class="news-country">${escHtml(e.country)}</span></div>
-              ${meta ? `<div class="news-meta">${meta}</div>` : ""}
-            </div>
-          </div>`;
-        }).join("")}
-      </div>
-    `;
+  const v = STATE.newsView;
   return `
-    <div class="panel panel-news" style="margin-top:14px;">
-      <div class="row-between" style="margin-bottom:${STATE.newsEvents.length?"14px":"0"};">
-        <div class="section-title" style="margin:0;">📰 High-Impact-News heute</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="newsRefreshBtn" title="Termine neu laden">⟳</button>
+    <div class="panel panel-news" id="newsPanel" style="margin-top:14px;">
+      <div class="row-between news-head">
+        <div class="section-title" style="margin:0;">📰 High-Impact-News</div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div class="subtab-row" role="group" aria-label="News-Ansicht">
+            <button type="button" class="subtab ${v==="heute"?"active":""}" data-newsview="heute">Heute</button>
+            <button type="button" class="subtab ${v==="woche"?"active":""}" data-newsview="woche">Woche</button>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm" data-newsaction="import" title="Termine importieren / verwalten">Import</button>
+        </div>
       </div>
-      ${body}
-      <div style="margin-top:12px; font-size:11px; color:var(--text-faint);">Quelle: ForexFactory-Kalender (nfs.faireconomy.media)</div>
+      <div id="newsPanelBody">${newsPanelBodyHtml()}</div>
+    </div>`;
+}
+
+function wireNewsPanel(){
+  const panel = document.getElementById("newsPanel");
+  if(!panel) return;
+  panel.addEventListener("click", (e)=>{
+    const vBtn = e.target.closest("[data-newsview]");
+    if(vBtn){
+      STATE.newsView = vBtn.dataset.newsview;
+      saveNewsView(STATE.newsView);
+      panel.querySelectorAll("[data-newsview]").forEach(b=> b.classList.toggle("active", b === vBtn));
+      document.getElementById("newsPanelBody").innerHTML = newsPanelBodyHtml();
+      return;
+    }
+    if(e.target.closest("[data-newsaction='import']")) openNewsModal();
+  });
+}
+
+// Wird von der Startseiten-Uhr aufgerufen: vergangene Termine ausgrauen, Countdown aktualisieren.
+let newsLastRefreshMinute = -1;
+function refreshNewsPanelTick(){
+  const m = Math.floor(Date.now() / 60000);
+  if(m === newsLastRefreshMinute) return;
+  newsLastRefreshMinute = m;
+  const el = document.getElementById("newsPanelBody");
+  if(el) el.innerHTML = newsPanelBodyHtml();
+}
+
+/* ---------- News bei Trades (optional, Einstellung im News-Dialog) ---------- */
+function tradeDayNewsHtml(dateIso, opts){
+  opts = opts || {};
+  if(!STATE.config.newsBeiTrades) return "";
+  const evs = newsForDate(dateIso);
+  if(!evs.length) return "";
+  const rows = evs.map(e=> newsRowHtml(e, { compact: !!opts.compact })).join("");
+  return `<div class="news-list news-list-trade">${rows}</div>`;
+}
+
+/* ---------- News-Dialog: Import & Verwaltung ---------- */
+let newsImportText = "";
+let newsImportTz = null; // manuelle Zeitzonen-Wahl in der Vorschau (null = aus Datei)
+
+function openNewsModal(){
+  newsImportText = "";
+  newsImportTz = null;
+  renderNewsModal();
+}
+function closeNewsModal(){
+  document.getElementById("modalRoot").innerHTML = "";
+  render();
+}
+
+function newsPreviewHtml(){
+  if(!newsImportText.trim()) return "";
+  const res = parseNewsImport(newsImportText, newsImportTz);
+  if(!res.ok) return `<div class="news-preview news-preview-error">⚠ ${escHtml(res.error)}</div>`;
+  const byDay = {};
+  res.events.forEach(e=>{ (byDay[e.d] = byDay[e.d] || []).push(e); });
+  const days = [];
+  for(let d = res.from; d <= res.to; d = isoAddDays(d, 1)) days.push(d);
+  const replaced = newsReplacedCount(res.from, res.to);
+  const tzOptions = [res.fileTz, "+02:00", "+01:00", NEWS_TZ].filter((v,i,a)=> a.indexOf(v) === i);
+  const warn = [];
+  if(res.skipped) warn.push(`${res.skipped} Zeile${res.skipped===1?"":"n"} ohne gültiges Datum/Titel übersprungen`);
+  if(res.unsure) warn.push(`${res.unsure} Termin${res.unsure===1?"":"e"} von Claude als unsicher markiert — bitte im Screenshot prüfen`);
+  const oldPast = res.to < isoAddDays(newsTodayISO(), -NEWS_KEEP_PAST_DAYS);
+  if(oldPast) warn.push(`Der Zeitraum liegt mehr als ${NEWS_KEEP_PAST_DAYS} Tage zurück und wird nicht gespeichert`);
+  return `
+    <div class="news-preview">
+      <div class="news-preview-sum">
+        <strong>${res.events.length} Termine</strong> · ${formatDateDE(res.from)} – ${formatDateDE(res.to)}
+        ${replaced ? `<span style="color:var(--text-dim);"> · ersetzt ${replaced} vorhandene Termine in diesem Zeitraum</span>` : ""}
+      </div>
+      <div class="field-group" style="margin:10px 0 12px;">
+        <label class="fg-label" for="newsTzSelect">Uhrzeiten im Screenshot sind in</label>
+        <select id="newsTzSelect">${tzOptions.map(tz=>`<option value="${escAttr(tz)}" ${tz===res.tz?"selected":""}>${escHtml(newsTzLabel(tz))}${tz===res.fileTz?" — laut Datei":""}</option>`).join("")}</select>
+        <div style="font-size:12px; color:var(--text-faint); margin-top:6px;">Unten stehen die Zeiten bereits umgerechnet in Wiener Ortszeit. Kontrolle: US-Daten wie NFP oder CPI kommen normalerweise um 14:30.</div>
+      </div>
+      ${warn.length ? `<div class="news-preview-warn">${warn.map(w=>`⚠ ${escHtml(w)}`).join("<br>")}</div>` : ""}
+      <div class="news-preview-list">
+        ${days.map(d=>`
+          <div class="news-day">
+            <div class="news-day-head">${formatNewsDay(d)}${byDay[d] ? `<span class="news-day-count">${byDay[d].length}</span>` : ""}</div>
+            <div class="news-list">${byDay[d] ? byDay[d].map(e=> newsRowHtml(e, {})).join("") : `<div class="news-empty-day">Keine 3-Sterne-Termine</div>`}</div>
+          </div>`).join("")}
+      </div>
+    </div>`;
+}
+
+function renderNewsModal(){
+  const store = STATE.news;
+  const hasData = store.events.length || store.ranges.length;
+  const rangesTxt = store.ranges.map(r=> `${formatDateDE(r[0])} – ${formatDateDE(r[1])}`).join(", ");
+  document.getElementById("modalRoot").innerHTML = `
+  <div class="modal-backdrop" id="newsBackdrop">
+    <div class="modal">
+      <div class="modal-header-row">
+        <div>
+          <h2>High-Impact-News importieren</h2>
+          <div class="modal-sub">3-Sterne-Termine aus dem Investing.com-Wirtschaftskalender — per Screenshot und Claude.</div>
+        </div>
+        <button type="button" class="icon-btn" id="newsCloseBtn" title="Schließen" aria-label="Schließen">✕</button>
+      </div>
+
+      <ol class="news-steps">
+        <li>Im <a href="${NEWS_CALENDAR_URL}" target="_blank" rel="noopener">Investing.com-Kalender</a> Filter „Wichtigkeit: 3 Sterne“ setzen, gewünschten Zeitraum wählen und Screenshots machen.</li>
+        <li><button type="button" class="btn btn-sm" id="newsCopyPromptBtn">Prompt kopieren</button> und zusammen mit den Screenshots an Claude schicken.</li>
+        <li>Claudes komplette Antwort kopieren und unten einfügen — der JSON-Block wird automatisch erkannt.</li>
+      </ol>
+
+      <div class="field-group">
+        <label class="fg-label" for="newsImportInput">Antwort von Claude</label>
+        <textarea id="newsImportInput" rows="5" placeholder="Hier einfügen (Strg/Cmd + V) …" spellcheck="false">${escHtml(newsImportText)}</textarea>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+          <button type="button" class="btn btn-sm" id="newsPasteBtn">Aus Zwischenablage einfügen</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="newsFileBtn">.json-Datei wählen</button>
+          <input type="file" id="newsFileInput" accept="application/json,.json,.txt,.md" style="display:none;">
+        </div>
+      </div>
+
+      <div id="newsPreview">${newsPreviewHtml()}</div>
+
+      <div class="field-group" style="border-top:1px solid var(--separator); padding-top:16px; margin-top:6px;">
+        <label class="dialog-check" style="display:flex; gap:10px; align-items:flex-start; cursor:pointer;">
+          <input type="checkbox" id="newsBeiTradesCheck" ${STATE.config.newsBeiTrades ? "checked" : ""} style="margin-top:3px;">
+          <span>News auch bei den Trades anzeigen<br><span style="font-size:12px; color:var(--text-faint);">In der Tagesansicht des Kalenders (Live/EOD) und auf der Trade-Detailseite — praktisch fürs Review.</span></span>
+        </label>
+      </div>
+
+      <div style="font-size:12.5px; color:var(--text-dim);">
+        ${hasData ? `Gespeichert: ${store.events.length} Termine · ${escHtml(rangesTxt)} · ${formatBytes(newsStoreBytes())}` : "Noch keine Termine gespeichert."}
+        <br><span style="color:var(--text-faint);">Termine älter als ${NEWS_KEEP_PAST_DAYS} Tage werden automatisch entfernt. Die Daten werden mit Google Drive synchronisiert.</span>
+      </div>
+
+      <div class="modal-footer">
+        ${hasData ? `<button type="button" class="btn btn-sm btn-danger" id="newsClearBtn">Alle News löschen</button>` : `<span></span>`}
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-ghost" id="newsCancelBtn">Schließen</button>
+          <button type="button" class="btn btn-primary" id="newsApplyBtn" disabled>Übernehmen</button>
+        </div>
+      </div>
     </div>
-  `;
+  </div>`;
+  wireNewsModal();
+}
+
+function updateNewsPreview(){
+  const el = document.getElementById("newsPreview");
+  if(!el) return;
+  el.innerHTML = newsPreviewHtml();
+  const res = newsImportText.trim() ? parseNewsImport(newsImportText, newsImportTz) : { ok:false };
+  document.getElementById("newsApplyBtn").disabled = !res.ok;
+  const sel = document.getElementById("newsTzSelect");
+  if(sel) sel.addEventListener("change", ()=>{ newsImportTz = sel.value; updateNewsPreview(); });
+}
+
+function wireNewsModal(){
+  const backdrop = document.getElementById("newsBackdrop");
+  backdrop.addEventListener("click", (e)=>{ if(e.target === backdrop) closeNewsModal(); });
+  document.getElementById("newsCloseBtn").addEventListener("click", closeNewsModal);
+  document.getElementById("newsCancelBtn").addEventListener("click", closeNewsModal);
+
+  const input = document.getElementById("newsImportInput");
+  const setText = (txt)=>{ newsImportText = txt; newsImportTz = null; input.value = txt; updateNewsPreview(); };
+  input.addEventListener("input", ()=>{ newsImportText = input.value; newsImportTz = null; updateNewsPreview(); });
+
+  document.getElementById("newsCopyPromptBtn").addEventListener("click", async ()=>{
+    let ok = false;
+    try{ await navigator.clipboard.writeText(NEWS_PROMPT); ok = true; }
+    catch(err){
+      // Fallback (ältere Browser / fehlende Berechtigung): unsichtbares Textfeld + execCommand
+      const ta = document.createElement("textarea");
+      ta.value = NEWS_PROMPT; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try{ ok = document.execCommand("copy"); }catch(e){}
+      ta.remove();
+    }
+    toast(ok ? "Prompt kopiert — jetzt mit den Screenshots an Claude schicken." : "Kopieren nicht möglich — der Prompt steht auch in der Projektdatei „News-Prompt“.");
+  });
+  document.getElementById("newsPasteBtn").addEventListener("click", async ()=>{
+    try{
+      const txt = await navigator.clipboard.readText();
+      if(!txt || !txt.trim()){ toast("Die Zwischenablage ist leer."); return; }
+      setText(txt);
+    }catch(err){
+      toast("Zugriff auf die Zwischenablage nicht erlaubt — bitte mit Strg/Cmd + V ins Feld einfügen.");
+      input.focus();
+    }
+  });
+  const fileInput = document.getElementById("newsFileInput");
+  document.getElementById("newsFileBtn").addEventListener("click", ()=> fileInput.click());
+  fileInput.addEventListener("change", ()=>{
+    const file = fileInput.files[0];
+    fileInput.value = "";
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=> setText(String(reader.result || ""));
+    reader.readAsText(file);
+  });
+
+  document.getElementById("newsBeiTradesCheck").addEventListener("change", (e)=>{
+    STATE.config.newsBeiTrades = e.target.checked;
+    saveConfig();
+  });
+
+  document.getElementById("newsApplyBtn").addEventListener("click", ()=>{
+    const res = parseNewsImport(newsImportText, newsImportTz);
+    if(!res.ok) return;
+    applyNewsImport(res);
+    closeNewsModal();
+    toast(`${res.events.length} Termine importiert (${formatDateDE(res.from)} – ${formatDateDE(res.to)}).`);
+  });
+
+  const clearBtn = document.getElementById("newsClearBtn");
+  if(clearBtn) clearBtn.addEventListener("click", async ()=>{
+    if(!await uiConfirm("Alle importierten Termine werden entfernt — auch auf den anderen Geräten (Sync).", { title:"Alle News löschen?", okText:"Löschen", danger:true })) return;
+    STATE.news = emptyNewsStore();
+    saveNews();
+    renderNewsModal();
+  });
+
+  updateNewsPreview();
 }
 
 function wireStart(){
@@ -2934,10 +3405,7 @@ function wireStart(){
     gdriveResolveConflict(false);
   });
 
-  const newsRefreshBtn = document.getElementById("newsRefreshBtn");
-  if(newsRefreshBtn) newsRefreshBtn.addEventListener("click", ()=>fetchHighImpactNews(true));
-  const newsRetryBtn = document.getElementById("newsRetryBtn");
-  if(newsRetryBtn) newsRetryBtn.addEventListener("click", ()=>fetchHighImpactNews(true));
+  wireNewsPanel();
 }
 
 /* =========================================================================
@@ -3043,6 +3511,7 @@ function dayDetailHtml(area){
     </div>
     <div class="panel">
       ${trades.length ? `<div class="day-detail-list">${trades.map(t=>dayDetailItemHtml(t)).join("")}</div>` : `<div style="color:var(--text-dim); font-size:13.5px;">Keine Trades an diesem Tag.</div>`}
+      ${(()=>{ const n = tradeDayNewsHtml(date, { compact:true }); return n ? `<div class="trade-news-block"><div class="view-label">📰 High-Impact-News an diesem Tag</div>${n}</div>` : ""; })()}
     </div>
   `;
 }
@@ -3835,6 +4304,7 @@ function renderTradeDetail(t){
         </div>
       </div>
 
+      ${(()=>{ const n = tradeDayNewsHtml(t.date); return n ? `<div class="view-row"><div class="view-label">📰 High-Impact-News an diesem Tag</div>${n}</div>` : ""; })()}
       ${t.grundNichtGenommen ? `<div class="view-row"><div class="view-label">Warum nicht genommen?</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.grundNichtGenommen)}</div></div>` : ""}
       ${t.notizen ? `<div class="view-row"><div class="view-label">Notizen</div><div class="view-value" style="white-space:pre-wrap;">${escHtml(t.notizen)}</div></div>` : ""}
 
@@ -5572,7 +6042,7 @@ async function exportXlsx(){
 }
 
 function exportJson(){
-  const payload = { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, exportedAt: new Date().toISOString() };
+  const payload = { trades: STATE.trades, config: STATE.config, insights: STATE.insights, dayConfirmations: STATE.dayConfirmations, news: STATE.news, exportedAt: new Date().toISOString() };
   downloadBlob(JSON.stringify(payload, null, 2), "trading-journal-backup.json", "application/json");
   markBackedUp();
   render();
@@ -5594,6 +6064,7 @@ function importJson(e){
       if(data.config) STATE.config = Object.assign(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), data.config);
       if(Array.isArray(data.insights)) STATE.insights = data.insights;
       STATE.dayConfirmations = Array.isArray(data.dayConfirmations) ? data.dayConfirmations : [];
+      if(data.news && Array.isArray(data.news.events)){ STATE.news = pruneNewsStore(sanitizeNewsStore(data.news)); saveNews(); }
       saveTrades(); saveConfig(); saveInsights(); saveDayConfirmations();
       markBackedUp();
       render();
@@ -6405,7 +6876,6 @@ function startApp(){
     appShell.classList.add("app-shell-glow");
     render();
     gdrivePull();
-    fetchHighImpactNews();
     setTimeout(()=> appShell.classList.remove("app-shell-glow"), 1100);
   }, 460);
 }
@@ -6486,6 +6956,7 @@ document.addEventListener("keydown", (e)=>{
       if(STATE.draft) requestCloseTradeModal();
       else if(STATE.insightDraft) requestCloseInsightModal();
       else if(document.getElementById("settingsBackdrop")) closeSettingsModal();
+      else if(document.getElementById("newsBackdrop")) closeNewsModal();
       else closeStrategyEntryModal();
       return;
     }

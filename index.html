@@ -3465,7 +3465,7 @@ function renderStartRecentTrades(){
     </div>`;
   }).join("");
   return `
-    <div class="panel s8 start-o-recent">
+    <div class="panel s4 start-o-recent">
       <div class="start-card-head">
         <div class="start-eyebrow">Letzte Einträge</div>
         <button type="button" class="linklike start-link" id="startAllTradesBtn">Alle Live-Trades →</button>
@@ -3554,8 +3554,8 @@ function renderStart(){
       ${renderStartKpis()}
       ${renderStartEquityCard()}
       ${renderStartRoutineCard()}
+      <div class="s8 start-news-slot start-o-news">${renderNewsPanel()}</div>
       ${renderStartRecentTrades()}
-      <div class="s4 start-news-slot start-o-news">${renderNewsPanel()}</div>
     </div>
 
     ${renderStartStatusbar()}

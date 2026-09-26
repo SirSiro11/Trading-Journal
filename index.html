@@ -237,10 +237,19 @@ header.topnav.is-compact::before{background:var(--glass-strong); border-bottom-c
 .theme-toggle .ico-sun{opacity:0; transform:rotate(-90deg) scale(.5);}
 :root[data-theme="dark"] .theme-toggle .ico-moon{opacity:0; transform:rotate(90deg) scale(.5);}
 :root[data-theme="dark"] .theme-toggle .ico-sun{opacity:1; transform:none;}
-/* Kurzer, weicher Farbwechsel beim Umschalten (nur während .theme-switching) */
-.theme-switching, .theme-switching *, .theme-switching *::before, .theme-switching *::after{
-  transition:background-color .45s var(--ease), color .45s var(--ease), border-color .45s var(--ease), box-shadow .45s var(--ease) !important;
+/* Weicher Hell/Dunkel-Wechsel (GEÄNDERT): Überblendung per View Transition — nur zwei
+   Bildebenen statt Transitions auf jedem einzelnen Element. */
+/* Die neue Ansicht liegt voll deckend darunter, das Standbild der alten blendet darüber
+   aus — so gibt es keinen Helligkeits-"Knick" in der Mitte wie beim reinen Kreuzblenden. */
+html.theme-vt::view-transition-new(root){animation:none; mix-blend-mode:normal;}
+html.theme-vt::view-transition-old(root){
+  z-index:1; mix-blend-mode:normal;
+  animation:themeOut .6s cubic-bezier(.4, 0, .2, 1) both;
 }
+@keyframes themeOut{ from{opacity:1;} to{opacity:0;} }
+@keyframes themeIn{ from{opacity:0;} to{opacity:1;} }
+/* Fallback ohne View-Transitions-API: kurzes Einblenden der ganzen Seite */
+html.theme-fade #appShell{animation:themeIn .35s cubic-bezier(.4, 0, .2, 1);}
 .brand{
   font-family:var(--font-display); font-weight:600; font-size:19px; letter-spacing:-.02em;
   transform-origin:left center; transition:transform .5s var(--ease);
@@ -905,6 +914,7 @@ table.breakdown td.num{text-align:right; font-family:var(--mono); font-variant-n
 .start-journal .linklike{color:var(--text-dim); font-size:12.5px;}
 .start-hero-cockpit .start-quick{margin-top:auto; padding-top:22px;}
 .start-hero-cockpit .start-quick .btn{flex:0 0 auto; padding:12px 20px;}
+.start-hero-cockpit .start-quick .btn{gap:0;} /* Kurz-/Langlabel ohne Flex-Abstand dazwischen */
 
 .start-sess{
   display:flex; flex-direction:column; justify-content:space-between; gap:14px;
@@ -1867,10 +1877,26 @@ function applyRemoteState(remote){
 
 // Schreibt den aktuellen lokalen Stand über den Proxy nach Google Drive.
 // force=true überspringt die Konfliktprüfung (nur nach ausdrücklicher Nutzerentscheidung).
+// GEÄNDERT: Sync-Statuswechsel (syncing/verbunden/Fehler) zeichnen nicht mehr die ganze
+// Ansicht neu — das ließ kurz nach dem Speichern die aktuelle Seite ein zweites Mal
+// "einladen". Aktualisiert werden nur Backup-Badge und die Sync-Anzeigen der Startseite.
+function refreshSyncUi(){
+  updateBackupBadge();
+  if(STATE.view !== "start" || STATE.viewingTrade) return;
+  const bar = document.querySelector(".start-status");
+  if(!bar) return;
+  bar.outerHTML = renderStartStatusbar();
+  const alertHtml = renderStartSyncAlert();
+  const oldAlert = document.querySelector(".start-alert");
+  if(oldAlert){ if(alertHtml) oldAlert.outerHTML = alertHtml; else oldAlert.remove(); }
+  else if(alertHtml){ const bento = document.querySelector(".start-bento"); if(bento) bento.insertAdjacentHTML("afterbegin", alertHtml); }
+  wireStartSync();
+}
+
 async function gdrivePush(force){
   if(gdriveBusy){ scheduleDriveAutoPush(); return; }
   gdriveBusy = true;
-  STATE.driveStatus = "syncing"; render();
+  STATE.driveStatus = "syncing"; refreshSyncUi();
   try{
     if(!force){
       // Konfliktprüfung: Hat ein anderes Gerät seit unserem letzten Abgleich geschrieben?
@@ -1881,7 +1907,7 @@ async function gdrivePush(force){
         STATE.driveConflictRemote = remote;
         STATE.driveError = "";
         gdriveBusy = false;
-        render();
+        refreshSyncUi();
         toast("⚠ In der Cloud liegt ein neuerer Stand von einem anderen Gerät — bitte auf der Startseite entscheiden.", null, null, 8000);
         return;
       }
@@ -1904,15 +1930,16 @@ async function gdrivePush(force){
     STATE.driveError = err.message || String(err);
   }
   gdriveBusy = false;
-  render();
+  refreshSyncUi();
 }
 
 // Gleicht lokal und Cloud ab: neuerer Stand gewinnt (Vergleich über "savedAt" im
 // Backup bzw. den lokalen "letzte Änderung"-Zeitstempel).
 async function gdrivePull(){
   if(gdriveBusy) return;
+  let pulledData = false;
   gdriveBusy = true;
-  STATE.driveStatus = "syncing"; render();
+  STATE.driveStatus = "syncing"; refreshSyncUi();
   try{
     const remote = await gdriveFetchRemote();
     gdriveLastPullAt = Date.now();
@@ -1925,6 +1952,7 @@ async function gdrivePull(){
     const localChangedAt = getLastChangeAt();
     if(remoteSavedAt > localChangedAt){
       applyRemoteState(remote);
+      pulledData = true;
       toast("Neuester Stand geladen.");
     }else if(localChangedAt > remoteSavedAt){
       // Lokal ist neuer. Wenn wir den Cloud-Stand aber noch nie gesehen haben (frisches Gerät,
@@ -1934,7 +1962,7 @@ async function gdrivePull(){
         STATE.driveConflictRemote = remote;
         STATE.driveError = "";
         gdriveBusy = false;
-        render();
+        refreshSyncUi();
         return;
       }
       gdriveBusy = false;
@@ -1952,7 +1980,8 @@ async function gdrivePull(){
     STATE.driveError = err.message || String(err);
   }
   gdriveBusy = false;
-  render();
+  // Neue Daten aus der Cloud -> Ansicht neu zeichnen (ohne Fade); sonst nur den Status.
+  if(pulledData) render(); else refreshSyncUi();
 }
 
 // Konfliktauflösung (Buttons auf der Startseite): Cloud-Stand übernehmen (lokale
@@ -2824,15 +2853,22 @@ function escAttr(s){ return escHtml(s); }
 /* =========================================================================
    RENDER ROOT
    ========================================================================= */
+let lastRenderViewKey = null;
 function render(){
   updateNavActive();
   updateBackupBadge();
   const app = document.getElementById("app");
   // Sanften Fade/Slide-Übergang bei jedem Reiter-/Ansichtswechsel erneut auslösen:
   // Animation entfernen, Reflow erzwingen, dann wieder hinzufügen.
-  app.classList.remove("app-fade-run");
-  void app.offsetWidth;
-  app.classList.add("app-fade-run");
+  // GEÄNDERT: Fade nur bei echtem Ansichtswechsel (Reiter / Detailseite) — nicht bei
+  // jedem Neu-Zeichnen nach Speichern, Löschen oder Sync, sonst "lädt" die Seite doppelt.
+  const viewKey = STATE.view + (STATE.viewingTrade ? ":detail:" + (STATE.viewingTrade.id || "") : "");
+  if(viewKey !== lastRenderViewKey){
+    lastRenderViewKey = viewKey;
+    app.classList.remove("app-fade-run");
+    void app.offsetWidth;
+    app.classList.add("app-fade-run");
+  }
   const isStart = STATE.view === "start" && !STATE.viewingTrade;
   app.classList.toggle("main-narrow", isStart);
   // Basis-Breite reicht für die 9 eingebauten Kategorien; jede frei erstellte Kategorie
@@ -3875,19 +3911,7 @@ function wireNewsModal(){
   updateNewsPreview();
 }
 
-function wireStart(){
-  // Schnellzugriff: Formulare direkt von der Startseite aus öffnen (Eintragen ist die
-  // tägliche Hauptaufgabe — vorher brauchte es dafür erst den Wechsel in einen Reiter).
-  const qLive = document.getElementById("quickAddLiveBtn");
-  if(qLive) qLive.addEventListener("click", ()=> openTradeModal("live", null));
-  const qEod = document.getElementById("quickAddEodBtn");
-  if(qEod) qEod.addEventListener("click", ()=> openTradeModal("eod", null));
-  const qIns = document.getElementById("quickAddInsightBtn");
-  if(qIns) qIns.addEventListener("click", ()=> openInsightModal(null));
-
-  const dayConfirmBtn = document.getElementById("dayConfirmToggleBtn");
-  if(dayConfirmBtn) dayConfirmBtn.addEventListener("click", toggleTodayConfirmed);
-
+function wireStartSync(){
   const gdriveSyncNowBtn = document.getElementById("gdriveSyncNowBtn");
   if(gdriveSyncNowBtn) gdriveSyncNowBtn.addEventListener("click", gdrivePull);
   const gdriveRetryBtn = document.getElementById("gdriveRetryBtn");
@@ -3902,6 +3926,22 @@ function wireStart(){
     if(!await uiConfirm("Der neuere Stand in der Cloud (vom anderen Gerät) wird mit dem Stand dieses Geräts überschrieben.", { title:"Cloud überschreiben?", okText:"Überschreiben", danger:true })) return;
     gdriveResolveConflict(false);
   });
+}
+
+function wireStart(){
+  // Schnellzugriff: Formulare direkt von der Startseite aus öffnen (Eintragen ist die
+  // tägliche Hauptaufgabe — vorher brauchte es dafür erst den Wechsel in einen Reiter).
+  const qLive = document.getElementById("quickAddLiveBtn");
+  if(qLive) qLive.addEventListener("click", ()=> openTradeModal("live", null));
+  const qEod = document.getElementById("quickAddEodBtn");
+  if(qEod) qEod.addEventListener("click", ()=> openTradeModal("eod", null));
+  const qIns = document.getElementById("quickAddInsightBtn");
+  if(qIns) qIns.addEventListener("click", ()=> openInsightModal(null));
+
+  const dayConfirmBtn = document.getElementById("dayConfirmToggleBtn");
+  if(dayConfirmBtn) dayConfirmBtn.addEventListener("click", toggleTodayConfirmed);
+
+  wireStartSync();
 
   wireNewsPanel();
 
@@ -4421,10 +4461,23 @@ function wireTradeListRows(root, area){
   root.querySelectorAll("[data-del]").forEach(b=>{
     b.addEventListener("click", async ()=>{
       if(!await uiConfirm("Direkt danach kannst du das Löschen noch einige Sekunden rückgängig machen.", { title:"Diesen Trade löschen?", okText:"Löschen", danger:true })) return;
-      const idx = STATE.trades.findIndex(x=>x.id===b.dataset.del);
-      if(idx < 0) return;
-      const deleted = STATE.trades[idx];
-      STATE.trades.splice(idx, 1);
+      const deleted = STATE.trades.find(x=>x.id===b.dataset.del);
+      if(!deleted) return;
+      // GEÄNDERT: Wurde ein Live-Trade nach EOD übernommen, wird gefragt, ob die
+      // EOD-Kopie mitgelöscht werden soll. Standard (Abbrechen/Esc) = EOD behalten.
+      const eodCopies = deleted.area === "live"
+        ? STATE.trades.filter(x=> x.area === "eod" && x.copiedFromLiveId === deleted.id)
+        : [];
+      let alsoEod = false;
+      if(eodCopies.length){
+        alsoEod = await uiConfirm(
+          `Dieser Trade wurde ins EOD übernommen (${formatDateDE(eodCopies[0].date)}${eodCopies[0].markt ? " · " + eodCopies[0].markt : ""}). Soll der Eintrag im EOD ebenfalls gelöscht werden?`,
+          { title:"Auch aus dem EOD löschen?", okText:"Auch im EOD löschen", cancelText:"Nur Live löschen", danger:true });
+      }
+      // Alle zu löschenden Trades samt Position merken (für "Rückgängig")
+      const toDelete = [deleted].concat(alsoEod ? eodCopies : []);
+      const removed = toDelete.map(t=> ({ t, idx: STATE.trades.indexOf(t) })).sort((a,b)=> a.idx - b.idx);
+      removed.slice().reverse().forEach(r=> STATE.trades.splice(r.idx, 1));
       // War das ein EOD-Trade, der aus einem Live-Trade kopiert wurde? Dann den
       // Live-Trade wieder freigeben, damit "→ EOD kopieren" dort erneut möglich ist.
       let source = null, sourceWasCopied = false;
@@ -4434,13 +4487,15 @@ function wireTradeListRows(root, area){
       }
       saveTrades();
       render();
-      toast("Trade gelöscht.", "Rückgängig", ()=>{
-        if(STATE.trades.some(x=>x.id===deleted.id)) return;
-        STATE.trades.splice(Math.min(idx, STATE.trades.length), 0, deleted);
+      toast(removed.length > 1 ? "Trade in Live und EOD gelöscht." : "Trade gelöscht.", "Rückgängig", ()=>{
+        removed.forEach(r=>{
+          if(STATE.trades.some(x=>x.id===r.t.id)) return;
+          STATE.trades.splice(Math.min(r.idx, STATE.trades.length), 0, r.t);
+        });
         if(source) source.copiedToEod = sourceWasCopied;
         saveTrades();
         render();
-        toast("Trade wiederhergestellt.");
+        toast(removed.length > 1 ? "Trades wiederhergestellt." : "Trade wiederhergestellt.");
       }, 7000);
     });
   });
@@ -7836,12 +7891,7 @@ window.addEventListener("beforeunload", (e)=>{
   const themeBtn = document.getElementById("btnTheme");
   const metaTheme = document.getElementById("metaThemeColor");
   let switchTimer = null;
-  function applyTheme(t, animate){
-    if(animate && !reduceMotion.matches){
-      root.classList.add("theme-switching");
-      clearTimeout(switchTimer);
-      switchTimer = setTimeout(()=> root.classList.remove("theme-switching"), 500);
-    }
+  function setThemeNow(t){
     root.setAttribute("data-theme", t);
     if(metaTheme) metaTheme.setAttribute("content", t === "dark" ? "#000000" : "#f5f5f7");
     if(themeBtn){
@@ -7849,6 +7899,27 @@ window.addEventListener("beforeunload", (e)=>{
       themeBtn.title = t === "dark" ? "Dunkelmodus ausschalten" : "Dunkelmodus einschalten";
     }
     redrawChart();
+  }
+  // GEÄNDERT: Weicher Hell/Dunkel-Wechsel über die View-Transitions-API — der Browser
+  // blendet ein Standbild der alten Ansicht in die neue über (GPU, ruckelfrei). Vorher
+  // bekam JEDES Element eine eigene Farb-Transition, das hat bei vielen Elementen,
+  // Milchglas und Schatten spürbar geruckelt. Ohne API-Unterstützung: sofortiger Wechsel
+  // plus kurzes Überblenden der ganzen Seite (ebenfalls nur eine Ebene).
+  let themeTransition = null;
+  function applyTheme(t, animate){
+    if(root.getAttribute("data-theme") === t && !animate){ setThemeNow(t); return; }
+    if(!animate || reduceMotion.matches){ setThemeNow(t); return; }
+    if(document.startViewTransition){
+      if(themeTransition){ try{ themeTransition.skipTransition(); }catch(e){} }
+      root.classList.add("theme-vt");
+      themeTransition = document.startViewTransition(()=> setThemeNow(t));
+      themeTransition.finished.finally(()=>{ root.classList.remove("theme-vt"); themeTransition = null; });
+    }else{
+      setThemeNow(t);
+      root.classList.remove("theme-fade"); void root.offsetWidth; root.classList.add("theme-fade");
+      clearTimeout(switchTimer);
+      switchTimer = setTimeout(()=> root.classList.remove("theme-fade"), 500);
+    }
   }
   if(themeBtn){
     themeBtn.addEventListener("click", ()=>{

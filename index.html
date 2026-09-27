@@ -728,7 +728,7 @@ main.main-narrow{max-width:1240px;}
 
 /* ---------- 15 Trade-Formular: Karten-Layout mit Screenshot-Spalte ---------- */
 .modal.trade-modal{max-width:1180px;}
-.tm-layout{display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:18px; align-items:start;}
+.tm-layout{display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:18px; align-items:start;}
 .tm-main{display:flex; flex-direction:column; gap:14px; min-width:0;}
 .tm-side{position:sticky; top:0; min-width:0;}
 .tm-card{background:var(--bg-card); border:1px solid transparent; border-radius:var(--radius); padding:18px 18px 4px;}
@@ -739,6 +739,20 @@ main.main-narrow{max-width:1240px;}
 .tm-card .chip.selected.result-SL{background:var(--red);}
 .tm-card .chip.selected.result-BE{background:var(--amber-fill);}
 .tm-card-accent{box-shadow:inset 3px 0 0 var(--accent-fill);}
+.tm-card-top{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;}
+.tm-card-top .tm-pill{margin-bottom:0;}
+.mentor-toggle{
+  display:inline-flex; align-items:center; gap:6px; padding:6px 13px; border-radius:999px;
+  border:1px solid var(--border-light); background:var(--bg-panel); color:var(--text-dim);
+  font-size:12.5px; font-weight:600; cursor:pointer;
+  transition:background-color .25s var(--ease), color .25s var(--ease), border-color .25s var(--ease), transform .3s var(--spring);
+}
+.mentor-toggle:hover{color:var(--text);}
+.mentor-toggle:active{transform:scale(.96);}
+.mentor-toggle .mentor-ico{font-size:13px; color:var(--text-faint); transition:color .25s var(--ease), transform .4s var(--spring);}
+.mentor-toggle.on{background:var(--amber-dim); border-color:var(--amber-line); color:var(--amber);}
+.mentor-toggle.on .mentor-ico{color:var(--amber-fill); transform:rotate(72deg) scale(1.1);}
+.mentor-badge{display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:999px; background:var(--amber-dim); color:var(--amber); font-size:12.5px; font-weight:600;}
 .tm-pill{display:inline-block; margin-bottom:12px; padding:3px 10px; border-radius:999px; background:var(--fill); font-size:11px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--text-dim);}
 .tm-card-title{font-size:13px; font-weight:700; letter-spacing:-.005em; color:var(--text); margin-bottom:14px;}
 .tm-card-title span{font-weight:400; color:var(--text-faint); margin-left:6px;}
@@ -755,11 +769,13 @@ main.main-narrow{max-width:1240px;}
 .tm-shot-group .shot-url-row{margin-top:0;}
 .tm-shots-card .shot-url-input{padding:9px 12px; min-width:0;}
 .tm-shots-card .shot-url-hint{margin:2px 0 14px;}
-.tm-shots{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:8px;}
-.tm-shots .shot-thumb img{height:62px;}
-.tm-shots .shot-broken{height:62px; font-size:10px; padding:4px;}
+.tm-shots{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px;}
+/* GEÄNDERT: größere Vorschau — 2 pro Reihe im 16:10-Format, ein einzelnes Bild über die volle Breite */
+.tm-shots .shot-thumb img{height:auto; aspect-ratio:16/10;}
+.tm-shots .shot-thumb:only-child{grid-column:1 / -1;}
+.tm-shots .shot-broken{height:auto; aspect-ratio:16/10; font-size:11px; padding:6px;}
 .tm-shots .shot-broken-sub{display:none;}
-.tm-shots .shot-remove{width:20px; height:20px; font-size:10px;}
+.tm-shots .shot-remove{width:24px; height:24px; font-size:11px;}
 
 /* ---------- 16 Bericht, Tabellen, Vergleich -------------------------------- */
 .period-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px;}
@@ -870,6 +886,9 @@ table.breakdown td.num{text-align:right; font-family:var(--mono); font-variant-n
 .news-row-compact{padding:7px 4px;}
 .news-row-compact .news-title{font-size:13.5px;}
 .news-week{display:flex; flex-direction:column; gap:14px;}
+.news-scroll{position:relative; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scroll-behavior:auto;}
+.news-scroll.is-scrollable{padding-right:6px; margin-right:-6px;}
+.news-scroll .news-day-head{position:sticky; top:0; z-index:1; background:var(--bg-panel); padding-top:2px;}
 .news-day-head{display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; letter-spacing:.02em; color:var(--text-dim); padding:0 4px 4px; border-bottom:1px solid var(--separator);}
 .news-day-today .news-day-head{color:var(--text);}
 .news-day-past{opacity:.55;}
@@ -1771,7 +1790,7 @@ function buildDemoTrades(){
     id: "demo-" + Math.random().toString(36).slice(2),
     richtung:null, markt:null, session:null, art:null, level:null, trend:null,
     kriterien:[], invalidierung:[], zeiteinheit:null,
-    ergebnis:null, r:null, genommen:undefined, grundNichtGenommen:"",
+    ergebnis:null, r:null, genommen:undefined, grundNichtGenommen:"", mentor:false,
     notizen:"", screenshots:{ htf:[], ltf:[], sonstige:[] }
   }, o, {
     createdAt: new Date(o.date+"T12:00:00").getTime(),
@@ -2310,6 +2329,7 @@ const STATE = {
   areaDateFilter: { live:"alles", eod:"alles" },
   // Schnellsuche in der Live-/EOD-Liste (reiner Anzeige-Filter)
   areaSearch: { live:"", eod:"" },
+  areaMentorOnly: { live:false, eod:false }, // Schnellfilter "nur Mentor-Trades" in Live/EOD
   // per Kalender-Klick ausgewählter Einzeltag pro Bereich (überschreibt areaDateFilter)
   areaSelectedDay: { live:null, eod:null },
   // welcher Monat im Kalender pro Bereich gerade angezeigt wird
@@ -3668,7 +3688,9 @@ function newsPanelBodyHtml(){
   }else if(end < isoAddDays(today, 2)){ // ab Donnerstag erinnern, wenn die Folgewoche fehlt
     hint = `<div class="news-hint">⏳ Daten nur bis ${formatNewsDay(end)} — <button type="button" class="linklike" data-newsaction="import">neue Termine importieren</button></div>`;
   }
-  return body + hint + `<div class="news-foot">Quelle: Investing.com (Import)${maxEnd ? ` · Daten bis ${formatDateDE(maxEnd)}` : ""} · Zeiten in Wiener Ortszeit</div>`;
+  // GEÄNDERT: Termine in eigenem Scroll-Bereich — sichtbar sind die nächsten 10,
+  // der Rest (auch Vergangenes darüber) ist im Feld selbst scrollbar (siehe fitNewsScroll).
+  return `<div class="news-scroll" id="newsScroll">${body}</div>` + hint + `<div class="news-foot">Quelle: Investing.com (Import)${maxEnd ? ` · Daten bis ${formatDateDE(maxEnd)}` : ""} · Zeiten in Wiener Ortszeit</div>`;
 }
 
 function renderNewsPanel(){
@@ -3699,10 +3721,12 @@ function wireNewsPanel(){
       saveNewsView(STATE.newsView);
       panel.querySelectorAll("[data-newsview]").forEach(b=> b.classList.toggle("active", b === vBtn));
       document.getElementById("newsPanelBody").innerHTML = newsPanelBodyHtml();
+      fitNewsScroll();
       return;
     }
     if(e.target.closest("[data-newsaction='import']")) openNewsModal();
   });
+  fitNewsScroll();
 }
 
 // Wird von der Startseiten-Uhr aufgerufen: vergangene Termine ausgrauen, Countdown aktualisieren.
@@ -3712,8 +3736,52 @@ function refreshNewsPanelTick(){
   if(m === newsLastRefreshMinute) return;
   newsLastRefreshMinute = m;
   const el = document.getElementById("newsPanelBody");
-  if(el) el.innerHTML = newsPanelBodyHtml();
+  if(!el) return;
+  // Hat der Nutzer im Feld gescrollt, bleibt seine Position erhalten, solange sich
+  // der "nächste" Termin nicht geändert hat.
+  const old = document.getElementById("newsScroll");
+  const keep = old && old.dataset.userScrolled === "1" ? { top: old.scrollTop, next: old.dataset.nextKey } : null;
+  el.innerHTML = newsPanelBodyHtml();
+  fitNewsScroll(keep);
 }
+
+// Höhe des News-Scrollbereichs so setzen, dass genau die nächsten NEWS_VISIBLE_ROWS
+// Termine sichtbar sind, und dorthin scrollen (vergangene liegen darüber).
+const NEWS_VISIBLE_ROWS = 10;
+function fitNewsScroll(keep){
+  const box = document.getElementById("newsScroll");
+  if(!box) return;
+  box.style.maxHeight = "";
+  box.classList.remove("is-scrollable");
+  const rows = Array.from(box.querySelectorAll(".news-row"));
+  if(rows.length <= NEWS_VISIBLE_ROWS) return; // passt komplett, kein Scrollen nötig
+  let start = rows.findIndex(r=> !r.classList.contains("news-row-past"));
+  // Immer 10 Termine zeigen: gibt es weniger kommende, rücken vergangene von oben nach
+  if(start < 0 || start > rows.length - NEWS_VISIBLE_ROWS) start = rows.length - NEWS_VISIBLE_ROWS;
+  const end = Math.min(rows.length - 1, start + NEWS_VISIBLE_ROWS - 1);
+  // Wochenansicht: Tageskopf (sticky) über dem ersten sichtbaren Termin mit einrechnen
+  const dayHead = rows[start].closest(".news-day") ? rows[start].closest(".news-day").querySelector(".news-day-head") : null;
+  const headH = dayHead ? dayHead.offsetHeight : 0;
+  const top = Math.max(0, rows[start].offsetTop - headH);
+  const bottom = rows[end].offsetTop + rows[end].offsetHeight;
+  const needed = bottom - top;
+  if(box.scrollHeight <= needed + 2){ return; } // passt ohnehin komplett
+  box.style.maxHeight = needed + "px";
+  box.classList.add("is-scrollable");
+  const nextKey = rows[start].textContent.trim().slice(0, 60);
+  box.dataset.nextKey = nextKey;
+  box.scrollTop = keep && keep.next === nextKey ? keep.top : top;
+  if(keep && keep.next === nextKey) box.dataset.userScrolled = "1";
+  // Listener erst nach dem programmatischen Scrollen anhängen (sonst zählt das als Nutzer-Scroll)
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{
+    box.addEventListener("scroll", ()=>{ box.dataset.userScrolled = "1"; }, { passive:true });
+  }));
+}
+let newsFitResizeTimer = null;
+window.addEventListener("resize", ()=>{
+  clearTimeout(newsFitResizeTimer);
+  newsFitResizeTimer = setTimeout(()=> fitNewsScroll(), 150);
+});
 
 /* ---------- News bei Trades (optional, Einstellung im News-Dialog) ---------- */
 function tradeDayNewsHtml(dateIso, opts){
@@ -4011,6 +4079,7 @@ function getAreaFilteredTrades(area){
   trades = trades.filter(t=> dateMatchesFilter(t.date, filter));
   const q = ((STATE.areaSearch && STATE.areaSearch[area]) || "").trim().toLowerCase();
   if(q) trades = trades.filter(t=> tradeSearchText(t).includes(q));
+  if(STATE.areaMentorOnly && STATE.areaMentorOnly[area]) trades = trades.filter(t=> t.mentor);
   return trades.sort((a,b)=> (b.date||"").localeCompare(a.date||"") || (b.createdAt||0)-(a.createdAt||0));
 }
 
@@ -4018,7 +4087,7 @@ function getAreaFilteredTrades(area){
 // alle Kategorien-Werte (inkl. eigener Kategorien), Ergebnis, Notizen und der Grund
 // für "nicht genommen". Reine Anzeige-Filterung, am Trade selbst ändert sich nichts.
 function tradeSearchText(t){
-  const parts = [t.markt, formatDateDE(t.date), t.date, t.ergebnis || "offen", t.notizen, t.grundNichtGenommen];
+  const parts = [t.markt, formatDateDE(t.date), t.date, t.ergebnis || "offen", t.notizen, t.grundNichtGenommen, t.mentor ? "mentor-trade mentor" : ""];
   tradeCategoryColumns(t.area).forEach(col=> tradeCategoryCellValues(t, col).forEach(v=> parts.push(v.text)));
   return parts.filter(Boolean).join(" \u0001 ").toLowerCase();
 }
@@ -4066,6 +4135,7 @@ function renderAreaView(area){
     </div>
     <div class="list-toolbar">
       <input type="search" class="search-input" id="areaSearchInput" placeholder="Suchen: Markt, Tag, Notiz …" value="${escAttr((STATE.areaSearch && STATE.areaSearch[area]) || "")}" aria-label="Trades durchsuchen">
+      <button type="button" class="mentor-toggle${STATE.areaMentorOnly[area] ? " on" : ""}" id="areaMentorToggle" aria-pressed="${STATE.areaMentorOnly[area] ? "true" : "false"}" title="Nur Mentor-Trades anzeigen"><span class="mentor-ico" aria-hidden="true">★</span> Mentor-Trades</button>
       <span id="areaSummary">${areaSummaryHtml(trades)}</span>
     </div>
     <div class="trade-list-scroll" id="tradeListScroll"><div class="trade-list" id="tradeListContainer" style="--list-min:${tradeListMinWidth(area)}px">${list}</div></div>
@@ -4077,10 +4147,10 @@ function renderAreaView(area){
 
 function emptyStateHtml(area){
   const q = ((STATE.areaSearch && STATE.areaSearch[area]) || "").trim();
-  const filtered = q || (STATE.areaDateFilter[area] && STATE.areaDateFilter[area] !== "alles");
+  const filtered = q || (STATE.areaDateFilter[area] && STATE.areaDateFilter[area] !== "alles") || STATE.areaMentorOnly[area];
   return `<div class="empty-state panel">
     <div class="big">◇</div>
-    <div>${q ? `Keine Trades gefunden für „${escHtml(q)}“.` : `Keine Einträge für diesen Zeitraum in ${AREA_LABEL[area]}.`}</div>
+    <div>${q ? `Keine Trades gefunden für „${escHtml(q)}“.` : STATE.areaMentorOnly[area] ? `Keine Mentor-Trades für diesen Zeitraum in ${AREA_LABEL[area]}.` : `Keine Einträge für diesen Zeitraum in ${AREA_LABEL[area]}.`}</div>
     ${filtered
       ? `<button type="button" class="btn btn-sm btn-ghost" data-resetareafilter="1">Suche &amp; Zeitraum zurücksetzen</button>`
       : `<button type="button" class="btn btn-primary" data-emptyadd="1">+ Ersten Trade erfassen</button>`}
@@ -4368,6 +4438,14 @@ function wireAreaView(area){
   });
   wireEmptyStateButtons(area);
 
+  const mentorToggle = document.getElementById("areaMentorToggle");
+  if(mentorToggle) mentorToggle.addEventListener("click", ()=>{
+    STATE.areaMentorOnly[area] = !STATE.areaMentorOnly[area];
+    mentorToggle.classList.toggle("on", STATE.areaMentorOnly[area]);
+    mentorToggle.setAttribute("aria-pressed", STATE.areaMentorOnly[area] ? "true" : "false");
+    refreshAreaList(area);
+  });
+
   const subtabRow = document.getElementById("subtabRow");
   if(subtabRow) subtabRow.addEventListener("click",(e)=>{
     const btn = e.target.closest("[data-datefilter]");
@@ -4547,6 +4625,7 @@ function wireEmptyStateButtons(area){
   if(reset) reset.addEventListener("click", ()=>{
     STATE.areaSearch[area] = "";
     STATE.areaDateFilter[area] = "alles";
+    STATE.areaMentorOnly[area] = false;
     render();
   });
 }
@@ -4758,6 +4837,7 @@ function emptyTrade(area){
     r: null,
     genommen: area==="eod" ? null : undefined,
     grundNichtGenommen: "",
+    mentor: false, // von einem Mentor bestätigt / selbst genommen (nur Formular, Detail & Filter)
     notizen: "",
     customCategories: {},
     screenshots: { htf: [], ltf: [], sonstige: [] },
@@ -4787,6 +4867,7 @@ function copyTradeToEod(liveTrade){
     ergebnis: liveTrade.ergebnis,
     r: liveTrade.r,
     genommen: true, // war ein echter Live-Trade, wurde also genommen
+    mentor: !!liveTrade.mentor,
     notizen: liveTrade.notizen || "",
     customCategories: JSON.parse(JSON.stringify(liveTrade.customCategories||{})),
     screenshots: {
@@ -4897,6 +4978,7 @@ function renderTradeDetail(t){
     <div class="page-head" style="margin-top:18px;">
       <h1>${escHtml(t.markt||"Trade")}</h1>
       <p>${AREA_LABEL[t.area]} · ${formatDateDE(t.date)} · Nur Ansicht</p>
+      ${t.mentor ? `<div style="margin-top:10px;"><span class="mentor-badge">★ Mentor-Trade</span></div>` : ""}
     </div>
 
     <div class="panel">
@@ -5003,7 +5085,12 @@ function renderModal(){
       <div class="tm-main">
 
         <section class="tm-card tm-card-accent" aria-label="Trade">
-          <div class="tm-pill">Trade</div>
+          <div class="tm-card-top">
+            <div class="tm-pill">Trade</div>
+            <button type="button" class="mentor-toggle${d.mentor ? " on" : ""}" id="f_mentor" aria-pressed="${d.mentor ? "true" : "false"}" title="Von einem Mentor bestätigt oder selbst genommen">
+              <span class="mentor-ico" aria-hidden="true">★</span> Mentor-Trade
+            </button>
+          </div>
           <div class="tm-row3">
             <div class="field-group">
               <label class="fg-label">Datum</label>
@@ -5153,6 +5240,14 @@ function wireModal(){
   backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) requestCloseTradeModal(); });
   document.getElementById("modalCloseBtn").addEventListener("click", requestCloseTradeModal);
   document.getElementById("modalCancelBtn").addEventListener("click", requestCloseTradeModal);
+
+  // Mentor-Trade an/aus (nur Klasse umschalten, kein Neuzeichnen des Formulars)
+  const mentorBtn = document.getElementById("f_mentor");
+  if(mentorBtn) mentorBtn.addEventListener("click", ()=>{
+    STATE.draft.mentor = !STATE.draft.mentor;
+    mentorBtn.classList.toggle("on", STATE.draft.mentor);
+    mentorBtn.setAttribute("aria-pressed", STATE.draft.mentor ? "true" : "false");
+  });
 
   // chip clicks (single + multi select)
   document.querySelectorAll("[data-chipgroup]").forEach(group=>{
@@ -5484,6 +5579,8 @@ const FILTER_DIMENSIONS_BASE = [
   {key:"zeiteinheit", label:"Zeiteinheit", cfgKey:"timeframes", field:"zeiteinheit"},
   {key:"kriterien", label:"Kriterien", cfgKey:"kriterien", field:"kriterien", multi:true},
   {key:"invalidierung", label:"Invalidierung", cfgKey:"invalidierung", field:"invalidierung", multi:true},
+  // Kein Eintrag in den Kategorien — feste Ja/Nein-Werte aus dem Feld "mentor"
+  {key:"mentor", label:"Mentor-Trade", field:"mentor", options:["Ja","Nein"], valueOf: t=> t.mentor ? "Ja" : "Nein"},
 ];
 // Dynamische Filter-/Aufschlüsselungs-Dimensionen für den Bericht — berücksichtigt
 // umbenannte Überschriften (categoryLabel) und hängt frei erstellte Kategorien
@@ -5619,7 +5716,7 @@ function renderBericht(){
   }).join("");
 
   const filterRows = getFilterDimensions().map(dim=>{
-    const opts = cfg[dim.cfgKey];
+    const opts = dim.options || cfg[dim.cfgKey];
     const sel = STATE.berichtFilters[dim.key] || [];
     return `<div class="filter-row">
       <div class="filter-label">${dim.label}</div>
@@ -6127,6 +6224,7 @@ function notesSectionHtml(trades){
 // erstellten Kategorien liegt der Wert in t.customCategories[customKey] statt direkt
 // in t[field].
 function filterDimValue(t, dimDef){
+  if(dimDef.valueOf) return dimDef.valueOf(t);
   return dimDef.isCustom ? (t.customCategories||{})[dimDef.customKey] : t[dimDef.field];
 }
 
@@ -6602,6 +6700,7 @@ function tradesToRows(trades){
     Status: t.ergebnis ? "geschlossen" : "offen",
     "Setup genommen": t.genommen===true ? "Ja" : (t.genommen===false ? "Nein" : ""),
     "Warum nicht genommen": t.grundNichtGenommen || "",
+    "Mentor-Trade": t.mentor ? "Ja" : "Nein",
     Notizen: t.notizen || ""
   }));
 }

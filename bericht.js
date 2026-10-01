@@ -1,4 +1,4 @@
-/* js/bericht.js — Bericht: Filter, Kennzahlen, Wortwolke, Diagramm, Export/Import */
+/* bericht.js — Bericht: Filter, Kennzahlen, Wortwolke, Diagramm, Export/Import */
 /* =========================================================================
    BERICHT
    ========================================================================= */

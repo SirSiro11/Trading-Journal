@@ -1,4 +1,4 @@
-/* js/core.js — Konfiguration, Speicher (localStorage), gemeinsamer Bild-Speicher, Demo-Daten */
+/* core.js — Konfiguration, Speicher (localStorage), gemeinsamer Bild-Speicher, Demo-Daten */
 /* ⚠️⚠️⚠️ CLAUDE: LIES DAS ZUERST, BEVOR DU IRGENDETWAS ANDERES ÄNDERST ⚠️⚠️⚠️
    Die Versionsnummer steht NUR NOCH in index.html (Parameter ?v=JJJJ.MM.TT an allen
    CSS-/JS-Einbindungen). Sie MUSS bei JEDER Änderung an IRGENDEINER Datei der App auf das
@@ -6,20 +6,22 @@
    ersetzen. Das ist zugleich das Cache-Busting: Nur mit neuem ?v= laden die Geräte die
    geänderten Dateien statt einer alten Kopie aus dem Browser-Cache. Niemals überspringen.
 
-   AUFBAU (seit 2026.09.29 — vorher eine einzige index.html mit ~8000 Zeilen):
+   AUFBAU (seit 2026.09.29 — vorher eine einzige index.html mit ~8000 Zeilen).
+   Seit 2026.10.01b liegen ALLE Dateien flach im Hauptverzeichnis (auch Bilder/Icons),
+   ohne Unterordner — der GitHub-Web-Upload entpackt Ordner flach:
      index.html          Gerüst (HTML), Theme-Vorabschaltung, Einbindungen
-     css/app.css         komplettes Design
-     js/core.js          Konfiguration, Speicher (localStorage), gemeinsamer Bild-Speicher, Demo-Daten
-     js/sync.js          Google-Drive-Sync über den Cloud-Run-Proxy (Pull/Push/Konflikt)
-     js/news.js          News-Daten: Import, Zeitzonen, Speicherung (ohne Oberfläche)
-     js/state.js         Zentraler Zustand STATE, Dialoge, Navigation, Kategorien-Verwaltung, render()
-     js/start.js         Startseite: Sessions, Kennzahlen, Equity, Routine, News-Kachel und News-Dialog
-     js/trades.js        Live/EOD-Listen, Kalender, Trade-Detail, Trade-Formular, Screenshots
-     js/bericht.js       Bericht: Filter, Kennzahlen, Wortwolke, Diagramm, Export/Import
-     js/erkenntnisse.js  Erkenntnisse-Reiter (Liste)
-     js/strategie.js     Strategie-Reiter und Erkenntnis-Formular
-     js/init.js          Sperrbildschirm, globale Tastatur-/Fehler-Handler, Fokus-Management, Start
-     js/design.js        Design-Schicht: Animationen, Navigation-Schieber, Hell/Dunkel
+     app.css         komplettes Design
+     core.js          Konfiguration, Speicher (localStorage), gemeinsamer Bild-Speicher, Demo-Daten
+     sync.js          Google-Drive-Sync über den Cloud-Run-Proxy (Pull/Push/Konflikt)
+     news.js          News-Daten: Import, Zeitzonen, Speicherung (ohne Oberfläche)
+     state.js         Zentraler Zustand STATE, Dialoge, Navigation, Kategorien-Verwaltung, render()
+     start.js         Startseite: Sessions, Kennzahlen, Equity, Routine, News-Kachel und News-Dialog
+     trades.js        Live/EOD-Listen, Kalender, Trade-Detail, Trade-Formular, Screenshots
+     bericht.js       Bericht: Filter, Kennzahlen, Wortwolke, Diagramm, Export/Import
+     erkenntnisse.js  Erkenntnisse-Reiter (Liste)
+     strategie.js     Strategie-Reiter und Erkenntnis-Formular
+     init.js          Sperrbildschirm, globale Tastatur-/Fehler-Handler, Fokus-Management, Start
+     design.js        Design-Schicht: Animationen, Navigation-Schieber, Hell/Dunkel
    Es sind normale <script>-Dateien (kein Build, keine Module): alle teilen sich einen
    globalen Namensraum und werden in genau dieser Reihenfolge ausgeführt. Code, der schon
    BEIM LADEN läuft (nicht erst in einer Funktion), darf nur Funktionen aus derselben oder

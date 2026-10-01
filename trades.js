@@ -1,4 +1,4 @@
-/* js/trades.js — Live/EOD-Listen, Kalender, Trade-Detail, Trade-Formular, Screenshots */
+/* trades.js — Live/EOD-Listen, Kalender, Trade-Detail, Trade-Formular, Screenshots */
 /* =========================================================================
    LIVE / EOD VIEW
    ========================================================================= */

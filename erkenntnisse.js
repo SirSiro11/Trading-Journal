@@ -1,4 +1,4 @@
-/* js/erkenntnisse.js — Erkenntnisse-Reiter (Liste) */
+/* erkenntnisse.js — Erkenntnisse-Reiter (Liste) */
 /* =========================================================================
    ERKENNTNISSE — freie Learnings aus dem Markt, unabhängig von einzelnen
    Trades. Mit Notiz + optionalen Screenshots, plus Stichwort-Wolke wie bei

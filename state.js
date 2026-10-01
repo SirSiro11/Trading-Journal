@@ -1,4 +1,4 @@
-/* js/state.js — Zentraler Zustand STATE, Dialoge, Navigation, Kategorien-Verwaltung, render() */
+/* state.js — Zentraler Zustand STATE, Dialoge, Navigation, Kategorien-Verwaltung, render() */
 /* =========================================================================
    STATE
    ========================================================================= */

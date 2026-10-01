@@ -1,4 +1,4 @@
-/* js/sync.js — Google-Drive-Sync über den Cloud-Run-Proxy (Pull/Push/Konflikt) */
+/* sync.js — Google-Drive-Sync über den Cloud-Run-Proxy (Pull/Push/Konflikt) */
 /* =========================================================================
    GOOGLE DRIVE SYNC (über eigenen Cloud-Proxy)
    Das Journal spricht nie direkt mit Google — stattdessen mit einer eigenen,

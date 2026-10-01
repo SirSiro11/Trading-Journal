@@ -76,7 +76,7 @@
   --ease:cubic-bezier(0.28, 0.11, 0.32, 1);
   --spring:cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur:.4s;
-  --start-bg-image:url("../img/start-bg.jpg");
+  --start-bg-image:url("start-bg.jpg");
 }
 
 /* Dunkle Tokens – aktiv bei <html data-theme="dark">. Umschalter im Header;

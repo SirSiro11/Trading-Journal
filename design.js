@@ -1,4 +1,4 @@
-/* js/design.js — Design-Schicht: Animationen, Navigation-Schieber, Hell/Dunkel */
+/* design.js — Design-Schicht: Animationen, Navigation-Schieber, Hell/Dunkel */
 /* =========================================================================
    DESIGN-SCHICHT — Animationen & Interaktionen im Apple-Stil
    Reine Präsentation: greift nicht in Daten, Speichern oder Sync ein. Hängt sich

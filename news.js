@@ -1,4 +1,4 @@
-/* js/news.js — News-Daten: Import, Zeitzonen, Speicherung (ohne Oberfläche) */
+/* news.js — News-Daten: Import, Zeitzonen, Speicherung (ohne Oberfläche) */
 /* =========================================================================
    NEWS — High-Impact-Wirtschaftstermine ("3 Sterne") per Import
    Seit 2026.09.26 kein automatischer Abruf mehr (Feed + CORS-Proxy-Kette war
@@ -260,6 +260,6 @@ function newsStoreBytes(){ return JSON.stringify(STATE.news).length * 2; }
 
 
 // Gemerkte Ansicht der News-Kachel ("heute" | "woche") — hier statt in start.js, weil
-// STATE (js/state.js) sie schon beim Laden braucht.
+// STATE (state.js) sie schon beim Laden braucht.
 function loadNewsView(){ try{ return localStorage.getItem(LS_NEWS_VIEW) === "woche" ? "woche" : "heute"; }catch(e){ return "heute"; } }
 function saveNewsView(v){ try{ localStorage.setItem(LS_NEWS_VIEW, v); }catch(e){} }

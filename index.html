@@ -11,10 +11,10 @@
 <!-- PWA / "Zum Home-Bildschirm hinzufügen" -->
 <link rel="manifest" href="manifest.webmanifest">
 <!-- GEÄNDERT (Performance): Icons, Manifest, Startbild und Strategie-Bilder liegen jetzt als eigene
-     Dateien unter img/ statt als Base64 in dieser Datei (vorher ~1,4 MB von 1,9 MB). Vorteil: kleinere
+     Dateien statt als Base64 in dieser Datei (vorher ~1,4 MB von 1,9 MB). Vorteil: kleinere
      HTML-Datei, Bilder werden vom Browser separat gecacht, Strategie-Bilder erst bei Bedarf geladen.
      Das Startbild wird schon während des Sperrbildschirms vorgeladen. -->
-<link rel="preload" href="img/start-bg.jpg" as="image">
+<link rel="preload" href="start-bg.jpg" as="image">
 <!-- GEÄNDERT (Design): Statusleisten-Farbe folgt Hell/Dunkel -->
 <meta name="theme-color" content="#f5f5f7" id="metaThemeColor">
 <meta name="color-scheme" content="light dark">
@@ -37,15 +37,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Mein Journal">
-<link rel="apple-touch-icon" href="img/icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="img/icons/favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 
 <!-- GEÄNDERT: SheetJS (~900 KB) blockierte das Rendern schon vor dem Sperrbildschirm.
      Wird jetzt erst im Bericht-Reiter bzw. beim Excel-Export nachgeladen (siehe loadXlsx()). -->
-<!-- GEÄNDERT (Stufe 3): Design, Programmcode und Bilder liegen in eigenen Dateien (css/, js/, img/).
+<!-- GEÄNDERT (Stufe 3): Design, Programmcode und Bilder liegen in eigenen Dateien — alle direkt im Hauptverzeichnis
+     (keine Unterordner, weil der GitHub-Web-Upload Ordner flach entpackt).
      ⚠ Versionsnummer ?v=… bei JEDER Änderung an allen Einbindungen auf das heutige Datum setzen
-     (siehe Kopfkommentar in js/core.js) — sonst laden Geräte alte Dateien aus dem Cache. -->
-<link rel="stylesheet" href="css/app.css?v=2026.10.01">
+     (siehe Kopfkommentar in core.js) — sonst laden Geräte alte Dateien aus dem Cache. -->
+<link rel="stylesheet" href="app.css?v=2026.10.01b">
 </head>
 <body>
 
@@ -103,16 +104,16 @@
 
 </div>
 
-<script src="js/core.js?v=2026.10.01"></script>
-<script src="js/sync.js?v=2026.10.01"></script>
-<script src="js/news.js?v=2026.10.01"></script>
-<script src="js/state.js?v=2026.10.01"></script>
-<script src="js/start.js?v=2026.10.01"></script>
-<script src="js/trades.js?v=2026.10.01"></script>
-<script src="js/bericht.js?v=2026.10.01"></script>
-<script src="js/erkenntnisse.js?v=2026.10.01"></script>
-<script src="js/strategie.js?v=2026.10.01"></script>
-<script src="js/init.js?v=2026.10.01"></script>
-<script src="js/design.js?v=2026.10.01"></script>
+<script src="core.js?v=2026.10.01b"></script>
+<script src="sync.js?v=2026.10.01b"></script>
+<script src="news.js?v=2026.10.01b"></script>
+<script src="state.js?v=2026.10.01b"></script>
+<script src="start.js?v=2026.10.01b"></script>
+<script src="trades.js?v=2026.10.01b"></script>
+<script src="bericht.js?v=2026.10.01b"></script>
+<script src="erkenntnisse.js?v=2026.10.01b"></script>
+<script src="strategie.js?v=2026.10.01b"></script>
+<script src="init.js?v=2026.10.01b"></script>
+<script src="design.js?v=2026.10.01b"></script>
 </body>
 </html>

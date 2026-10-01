@@ -1,4 +1,4 @@
-/* js/init.js — Sperrbildschirm, globale Tastatur-/Fehler-Handler, Fokus-Management, Start */
+/* init.js — Sperrbildschirm, globale Tastatur-/Fehler-Handler, Fokus-Management, Start */
 /* =========================================================================
    ZUGANGSSPERRE
    Einfache Code-Abfrage, die zufällige Besucher des öffentlichen Links abhält —

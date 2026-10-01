@@ -1,4 +1,4 @@
-/* js/start.js — Startseite: Sessions, Kennzahlen, Equity, Routine, News-Kachel und News-Dialog */
+/* start.js — Startseite: Sessions, Kennzahlen, Equity, Routine, News-Kachel und News-Dialog */
 /* =========================================================================
    START (Startseite / Dashboard)
    Begrüßung, Live-Datum/Uhrzeit und der Cloud-Status auf einen Blick, direkt
@@ -672,7 +672,7 @@ function renderStart(){
 }
 
 /* ---------- News-Kachel (Startseite) ---------- */
-// loadNewsView/saveNewsView → js/news.js (werden schon beim Anlegen von STATE gebraucht)
+// loadNewsView/saveNewsView → news.js (werden schon beim Anlegen von STATE gebraucht)
 
 // Flagge aus Währung (USD …) oder Länderkürzel (US, DE, EU …). Zweistellige Kürzel werden
 // direkt in Flaggen-Emoji umgewandelt (Windows zeigt dafür nur die Buchstaben — passt trotzdem).

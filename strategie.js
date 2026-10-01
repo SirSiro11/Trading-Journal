@@ -1,17 +1,17 @@
-/* js/strategie.js — Strategie-Reiter und Erkenntnis-Formular */
+/* strategie.js — Strategie-Reiter und Erkenntnis-Formular */
 /* =========================================================================
    STRATEGIE
    Statisches Nachschlagewerk zum eigenen Entry-Modell — reine Anzeige,
    keine Daten in STATE. Inhalt 1:1 nach Vorgabe übernommen.
    ========================================================================= */
-const STRAT_IMG_LIMIT = "img/strategie/limit.png";
+const STRAT_IMG_LIMIT = "limit.png";
 
-const STRAT_IMG_CONFIRMATION = "img/strategie/confirmation.png";
-const STRAT_IMG_SWEEP = "img/strategie/sweep.png";
-const STRAT_IMG_FLIP = "img/strategie/flip.png";
-const STRAT_IMG_CONTINUATION = "img/strategie/continuation.png";
-const STRAT_IMG_COUNTER_M5 = "img/strategie/counter-m5.png";
-const STRAT_IMG_COUNTER_FT = "img/strategie/counter-ft.png";
+const STRAT_IMG_CONFIRMATION = "confirmation.png";
+const STRAT_IMG_SWEEP = "sweep.png";
+const STRAT_IMG_FLIP = "flip.png";
+const STRAT_IMG_CONTINUATION = "continuation.png";
+const STRAT_IMG_COUNTER_M5 = "counter-m5.png";
+const STRAT_IMG_COUNTER_FT = "counter-ft.png";
 
 const STRATEGY_ENTRIES = [
   { key:"limit", icon:"🎯", name:"Limit Entry", thumb: STRAT_IMG_LIMIT },

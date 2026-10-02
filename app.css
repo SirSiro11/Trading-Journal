@@ -623,7 +623,8 @@ main.main-narrow{max-width:1240px;}
 .trade-detail-cat-label{width:220px; color:var(--text-dim); font-weight:600; font-size:12.5px; white-space:nowrap;}
 .shot-thumb{position:relative; border-radius:12px; overflow:hidden; border:1px solid var(--separator); background:var(--bg-card);}
 .shot-thumb img{display:block; width:100%; height:160px; object-fit:cover; cursor:zoom-in; transition:transform .6s var(--ease);}
-.shot-thumb:hover img{transform:scale(1.03);}
+/* GEÄNDERT (2026.10.02): Zoom nur bei echter Maus — am iPhone blieb er nach dem Antippen hängen */
+@media (hover:hover){ .shot-thumb:hover img{transform:scale(1.03);} }
 .shot-thumb.lg img{height:240px;}
 .shot-remove{
   position:absolute; top:6px; right:6px; width:24px; height:24px; border-radius:50%;
@@ -995,7 +996,10 @@ button.start-spill:active{transform:scale(.97);}
 .start-meter i{display:block; height:100%; border-radius:3px;}
 
 @media (max-width:1000px){
-  .start-hero-cockpit{grid-template-columns:1fr; gap:22px;}
+  /* GEÄNDERT (2026.10.02): minmax(0,1fr) statt 1fr — sonst richtete sich die Spalte nach dem
+     längsten nicht umbrechenden Inhalt (z. B. langer News-Titel in der Session-Karte) und
+     der ganze Hero-Inhalt ragte am iPhone rechts über die Karte hinaus. */
+  .start-hero-cockpit{grid-template-columns:minmax(0,1fr); gap:22px;}
   .start-bento .s3{grid-column:span 6;}
   .start-bento .s4, .start-bento .s8{grid-column:1 / -1;}
 }
@@ -1369,6 +1373,16 @@ table.strat-table tr:last-child td{border-bottom:none;}
   .trade-detail-cat-table td{padding-left:4px; padding-right:4px;}
   .trade-detail-cat-label{padding-right:10px !important;}
 }
+
+/* GEÄNDERT (2026.10.02b): Verlaufsschrift (background-clip:text) wird nur innerhalb der
+   Element-Box gemalt — bei line-height 1.05 lagen Unterlängen (g, p, y) darunter und wurden
+   abgeschnitten. Etwas Innenabstand unten, den der Außenabstand wieder ausgleicht. */
+.start-hero .page-head h1{padding-bottom:.16em;}
+.start-hero-cockpit .page-head h1{margin-bottom:calc(8px - .16em);}
+@media (max-width:640px){ .start-hero-cockpit .page-head h1{margin-bottom:calc(6px - .16em);} }
+
+/* Start-Hero: Kinder dürfen schmaler werden als ihr längster Inhalt */
+.start-hero-cockpit > *, .start-sess, .start-sess > *{min-width:0;}
 
 /* Detailansicht: Aktionen rechts ("→ Ins Live", "Bearbeiten") */
 .trade-detail-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}

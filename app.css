@@ -480,6 +480,17 @@ main.main-narrow{max-width:1240px;}
 .badge-result-SL{background:var(--red-dim); color:var(--red);}
 .badge-result-BE{background:var(--amber-dim); color:var(--amber);}
 .badge-eod-copied{background:var(--info-dim); color:var(--info);}
+/* GEÄNDERT (2026-10-04): EOD-Button und EOD-Badge als inline-flex mit SVG-Symbol + Label, damit
+   Symbol und "EOD" exakt mittig sitzen (vorher Text ca. 1,5 px zu hoch, Pfeil ca. 2 px zu tief). */
+.eod-inline-btn, .badge-eod-copied{display:inline-flex; align-items:center; justify-content:center; gap:4px; line-height:1;}
+.eod-ico{display:block; flex:none; width:11px; height:11px;}
+/* Label auf Versalhöhe zuschneiden, damit es optisch mittig steht; Fallback: leicht nach unten schieben */
+@supports (text-box: trim-both cap alphabetic){
+  .eod-label{text-box:trim-both cap alphabetic;}
+}
+@supports not (text-box: trim-both cap alphabetic){
+  .eod-label{position:relative; top:.06em;}
+}
 /* Screenshot-Vorschau in der Liste */
 .trade-thumb{position:relative; justify-self:end; width:100px; height:60px; padding:0; border:1px solid var(--separator); border-radius:10px; overflow:hidden; background:var(--bg-card); cursor:zoom-in; display:block; transition:transform .35s var(--spring), box-shadow .3s var(--ease);}
 .trade-thumb img{width:100%; height:100%; object-fit:cover; display:block;}

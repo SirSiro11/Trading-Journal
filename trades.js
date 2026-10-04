@@ -712,12 +712,19 @@ function tradeListHeaderHtml(area){
     <div></div><div></div>${catLabels}<div></div><div></div><div></div>
   </div></div>`;
 }
+/* NEU (2026-10-04): Pfeil und Haken für die EOD-Buttons als kleine SVGs statt Textzeichen —
+   "→" und "✓" sitzen je nach Schrift unterschiedlich hoch und ließen sich nicht sauber
+   mit "EOD" mittig ausrichten. 11×11 px, Farbe über currentColor wie der Text. */
+const EOD_ICON_ARROW = `<svg class="eod-ico" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 5.5h8M6.5 2.5l3 3-3 3"/></svg>`;
+const EOD_ICON_CHECK = `<svg class="eod-ico" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.75 5.75l2.5 2.5 5-5.5"/></svg>`;
 function tradeListRowHtml(t){
   const isOpen = !t.ergebnis;
   const rDisplay = (t.r===null || t.r===undefined || t.r==="") ? "—" : formatR(t.r);
   const rClass = (t.r>0) ? "pos" : (t.r<0 ? "neg" : "");
-  const eodExtra = (t.area==="live" && !t.copiedToEod) ? `<button type="button" class="btn btn-sm eod-inline-btn" data-copy-eod="${t.id}" title="In EOD kopieren">→ EOD</button>`
-    : t.copiedToEod ? `<span class="badge badge-eod-copied">✓ EOD</span>` : "";
+  /* GEÄNDERT (2026-10-04): Pfeil/Haken als SVG (EOD_ICON_ARROW/EOD_ICON_CHECK), "EOD" in
+     eigenem <span class="eod-label"> — Text saß ca. 1,5 px zu hoch, der Pfeil ca. 2 px zu tief. */
+  const eodExtra = (t.area==="live" && !t.copiedToEod) ? `<button type="button" class="btn btn-sm eod-inline-btn" data-copy-eod="${t.id}" title="In EOD kopieren">${EOD_ICON_ARROW}<span class="eod-label">EOD</span></button>`
+    : t.copiedToEod ? `<span class="badge badge-eod-copied">${EOD_ICON_CHECK}<span class="eod-label">EOD</span></span>` : "";
   const shots = tradeScreenshotList(t);
   const thumbCell = shots.length
     ? `<button type="button" class="trade-thumb" data-listshot="${t.id}" title="Screenshot ansehen" aria-label="Screenshot ansehen${shots.length>1?` (1 von ${shots.length})`:""}"><img src="${escAttr(shots[0])}" alt="" loading="lazy" decoding="async">${shots.length>1?`<span class="trade-thumb-count">${shots.length}</span>`:""}</button>`

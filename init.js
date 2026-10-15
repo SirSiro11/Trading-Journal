@@ -26,16 +26,25 @@ function startApp(){
   // der Lock-Screen blendet mit leichtem Weichzeichner aus, danach kommt die
   // App mit Blur-Auflösung, sanftem Hochgleiten und kurzem Glow-Aufblitzen rein
   // (statt hartem display:none-Umschalten).
+  /* GEÄNDERT (2026-10-15): Läuft ein Intro (intro.js, in tryUnlock vorbereitet), blendet statt der
+     App das Intro aus Schwarz ein. Die App wird trotzdem sofort darunter aufgebaut und der Pull
+     startet wie bisher; Einblenden und Glow der App übernimmt dann das Intro an seinem Ende. */
+  let mitIntro = false;
+  try{ mitIntro = typeof INTRO !== "undefined" && INTRO.geplant(); }catch(e){ mitIntro = false; }
   lockScreen.classList.add("lock-fading");
   setTimeout(()=>{
     lockScreen.style.display = "none";
+    if(mitIntro) appShell.classList.add("intro-shell");
     appShell.style.display = "";
-    appShell.classList.remove("app-shell-glow");
-    void appShell.offsetWidth;
-    appShell.classList.add("app-shell-glow");
+    if(!mitIntro){
+      appShell.classList.remove("app-shell-glow");
+      void appShell.offsetWidth;
+      appShell.classList.add("app-shell-glow");
+      setTimeout(()=> appShell.classList.remove("app-shell-glow"), 1100);
+    }
     render();
     gdrivePull();
-    setTimeout(()=> appShell.classList.remove("app-shell-glow"), 1100);
+    if(mitIntro){ try{ INTRO.starten(); }catch(e){ console.warn("Intro konnte nicht starten", e); } }
   }, 460);
 }
 
@@ -44,6 +53,8 @@ function tryUnlock(){
   const val = input.value.trim();
   if(!val) return;
   if(simpleHash(val) === LOCK_PIN_CHECK){
+    // NEU (2026-10-15): Intro vorbereiten — muss in dieser Geste passieren (iOS gibt Ton nur nach einer Geste frei)
+    try{ if(typeof INTRO !== "undefined") INTRO.vorbereiten(); }catch(e){ console.warn("Intro-Vorbereitung fehlgeschlagen", e); }
     startApp();
   }else{
     document.getElementById("lockError").style.display = "block";

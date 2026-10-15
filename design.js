@@ -168,15 +168,29 @@
   // GEÄNDERT (Stufe 4): render() meldet Ansichtswechsel selbst (RENDER_HOOKS) —
   // kein eigener MutationObserver auf #app mehr.
   let viewEnterTimer = null;
-  RENDER_HOOKS.push((_app, viewChanged)=>{
-    if(!viewChanged) return;
+  function viewEnter(){
     requestAnimationFrame(updateScroll);
     if(reduceMotion.matches) return;
     app.classList.add("is-view-enter");
     clearTimeout(viewEnterTimer);
     viewEnterTimer = setTimeout(()=> app.classList.remove("is-view-enter"), 1600);
     setupReveal();
+  }
+  /* GEÄNDERT (2026-10-15): Während das Intro läuft (intro.js), wartet der Einstieg der Ansicht —
+     sonst liefen Reveal und Count-up unsichtbar unter dem Intro ab. Das Intro holt ihn an seinem
+     Ende über designReplayEnter() genau einmal nach. */
+  let enterPending = false;
+  RENDER_HOOKS.push((_app, viewChanged)=>{
+    if(!viewChanged) return;
+    if(typeof INTRO !== "undefined" && INTRO.aktiv()){ enterPending = true; requestAnimationFrame(updateScroll); return; }
+    viewEnter();
   });
+  // NEU (2026-10-15)
+  window.designReplayEnter = function(){
+    if(!enterPending) return;
+    enterPending = false;
+    viewEnter();
+  };
 
   /* ---------- 4 Modals: Einfahren nur beim ersten Öffnen ---------- */
   if(modalRoot){

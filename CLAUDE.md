@@ -12,7 +12,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Gerüst, Theme-Umschaltung vor dem ersten Zeichnen, Einbindungen mit `?v=` |
-| `app.css` | komplettes Design, Abschnitte 01–25 |
+| `app.css` | komplettes Design, Abschnitte 01–26 (26 = Intro) |
 | `core.js` | Konfiguration, Speicher, gemeinsamer Bild-Speicher, Demo-Daten |
 | `sync.js` | Google-Drive-Sync: Pull, Push, Konfliktprüfung |
 | `news.js` | News-Daten: Import, Zeitzonen, Speicherung |
@@ -22,6 +22,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 | `bericht.js` | Bericht mit Filtern, Kennzahlen, Wortwolke, Equity-Kurve, Export/Import |
 | `erkenntnisse.js` | Erkenntnisse-Liste |
 | `strategie.js` | Strategie-Reiter, Erkenntnis-Formular |
+| `intro.js` | Cinematisches Intro nach dem Entsperren: Drehbuch (Datenstruktur am Dateianfang), WebGL-Bild, Web-Audio-Ton, Einstellungen `tj_intro_v1` |
 | `init.js` | Sperrbildschirm, globale Tasten- und Fehler-Handler, Fokus |
 | `design.js` | Animationen, Navigations-Schieber, Hell/Dunkel |
 | Bilder | `icon-192/512.png`, `apple-touch-icon.png`, `favicon-32.png`, `start-bg.jpg`, Strategie-PNGs |
@@ -30,7 +31,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 **Warum keine Unterordner:** Clemens lädt Dateien teils per GitHub-Web-Upload hoch, und der legt alles flach ab. Mit Ordnern fehlten Pfade und die App startete nicht.
 
 ## Architektur – das muss man wissen
-- **Normale `<script>`-Dateien, keine Module.** Sie teilen sich einen globalen Namensraum, und die Reihenfolge ist fest: `core → sync → news → state → start → trades → bericht → erkenntnisse → strategie → init → design`. Code, der schon beim Laden läuft, darf nur Funktionen aus derselben oder einer früheren Datei aufrufen.
+- **Normale `<script>`-Dateien, keine Module.** Sie teilen sich einen globalen Namensraum, und die Reihenfolge ist fest: `core → sync → news → state → start → trades → bericht → erkenntnisse → strategie → intro → init → design` (`intro` vor `init`, weil `init.js` es beim Entsperren aufruft). Code, der schon beim Laden läuft, darf nur Funktionen aus derselben oder einer früheren Datei aufrufen.
 - **Daten:** Sie liegen primär in `localStorage` (Schlüssel `tj_*_v1`), damit die App offline voll funktioniert. Die Cloud-Kopie ist eine einzige JSON-Datei in Google Drive.
 - **Cloud-Zugriff nur über den Proxy `journalProxy` (Cloud Run).** Das Google-Token bleibt auf dem Server, ein Login direkt im Browser macht in der iPhone-PWA Probleme. Neue Backend-Funktionen kommen als Erweiterung in diesen Proxy, Geheimnisse liegen als Umgebungsvariablen und nie im Repo.
 - **Sync:**
@@ -64,7 +65,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.10.15b)
+## Aktueller Stand (Version 2026.10.15c)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -74,8 +75,11 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - „→ EOD“ kopiert einen Live-Trade, „→ Ins Live“ übernimmt einen EOD-Trade (optional verknüpft).
 - 2026.10.04: In den EOD-Buttons der Liste sind Pfeil und Haken jetzt SVGs, die Beschriftung sitzt per `text-box: trim-both cap alphabetic` exakt mittig.
 - 2026.10.15b: Beim Reveal blenden im Start-Hero nur die Texte ein. Das Foto, die Schnell-Buttons und die Session-Kachel stehen sofort da. **Regel:** Milchglas-Flächen (`backdrop-filter`) nie per `opacity` animieren, weder selbst noch über einen Vorfahren unterhalb des Hintergrundbilds. Chromium/Safari zeigen den Blur sonst erst nach dem Fade. Den Hero selbst nicht einblenden, sonst schimmert das Foto beim Login heller durch (Liste `NO_REVEAL` in `design.js`).
+- 2026.10.15c: **Cinematisches Intro** (`intro.js`, CSS-Abschnitt 26), ~18 s nach dem Entsperren, Kurzfassung ~4,4 s, ruhige Titelkarte bei `prefers-reduced-motion`, ohne WebGL die Kurzfassung als DOM-Version. **Noch Vorschau-Phase:** `INTRO_LIVE = false` in `intro.js`, d. h. der normale Login ist unverändert; aktiv nur mit `?intro=vorschau`, `?intro=kurz`, `?intro=bild:8.5` (Standbild), `?intro=live` (folgt der Einstellung) oder über „Intro jetzt abspielen“ im Modal „⚙ Einstellungen“ (früher „Kategorien“). Regeln: Das Intro liest nur, Toasts/Dialoge warten währenddessen (`UI_HOLD` in `state.js`), der Einstieg der Startseite (Reveal) wird über `designReplayEnter()` nachgeholt, `appShellIn` läuft bei Intro nicht (Klasse `intro-shell`). Der `AudioContext` muss in der Entsperr-Geste entstehen (`INTRO.vorbereiten()` in `tryUnlock`).
 
 **Offen / bekannt:**
+- Am iPhone noch prüfen (Intro): Ton nach dem Entsperren, Stummschalter, flüssige Wiedergabe (60 fps), Safe Areas in der PWA, Lesbarkeit der Texte, Match-Cut auf den Hero.
+- `intro.js` ist ~90 KB (Richtwert 80 KB, gzip ~33 KB): drei Ersatzfassungen und Test-Hilfen (`INTRO.tonOffline`, `?intro=bild:`) sind mit drin.
 - Am iPhone (Safari) noch prüfen: Start-Hero, „g“ in der Begrüßung, Detail-Kategorien (2026.10.02b), EOD-Buttons (2026.10.04) und Milchglas von „+ Erkenntnis“ beim Wechsel auf Start sowie die Login-Animation des Hero-Fotos (2026.10.15b).
 - Die Konfliktprüfung lädt vor jedem Upload die ganze Cloud-Datei. Schlanker wäre eine Proxy-Abfrage, die nur `savedAt` liefert.
 - `localStorage` hat ein Limit von etwa 5 MB, viele Screenshots füllen es.
@@ -83,6 +87,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - Ein Sicherheits-Umbau am Zugriffsschutz ist geplant. Details bespricht Clemens außerhalb des Repos, bitte nicht hier dokumentieren.
 
 ## Nächste Schritte
+0. **Intro freischalten (Phase 3):** nach Clemens' Feedback `INTRO_LIVE = true` setzen (Standard „Immer“), Hinweis im Einstellungs-Abschnitt entfällt dann automatisch.
 1. **KI-Wochenbericht:**
    - neuer Unter-Reiter im Bericht
    - neue Analyse-Funktion in `journalProxy`, die die Anthropic API aufruft (API-Schlüssel als Umgebungsvariable)

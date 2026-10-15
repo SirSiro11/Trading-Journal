@@ -211,7 +211,18 @@ function uid(){
   return "id-" + Math.random().toString(36).slice(2) + Date.now();
 }
 
+/* NEU (2026-10-15): Während das Intro läuft (intro.js), warten Toasts und Dialoge und
+   erscheinen erst danach — z. B. „Neuester Stand geladen.“ vom Pull beim Entsperren. */
+let UI_HOLD = null;   // null = frei, sonst Liste der wartenden Aufrufe
+function uiHoldStart(){ if(!UI_HOLD) UI_HOLD = []; }
+function uiHoldRelease(){
+  const q = UI_HOLD; UI_HOLD = null;
+  if(q) q.forEach(fn=>{ try{ fn(); }catch(err){ console.error("Wartender UI-Aufruf fehlgeschlagen", err); } });
+}
+
 function toast(msg, undoLabel, undoFn, durationMs){
+  /* GEÄNDERT (2026-10-15): wartet, solange das Intro läuft */
+  if(UI_HOLD){ UI_HOLD.push(()=> toast(msg, undoLabel, undoFn, durationMs)); return; }
   const root = document.getElementById("toastRoot");
   const el = document.createElement("div");
   el.className = "toast";
@@ -237,6 +248,8 @@ function toast(msg, undoLabel, undoFn, durationMs){
    (Abbrechen). Enter bestätigt, Escape bricht ab, Klick auf den Hintergrund ebenfalls.
    ========================================================================= */
 function uiDialog(opts){
+  /* GEÄNDERT (2026-10-15): wartet, solange das Intro läuft */
+  if(UI_HOLD) return new Promise(resolve=> UI_HOLD.push(()=> uiDialog(opts).then(resolve)));
   return new Promise(resolve=>{
     const root = document.getElementById("dialogRoot");
     const hasInput = opts.input !== undefined;
@@ -382,8 +395,8 @@ function renderSettingsModal(){
     <div class="modal">
       <div class="modal-header-row">
         <div>
-          <h2>Kategorien verwalten</h2>
-          <div class="modal-sub">Werte hinzufügen, umbenennen (✎) oder entfernen (✕) — wirkt sich sofort auf alle Formulare und Filter aus. Umbenennen aktualisiert automatisch auch alle bestehenden Trades.</div>
+          <h2>Einstellungen</h2>
+          <div class="modal-sub">Kategorien: Werte hinzufügen, umbenennen (✎) oder entfernen (✕) — wirkt sich sofort auf alle Formulare und Filter aus. Umbenennen aktualisiert automatisch auch alle bestehenden Trades.</div>
         </div>
         <button type="button" class="icon-btn" id="settingsCloseBtn" title="Schließen" aria-label="Schließen">✕</button>
       </div>
@@ -391,6 +404,7 @@ function renderSettingsModal(){
       <div class="field-group" style="border-top:1px solid var(--border); padding-top:18px; margin-top:6px;">
         <button type="button" class="btn" id="addNewCategoryBtn">+ Neue Kategorie erstellen</button>
       </div>
+      ${/* NEU (2026-10-15): Intro-Einstellungen (nur dieses Gerät, siehe intro.js) */ typeof INTRO !== "undefined" ? INTRO.einstellungenHtml() : ""}
       <div class="modal-footer" style="justify-content:flex-end;">
         <button class="btn btn-primary" id="settingsDoneBtn">Fertig</button>
       </div>
@@ -402,6 +416,7 @@ function renderSettingsModal(){
 
 function wireSettingsModal(){
   const backdrop = document.getElementById("settingsBackdrop");
+  if(typeof INTRO !== "undefined") INTRO.einstellungenVerdrahten(backdrop); // NEU (2026-10-15)
   backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeSettingsModal(); });
   document.getElementById("settingsCloseBtn").addEventListener("click", closeSettingsModal);
   document.getElementById("settingsDoneBtn").addEventListener("click", closeSettingsModal);

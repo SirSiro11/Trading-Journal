@@ -64,7 +64,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.10.04)
+## Aktueller Stand (Version 2026.10.15)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -73,9 +73,10 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - Google-Drive-Sync mit Konfliktauflösung, PIN-Sperre, Hell/Dunkel, PWA.
 - „→ EOD“ kopiert einen Live-Trade, „→ Ins Live“ übernimmt einen EOD-Trade (optional verknüpft).
 - 2026.10.04: In den EOD-Buttons der Liste sind Pfeil und Haken jetzt SVGs, die Beschriftung sitzt per `text-box: trim-both cap alphabetic` exakt mittig.
+- 2026.10.15: Der Start-Hero wird als Ganzes eingeblendet, nicht mehr seine Kinder einzeln. Sonst blieb das Milchglas (`backdrop-filter`) von „+ Erkenntnis“ während des Fades durchsichtig. **Regel:** Elemente mit `backdrop-filter` dürfen keinen Vorfahren haben, der *innerhalb* des Hintergrunds per `opacity` einblendet.
 
 **Offen / bekannt:**
-- Am iPhone (Safari) noch prüfen: Start-Hero, „g“ in der Begrüßung, Detail-Kategorien (2026.10.02b) und EOD-Buttons (2026.10.04).
+- Am iPhone (Safari) noch prüfen: Start-Hero, „g“ in der Begrüßung, Detail-Kategorien (2026.10.02b) EOD-Buttons (2026.10.04) und Milchglas von „+ Erkenntnis“ beim Wechsel auf Start (2026.10.15).
 - Die Konfliktprüfung lädt vor jedem Upload die ganze Cloud-Datei. Schlanker wäre eine Proxy-Abfrage, die nur `savedAt` liefert.
 - `localStorage` hat ein Limit von etwa 5 MB, viele Screenshots füllen es.
 - Fokus und Einblenden der Dialoge laufen noch über einen `MutationObserver` auf `#modalRoot`. Das funktioniert, ist aber unaufgeräumt.

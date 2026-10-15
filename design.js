@@ -82,7 +82,13 @@
   /* ---------- 3 Scroll-Reveal + Count-up ----------
      Nur beim Wechsel der Ansicht (Reiter, Trade-Detail) — nicht bei jedem
      Neu-Rendern durch Filter oder Chips, das würde nerven. */
-  const CONTAINERS = ".stat-grid, .start-stats, .start-bento, .strat-entry-grid, .compare-rings, .trade-list, .notes-list, .start-hero, .panel, .equity-card, .compare-wrap, .strat-panel, .trade-list-scroll";
+  /* GEÄNDERT (2026-10-15): .start-hero ist kein Container mehr — der Hero wird als Ganzes
+     eingeblendet statt seiner Kinder einzeln. Sonst hatte .start-hero-main während des Fades
+     opacity < 1 und wurde damit zur „Backdrop-Root“: Das Milchglas (backdrop-filter) des
+     „+ Erkenntnis“-Buttons sah das Hero-Foto nicht und blieb durchsichtig, bis der Fade
+     fertig war — erst dann wurde es schlagartig milchig. Als Ganzes eingeblendet liegt das
+     Foto (::before) innerhalb derselben Ebene, und der Blur stimmt von Anfang an. */
+  const CONTAINERS = ".stat-grid, .start-stats, .start-bento, .strat-entry-grid, .compare-rings, .trade-list, .notes-list, .panel, .equity-card, .compare-wrap, .strat-panel, .trade-list-scroll";
   const COUNT_SEL  = ".stat-card .value, .start-stat .value, .start-kpi .value, .mini-stat-value, .gauge, .cal-month-total span:last-child";
   const MAX_REVEAL = 60;   // lange Listen: nur die ersten Einträge animieren
 

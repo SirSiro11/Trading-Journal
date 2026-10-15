@@ -82,19 +82,22 @@
   /* ---------- 3 Scroll-Reveal + Count-up ----------
      Nur beim Wechsel der Ansicht (Reiter, Trade-Detail) — nicht bei jedem
      Neu-Rendern durch Filter oder Chips, das würde nerven. */
-  /* GEÄNDERT (2026-10-15): .start-hero ist kein Container mehr — der Hero wird als Ganzes
-     eingeblendet statt seiner Kinder einzeln. Sonst hatte .start-hero-main während des Fades
-     opacity < 1 und wurde damit zur „Backdrop-Root“: Das Milchglas (backdrop-filter) des
-     „+ Erkenntnis“-Buttons sah das Hero-Foto nicht und blieb durchsichtig, bis der Fade
-     fertig war — erst dann wurde es schlagartig milchig. Als Ganzes eingeblendet liegt das
-     Foto (::before) innerhalb derselben Ebene, und der Blur stimmt von Anfang an. */
-  const CONTAINERS = ".stat-grid, .start-stats, .start-bento, .strat-entry-grid, .compare-rings, .trade-list, .notes-list, .panel, .equity-card, .compare-wrap, .strat-panel, .trade-list-scroll";
+  /* GEÄNDERT (2026-10-15b): Der Hero selbst blendet NICHT ein (sonst schimmert das Foto beim
+     Einloggen ausgewaschen/heller durch den hellen Seitenhintergrund) — nur seine Texte.
+     Milchglas-Flächen im Hero (Schnell-Buttons, Session-Kachel) werden gar nicht animiert:
+     Solange eine opacity-Animation läuft (am Element selbst oder an einem Vorfahren innerhalb
+     des Heros), legt der Browser sie auf eine eigene Ebene ohne das Hero-Foto — das Milchglas
+     (backdrop-filter) bliebe durchsichtig und würde erst nach dem Fade schlagartig milchig. */
+  const CONTAINERS = ".stat-grid, .start-stats, .start-bento, .strat-entry-grid, .compare-rings, .trade-list, .notes-list, .start-hero, .start-hero-main, .panel, .equity-card, .compare-wrap, .strat-panel, .trade-list-scroll";
+  // NEU (2026-10-15): nie per Reveal einblenden (siehe oben)
+  const NO_REVEAL  = ".start-quick, .start-sess";
   const COUNT_SEL  = ".stat-card .value, .start-stat .value, .start-kpi .value, .mini-stat-value, .gauge, .cal-month-total span:last-child";
   const MAX_REVEAL = 60;   // lange Listen: nur die ersten Einträge animieren
 
   function collectRevealTargets(container, out){
     for(const child of container.children){
       if(out.length >= MAX_REVEAL) return;
+      if(child.matches(NO_REVEAL)) continue;
       if(child.matches(CONTAINERS) || child.querySelector(CONTAINERS)){
         collectRevealTargets(child, out);
       }else if(child.getClientRects().length){

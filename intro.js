@@ -61,29 +61,28 @@ const D = {
     gold:"#f2c27a", weissWarm:"#fff0d6", teal:"#0e3943", tealHell:"#3d8c9a",
     rot:"#b8473e", gruen:"#5aae84", ldn:"#409cff", nyc:"#30d158", lichtHell:"#f3ece1", lila:"#8c78d0", silber:"#c9d3d6"
   },
-  /* NEU (2026-10-16): der Trade im Akt „Disziplin“ (GBP/USD, M5, 08.10.2026) — Zeiten „HH:MM“, Preise wie im Chart.
-     Gegen einen anderen Trade austauschbar: Stützpunkte des Kursverlaufs, Dochte, Zonen, Linien, Entry/Stop/Ziel. */
+  /* NEU (2026-10-16), GEÄNDERT (2026-10-16b): der Trade im Akt „Disziplin“ — 1:1 aus Clemens' Screenshot vermessen
+     (GBP/USD, M5, OANDA, 08.10.2026, 22:50–18:05). Kerzen: je Kerze O,H,L,C in 0,00001 über 1,3170, Leerzeichen getrennt.
+     Zeiten „HH:MM“, Preise wie im Chart. Austauschbar gegen einen anderen Trade. */
   trade: {
-    paar:"GBP/USD · M5", mitte:1.32075, hochAb:"05:30",     // Hochformat zeigt den Chart erst ab 05:30
-    entry:1.31902, stop:1.31837, ziel:1.32176, start:"13:05", ende:"16:05",
-    kurs:[["23:00",1.3203],["23:30",1.3203],["00:30",1.3205],["00:45",1.3210],["01:30",1.3209],["01:50",1.3211],["02:20",1.3206],["02:40",1.3203],
-      ["03:00",1.3194],["03:15",1.3199],["03:30",1.31985],["03:45",1.3206],["04:00",1.3214],["04:15",1.32205],["04:25",1.3218],["04:45",1.3215],
-      ["05:00",1.3209],["05:15",1.31985],["05:30",1.3203],["05:50",1.3209],["06:10",1.3210],["06:30",1.3205],["06:45",1.3208],["07:00",1.3209],
-      ["07:30",1.3203],["07:45",1.3199],["08:00",1.3196],["08:10",1.3188],["08:20",1.3194],["08:40",1.3199],["08:50",1.3200],["09:00",1.3190],
-      ["09:10",1.3193],["09:30",1.3199],["09:45",1.3205],["10:00",1.3199],["10:10",1.3202],["10:20",1.3211],["10:35",1.3204],["10:50",1.3198],
-      ["11:00",1.3192],["11:10",1.3187],["11:30",1.3195],["11:45",1.3196],["12:00",1.3191],["12:10",1.3186],["12:25",1.3193],["12:45",1.3199],
-      ["12:55",1.3204],["13:05",1.3192],["13:20",1.3194],["13:40",1.3195],["14:00",1.3206],["14:15",1.3211],["14:30",1.3213],["14:45",1.3205],
-      ["15:00",1.3201],["15:10",1.3208],["15:25",1.3211],["15:40",1.3212],["15:55",1.3216],["16:05",1.3218]],
-    dochte:{ "23:15":[1.3215,0], "04:15":[1.32225,0], "08:10":[0,1.31835], "11:10":[0,1.3185], "12:10":[0,1.31845], "13:05":[0,1.31895], "16:00":[1.3219,0] },
-    zonen:[ { von:"04:15", bis:"16:05", p:[1.32172,1.32222], art:"angebot" },
-            { von:"23:00", bis:"13:30", p:[1.31812,1.31892], art:"nachfrage" },
-            { von:"09:05", bis:"12:00", p:[1.31877,1.31929], art:"nachfrage", label:"5" },
-            { von:"12:15", bis:"13:30", p:[1.31842,1.31895], art:"nachfrage", label:"15" },
-            { von:"13:05", bis:"16:05", p:[1.31837,1.31902], art:"lila", label:"2" } ],
-    linien:[ { von:"04:15", bis:"10:00", p:1.3213, art:"gold" }, { von:"04:15", bis:"10:00", p:1.32075, art:"hell" },
-             { von:"04:15", bis:"10:00", p:1.3200, art:"fein" }, { von:"04:15", bis:"10:00", p:1.31877, art:"fein" },
-             { von:"23:00", bis:"11:00", p:1.32176, art:"fein" }, { von:"23:00", bis:"11:00", p:1.3185, art:"fein" },
-             { von:"23:00", bis:"11:00", p:1.32335, art:"hell" }, { von:"12:00", bis:"12:50", p:1.3200, art:"hell", label:"C" } ]
+    paar:"GBP/USD · 5 · OANDA", erste:"22:50", bereich:[1.31690, 1.32375],   // sichtbarer Preisbereich wie im Screenshot
+    kerzen:"417,432,413,415 414,449,412,433 431,431,431,431 503,503,422,429 433,446,425,428 425,429,424,424 425,426,425,425 425,433,422,425 425,428,420,424 425,437,425,428 429,435,423,424 425,428,422,428 428,437,426,431 429,439,422,436 437,450,422,447 446,461,443,446 446,455,446,446 447,460,447,460 460,468,459,460 460,479,460,478 478,479,468,468 468,469,450,455 460,469,460,468 469,469,464,464 464,468,461,461 461,465,458,464 462,469,457,468 468,469,447,461 461,465,456,465 464,469,464,469 469,475,468,472 474,474,457,460 460,474,459,468 469,479,468,475 475,482,475,482 479,482,452,455 455,460,443,443 443,446,433,433 433,455,428,454 453,455,436,436 437,443,412,412 410,410,389,403 401,407,389,403 403,410,398,403 401,415,401,414 414,415,396,397 397,406,383,383 383,421,383,414 414,425,396,399 400,407,380,381 383,389,366,372 374,381,361,372 372,407,370,406 403,424,391,424 424,425,400,408 410,415,404,406 404,414,382,410 407,419,404,417 421,447,420,442 442,475,442,468 465,475,457,457 461,490,461,486 487,496,479,490 490,505,486,500 498,511,490,510 510,524,501,508 508,511,486,497 498,508,493,501 500,500,468,469 468,474,455,457 457,472,454,469 468,479,461,462 462,464,424,424 424,439,418,428 429,439,408,425 424,429,407,410 407,411,366,374 374,385,367,378 379,394,377,385 386,388,374,379 381,397,379,396 396,414,396,406 406,419,406,418 419,425,412,421 421,425,414,419 419,424,410,417 417,426,417,417 415,419,409,414 415,419,400,407 407,414,399,399 401,401,377,379 379,397,379,396 396,406,388,388 388,399,386,392 393,396,386,388 388,397,384,392 394,397,384,396 396,410,396,397 397,403,386,403 403,406,389,399 399,414,396,399 401,411,395,396 397,397,386,388 388,389,368,369 369,379,366,367 367,369,349,357 358,360,352,353 351,356,330,331 333,333,281,287 288,302,268,295 295,295,246,275 275,285,234,256 257,302,244,283 285,307,283,303 303,342,267,338 336,343,278,278 279,306,275,297 297,297,266,297 296,318,296,314 317,338,296,297 296,297,272,289 289,297,256,257 258,261,197,208 211,231,176,217 218,315,211,275 277,321,270,311 313,371,308,368 367,374,314,349 349,353,274,277 277,304,268,273 273,331,264,327 327,338,303,303 303,331,298,314 315,335,302,315 313,363,281,361 363,385,334,335 333,388,324,385 383,426,370,410 408,415,363,363 364,407,364,385 383,425,293,295 293,300,242,251 247,279,247,269 268,285,237,277 279,285,232,233 233,260,222,249 251,289,239,257 259,259,202,221 221,224,154,195 193,219,161,213 215,248,203,207 207,255,204,240 239,288,239,257 257,283,226,243 244,256,202,202 201,225,186,199 195,215,182,205 195,211,175,208 201,210,186,195 195,225,193,213 213,220,182,185 181,196,145,147 147,220,146,199 197,219,175,211 209,235,204,214 213,277,202,248 249,285,248,284 285,315,280,313 311,328,264,271 273,338,272,336 334,335,236,242 242,255,185,245 246,257,226,233 233,284,233,248 249,249,204,219 221,242,211,241 243,266,225,235 234,276,202,263 263,317,255,288 287,305,268,288 285,297,229,231 231,265,231,239 237,315,218,305 305,396,302,371 372,381,340,371 374,403,346,399 401,407,365,407 407,436,391,425 424,435,353,383 381,385,338,361 360,378,325,333 333,353,302,302 302,320,281,311 310,315,286,313 313,323,275,309 308,433,302,406 404,444,374,383 382,388,338,345 347,410,339,383 383,399,360,393 394,455,389,428 428,429,382,392 392,399,355,399 397,461,389,436 436,472,416,431 432,457,402,436 435,446,390,437 437,494,422,494 496,526,470,486 486,533,477,515 515,576,505,569 569,668,569,667 668,675,652,675 690,710,675,690 671,675,667,671 675,675,623,644 642,651,570,587 585,626,551,551 551,587,531,578 577,580,533,560 561,566,491,493 493,515,425,433 433,464,418,433 432,461,423,442 439,451,418,437 439,439,394,404 403,429,403,424 422,429,368,385 383,396,358,367 367,396,364,396 394,399,360,388 389,396,340,351",
+    entry:1.31902, stop:1.31837, ziel:1.32170, boxVon:"13:00", boxBis:"16:05", boxDunkelBis:"15:50", sweep:"12:15", kurs:1.32228,
+    zonen:[ { von:"04:15", bis:"ENDE", p:[1.32186,1.32224], art:"angebot" },
+            { von:"22:50", bis:"13:30", p:[1.31814,1.31891], art:"nachfrage" },
+            { von:"09:05", bis:"12:00", p:[1.31875,1.31930], art:"nachfrage" },
+            { von:"12:15", bis:"13:30", p:[1.31844,1.31899], art:"nachfrage" },
+            { von:"13:00", bis:"16:05", p:[1.31835,1.31901], art:"lila" },
+            { von:"13:00", bis:"14:00", p:[1.31845,1.31899], art:"lila" } ],
+    linien:[ [1.32356,"22:48","11:00","schwarz"], [1.32176,"22:48","11:00","grau"], [1.31856,"22:48","11:00","grau"],
+             [1.32225,"04:15","09:50","grau"], [1.32123,"04:15","09:50","gelb"], [1.32050,"04:15","09:50","schwarz"],
+             [1.31987,"04:15","09:50","grau"], [1.31875,"04:15","09:50","grau"],
+             [1.31989,"11:30","12:00","schwarz"], [1.31989,"12:15","12:45","schwarz"],
+             [1.32038,"12:15","13:05","grau"], [1.31976,"12:15","13:05","grau"], [1.31941,"12:15","13:05","schwarz"],
+             [1.31901,"12:15","13:05","gelb"], [1.31844,"12:15","13:05","grau"] ],
+    labels:[ ["5","11:52",1.31904], ["15","13:20",1.31853], ["2","13:53",1.31872], ["C","12:07",1.3199] ],
+    etiketten:[ [1.32290,"rot"], [1.32258,"grau"], [1.32228,"schwarz"], [1.32170,"blau"], [1.32130,"gruen"], [1.32096,"hell"],
+                [1.32060,"grau"], [1.32031,"lila"], [1.31902,"grau"], [1.31837,"lila"] ]
   },
   /* NEU (2026-10-16): Übergänge — Kamera-Stöße [Zeit, Stärke], Glitch-Schnitte (2 Frames RGB-Versatz), radiale Zoom-Unschärfe
      [von, bis, Stärke, Form], Lichteinfälle [von, bis, x von, x bis, Stärke] (x in Bildbreiten) */
@@ -483,7 +482,7 @@ function rtsAnlegen(g, w, h){
   g.rts = [g.S, g.St0, g.St1].concat(g.B);
 }
 // Zahlen-Atlas für Bokeh-Kursziffern und Beschriftungen (Canvas 2D, Systemschrift, mit Mipmaps)
-const Z_SL = 36, Z_ENTRY = 37, Z_STOP = 38, Z_ZIEL = 39, Z_LABEL = { "5":40, "15":41, "2":42, "C":43 }, Z_PREIS = 44, Z_PAAR = 47;   // GEÄNDERT (2026-10-16)
+const Z_SL = 36, Z_LABEL = { "5":40, "15":41, "2":42, "C":43 }, Z_PAAR = 44, Z_ETIKETT = 45;   // GEÄNDERT (2026-10-16b): Preis-Etiketten 45 …
 function atlasBauen(g){
   const gl = g.gl, cv = document.createElement("canvas"); cv.width = cv.height = 1024;
   const x = cv.getContext("2d"), r = mulberry32(1234), txt = [];
@@ -494,13 +493,13 @@ function atlasBauen(g){
     else if(k === 2) txt.push(fmt(1.08 + r()*0.01, 4)); else txt.push(String(9 + (r()*6|0)).padStart(2,"0") + ":" + String(r()*60|0).padStart(2,"0") + ":" + String(r()*60|0).padStart(2,"0"));
   }
   const pz = (v)=> v.toFixed(5).replace(".", ",");
-  txt.push("SL", "ENTRY", "STOP", "ZIEL", "5", "15", "2", "C", pz(D.trade.ziel), pz(D.trade.entry), pz(D.trade.stop), D.trade.paar);
+  txt.push("SL", "", "", "", "5", "15", "2", "C", D.trade.paar, ...D.trade.etiketten.map(e=> pz(e[0])));
   x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle";
   txt.forEach((s,i)=>{
     const lab = i >= 36;
     x.font = (lab ? "600 30px " : "500 38px ") + "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
     if("letterSpacing" in x) x.letterSpacing = lab ? "7px" : "1px";
-    x.fillText(s, (i%4)*256 + 128, floor(i/4)*64 + 33);
+    x.fillText(s, (i%4)*256 + 128, floor(i/4)*64 + 33, 236);   // GEÄNDERT (2026-10-16b): nie über die Zelle hinaus (lange Paar-Zeile lief ins Etikett)
   });
   const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -618,8 +617,8 @@ function baueWelt(seed, hoch){
   for(let i=0;i<nT;i++){ const r = R() < 0.43 ? 1.2 + R()*1.4 : -(0.9 + R()*0.15); rs.push(r); eq.push(eq[i] + r); }
   const end = eq[nT] > 1 ? eq[nT] : 1, Wc = hoch ? 26 : 58, Hc = hoch ? 34 : 22;
   w.eq = { n:nT+1, rs, x:new Float32Array(nT+1), y:new Float32Array(nT+1) };
-  w.chart = baueChart(hoch);   // NEU (2026-10-16)
-  const ex = w.chart.hw + 0.7, ey = w.chart.yZiel;   // die Kurve beginnt am Ziel des Trades
+  w.chart = baueChart();   // NEU (2026-10-16)
+  const ex = w.chart.hw + 1.5, ey = w.chart.yZiel;   // die Kurve beginnt am Ziel des Trades
   for(let i=0;i<=nT;i++){ w.eq.x[i] = ex + Wc*i/nT; w.eq.y[i] = ey + Hc*eq[i]/end; }
   let x0 = -w.chart.hw - 0.6, x1 = ex + Wc + 7, y0 = -w.chart.hh - 0.4, y1 = ey + Hc + 5;
   for(let i=0;i<=nT;i++){ y0 = min(y0, w.eq.y[i]-1); }
@@ -627,32 +626,23 @@ function baueWelt(seed, hoch){
   w.eq.box = { cx:(x0+x1)/2, cy:(y0+y1)/2, hw:(x1-x0)/2, hh:(y1-y0)/2 };
   return w;
 }
-// NEU (2026-10-16): Trade aus D.trade in Weltkoordinaten (5-Minuten-Kerzen ab 23:00)
-function baueChart(hoch){
-  const T = D.trade, R = mulberry32(808);
-  const idx = (z)=>{ const [h, m] = z.split(":").map(Number); return ((h - 23 + 24) % 24)*12 + m/5; };
-  const iE = idx(T.start), iZ = idx(T.ende), N = iZ + 1, i0 = hoch ? idx(T.hochAb) : 0;
-  const hw = hoch ? 3.3 : 6.9, yk = hoch ? 1250 : 720, dx = 2*hw/(N - i0);   // Querformat flacher: Platz für die Texte darunter
-  const X = (i)=> -hw + (i - i0 + 0.5)*dx, Y = (p)=> (p - T.mitte)*yk;
-  const kp = T.kurs.map(([z, p])=> [idx(z), p]);
-  const pfad = (i)=>{ for(let k=1;k<kp.length;k++) if(i <= kp[k][0]){ const a = kp[k-1], b = kp[k]; return lerp(a[1], b[1], K.sanft((i-a[0])/(b[0]-a[0]))); } return kp[kp.length-1][1]; };
-  const dochte = {}; for(const z in T.dochte) dochte[idx(z)] = T.dochte[z];
-  const kerzen = []; let o = pfad(0);
-  for(let i=0;i<N;i++){
-    const c = pfad(i + 1) + (R() - 0.5)*0.00011;
-    let h = max(o, c) + R()*R()*0.00016 + 0.00002, l = min(o, c) - R()*R()*0.00016 - 0.00002;
-    if(dochte[i]){ if(dochte[i][0]) h = dochte[i][0]; if(dochte[i][1]) l = dochte[i][1]; }
-    if(i >= i0) kerzen.push({ i, x:X(i), O:Y(o), C:Y(c), H:Y(h), L:Y(l) });
-    o = c;
-  }
-  const iS = idx("12:10"), zx = (z)=> z ? X(clamp(idx(z), i0, N - 1)) : X(N - 1);
-  return { kerzen, hw, hh:2.7*yk/1000, dx, iE, iZ, i0, X, Y,
-    sx:X(iS), sy:Y(1.31845),                                  // Sweep in die Nachfragezone (Start der Szene)
-    xE:X(iE) - dx*0.5, xZ:X(iZ) + dx*0.5, yE:Y(T.entry), yS:Y(T.stop), yZiel:Y(T.ziel),
+// NEU (2026-10-16), GEÄNDERT (2026-10-16b): Trade aus D.trade in Weltkoordinaten — Proportionen wie im Screenshot
+function baueChart(){
+  const T = D.trade, ab = T.erste.split(":").map(Number), a0 = ab[0]*60 + ab[1];
+  const idx = (z)=>{ if(z === "ENDE") return N - 0.5; const [h, m] = z.split(":").map(Number); return ((((h*60 + m - a0 + 60) % 1440) + 1440) % 1440 - 60)/5; };   // GEÄNDERT (2026-10-16b): Zeiten kurz vor der ersten Kerze (22:48) nicht über Mitternacht umbrechen
+  const roh = T.kerzen.trim().split(/\s+/).map(q=> q.split(",").map(v=> 1.3170 + v/1e5)), N = roh.length;
+  const hw = 7, dx = 2*hw/(N + 1), yk = dx*1.2766e5/6.325, pm = (T.bereich[0] + T.bereich[1])/2;   // 6,325 px je Kerze, 1,2766 px je 0,00001 im Original
+  const X = (k)=> -hw + (k + 0.5)*dx, Y = (p)=> (p - pm)*yk, yMax = Y(T.bereich[1]);
+  const kerzen = roh.map(([O, H, L, Cl], k)=> ({ i:k, x:X(k), O:min(Y(O), yMax), H:min(Y(H), yMax), L:min(Y(L), yMax), C:min(Y(Cl), yMax) }));
+  const iS = idx(T.sweep), iE = idx(T.boxVon), iZ = idx(T.boxBis);
+  return { kerzen, N, hw, hh:(T.bereich[1] - T.bereich[0])/2*yk, dx, iE, iZ, X, Y,
+    sx:X(iS), sy:Y(1.31845), xE:X(iE), xZ:X(iZ), xD:X(idx(T.boxDunkelBis)), yE:Y(T.entry), yS:Y(T.stop), yZiel:Y(T.ziel), yKurs:Y(T.kurs),
     bx:(X(iE) + X(iZ))/2, by:(Y(T.entry) + Y(T.ziel))/2,
-    zonen:T.zonen.map(z=> ({ x0:max(zx(z.von), X(i0)) - dx*0.5, x1:zx(z.bis) + dx*0.5, y0:Y(z.p[0]), y1:Y(z.p[1]), art:z.art, label:z.label })),
-    linien:T.linien.filter(l=> idx(l.bis) > i0).map(l=> ({ x0:max(zx(l.von), X(i0)), x1:zx(l.bis), y:Y(l.p), art:l.art, label:l.label })),
-    flug:[0,1,2,3,4,5,6,7,8,9,10,11].map(()=> [R()-0.5, R()-0.5, R(), R()-0.5, R()-0.5]) };   // Startversatz der einfliegenden Striche
+    zonen:T.zonen.map(z=> ({ x0:X(idx(z.von)), x1:X(idx(z.bis)), y0:Y(z.p[0]), y1:Y(z.p[1]), art:z.art })),
+    linien:T.linien.map(([p, a, b, art])=> ({ x0:X(idx(a)), x1:X(idx(b)), y:Y(p), art })),
+    labels:T.labels.map(([t, z, p])=> ({ t, x:X(idx(z)), y:Y(p) })),
+    etiketten:T.etiketten.map(([p, art], n)=> ({ y:Y(p), art, n })),
+    flug:[0,1,2,3,4,5,6,7,8,9,10,11].map((n)=>{ const R = mulberry32(808 + n); return [R()-0.5, R()-0.5, R(), R()-0.5, R()-0.5]; }) };   // Startversatz der einfliegenden Striche
 }
 const kursIdx = (x)=> clamp((x - W.kurs.X0)/W.kurs.DX, 0, W.kurs.N-1.001);
 const kursAus = (arr, x)=>{ const f = kursIdx(x), i = f|0, k = f - i; return lerp(arr[i], arr[i+1], k); };
@@ -715,12 +705,13 @@ function kamBei(t){
 function kamChart(t){
   const T = W.chart, fov = 30;
   const a = K.inOut3(prog(t, 7.15, 8.3)), p = K.sanft(prog(t, 8.3, D.akte.aufstieg[0])), r = K.aus3(prog(t, 6.6, 7.2));
-  const tn = tan(fov*PI/360), dVoll = max(T.hh*1.06/(0.53*tn), T.hw*1.05/(0.95*tn*L.aspI)), dNah = (L.hoch ? 3.4 : 2.7)*lerp(1.25, 1, r);   // Chart in der oberen Bildhälfte, Text darunter
-  const tgtNah = [T.sx + 0.35, T.sy + 0.45, 0], tgtVoll = [0, 0, 0], tgtBox = [lerp(0, T.bx, 0.35), lerp(0, T.by, 0.35), 0];
-  const tgt = mix3(mix3(tgtNah, tgtVoll, a), tgtBox, p), d = lerp(dNah, dVoll, a)*lerp(1, 0.88, p);
+  // GEÄNDERT (2026-10-16b): Totale = Bildausschnitt des Screenshots inkl. Preisachse rechts; Text C liegt im leeren Streifen unten
+  const tn = tan(fov*PI/360), hwV = T.hw + 0.5, dVoll = max(T.hh*1.02/tn, hwV*(L.hoch ? 1.05 : 1.03)/(tn*L.aspI)), dNah = (L.hoch ? 3.4 : 2.7)*lerp(1.25, 1, r);
+  const tgtNah = [T.sx + 0.35, T.sy + 0.45, 0], tgtVoll = [0.5, L.hoch ? 0 : 0.3, 0], tgtBox = [lerp(0.5, T.bx, L.hoch ? 0.04 : 0.25), lerp(tgtVoll[1], T.by, 0.25), 0];
+  const tgt = mix3(mix3(tgtNah, tgtVoll, a), tgtBox, p), d = lerp(dNah, dVoll, a)*lerp(1, L.hoch ? 0.985 : 0.94, p);   // Hochformat: kaum Push, sonst fehlt links der Tagesbeginn
   const yaw = lerp(-0.42, 0, a) + 0.05*p, pitch = lerp(-0.14, 0.015, a);
-  return { pos:[tgt[0] + sin(yaw)*d, tgt[1] + sin(pitch)*d, cos(yaw)*cos(pitch)*d], tgt, fov, roll:lerp(5, 0, a) - 0.8*p,
-    bl:lerp(0.1, 0.014, a), shiftY:lerp(0, 0.39, a), shot:"d" };
+  return { pos:[tgt[0] + sin(yaw)*d, tgt[1] + sin(pitch)*d, cos(yaw)*cos(pitch)*d], tgt, fov, roll:lerp(5, 0, a) - 0.4*p,
+    bl:lerp(0.1, 0.014, a), shiftY:lerp(0, L.hoch ? 0.3 : 0, a), shot:"d" };
 }
 
 /* --- Bausteine --- */
@@ -833,69 +824,68 @@ function szVerlust(t, F){
   if(tau >= tb && tau < tb + 0.08){ const q = 1 - (tau-tb)/0.08; spr(0, 0, 0.12, 1.1, 0.12, 0, C.weissWarm, 2.4*q, 0, 3, 4, 1); }
   staub(tau*6, k.tgt, [12,9,12], 0.45, mix3(C.weissWarm, C.tealHell, 0.4), lp, 0.8);
 }
-// NEU (2026-10-16): der Trade aus D.trade — Match-Transition, Zonen, Long-Box, Kerzen bis ins Ziel
+// NEU (2026-10-16), GEÄNDERT (2026-10-16b): der Trade 1:1 wie im Screenshot — Match-Transition, Zonen, Linien, Long-Box, Kerzen bis ins Ziel
 function chartZeichnen(t, alpha){
   const T = W.chart, b = D.beats, t0 = D.akte.disziplin[0], ty = eb.kam.tgt[1];
-  const farbe = { gold:sk(C.gold, 1.2, 0.5), hell:sk(C.weissWarm, 0.32, 0.3), fein:sk(C.tealHell, 0.16, 0) };
-  // Linien fliegen aus dem Objektiv herein und rasten ein (Fortsetzung der Scherben aus dem Verlust)
+  const LF = { gelb:[sk(C.gold, 1.25, 0.5), 0.018], schwarz:[sk(C.weissWarm, 0.42, 0.3), 0.016], grau:[sk(C.tealHell, 0.24, 0.1), 0.011] };
+  const ZF = { angebot:[C.rot, 0.3], nachfrage:[mix3(C.tealHell, C.silber, 0.45), 0.2], lila:[C.lila, 0.24] };
+  // Linien fliegen aus der Bildmitte herein und rasten ein (Fortsetzung der Scherben aus dem Verlust)
   T.linien.forEach((l, j)=>{
     const fl = T.flug[j % T.flug.length], q = K.aus3(prog(t, t0 + 0.02*j, t0 + 0.6 + 0.02*j)); if(q <= 0) return;
-    const w = 1 - q, ox = fl[0]*3.2*w, oy = (ty - l.y)*w + fl[1]*1.2*w, oz = (0.6 + fl[2]*1.4)*w, sx = fl[3]*1.6*w, sy = fl[4]*1.2*w;   // Start in der Bildmitte, nah vor der Kamera
-    const c = l.art === "gold" ? farbe.gold : l.art === "hell" ? farbe.hell : farbe.fein, g = (1 + 5*w)*alpha;
-    strecke(l.x0 + ox + sx, l.y + oy + sy, oz, l.x1 + ox - sx, l.y + oy - sy, oz, [c[0]*g, c[1]*g, c[2]*g, c[3]], l.art === "fein" ? 0.012 : 0.018);
-    if(l.label) spr(l.x0 - 0.16, l.y + 0.12, 0, 0.2, 0.1, 0, C.weissWarm, 0.5*q*alpha, 0, 2, Z_LABEL[l.label], 0);
+    const w = 1 - q, ox = fl[0]*3.2*w, oy = (ty - l.y)*w + fl[1]*1.2*w, oz = (0.6 + fl[2]*1.4)*w, sx = fl[3]*1.6*w, sy = fl[4]*1.2*w;
+    const [c, br] = LF[l.art], g = (1 + 5*w)*alpha;
+    strecke(l.x0 + ox + sx, l.y + oy + sy, oz, l.x1 + ox - sx, l.y + oy - sy, oz, [c[0]*g, c[1]*g, c[2]*g, c[3]], br);
   });
+  // aktuelle Kurslinie (gepunktet, über die ganze Breite)
+  { const q = K.aus3(prog(t, t0 + 0.4, t0 + 1.0)); for(let x = -T.hw; x < -T.hw + 2*T.hw*q; x += 0.09) strecke(x, T.yKurs, 0.01, x + 0.035, T.yKurs, 0.01, sk(C.weissWarm, 0.3*alpha, 0), 0.01); }
   // Zonen als Glasflächen, gestaffelt
   T.zonen.forEach((z, j)=>{
     const q = K.aus3(prog(t, t0 + 0.05 + 0.08*j, t0 + 0.55 + 0.08*j)); if(q <= 0) return;
-    const c = z.art === "angebot" ? C.rot : z.art === "lila" ? C.lila : mix3(C.tealHell, C.silber, 0.4);
-    const hy = (z.y1 - z.y0)/2*q, my = (z.y0 + z.y1)/2;
-    spr((z.x0 + z.x1)/2, my, -0.08, (z.x1 - z.x0)/2, max(0.005, hy), 0, c, (z.art === "angebot" ? 0.32 : 0.24)*alpha, 0.2, 1, 0.45, 0);
-    if(z.label) spr(z.x1 - 0.25, my, -0.06, 0.2, 0.1, 0, C.weissWarm, 0.45*q*alpha, 0, 2, Z_LABEL[z.label], 0);
+    const [c, i] = ZF[z.art], hy = (z.y1 - z.y0)/2*q, my = (z.y0 + z.y1)/2;
+    spr((z.x0 + z.x1)/2, my, -0.08 - 0.004*j, (z.x1 - z.x0)/2, max(0.005, hy), 0, c, i*alpha, 0.18, 1, 0.4, 0);
   });
-  spr(-T.hw + 0.6, T.hh - 0.05, 0, 0.62, 0.155, 0, C.weissWarm, 0.38*K.aus3(prog(t, t0 + 0.6, t0 + 1.1))*alpha, 0, 2, Z_PAAR, 0);
-  // Kerzen: vor dem Entry als Welle vom Sweep aus, im Trade Kerze für Kerze bis ins Ziel
-  const fT = T.iE + (T.iZ - T.iE + 1)*K.sanft(prog(t, 8.2, D.zielErreicht));
+  T.labels.forEach((l, j)=>{ const q = K.aus3(prog(t, t0 + 0.7 + 0.06*j, t0 + 1.1 + 0.06*j)); spr(l.x, l.y, 0.01, 0.56, 0.14, 0, C.weissWarm, 0.6*q*alpha, 0, 2, Z_LABEL[l.t], 0); });   // GEÄNDERT (2026-10-16b): lesbar wie im Chart
+  spr(-T.hw + 0.72, T.Y(1.32356) + 0.13, 0, 0.76, 0.19, 0, C.weissWarm, 0.32*K.aus3(prog(t, t0 + 0.6, t0 + 1.1))*alpha, 0, 2, Z_PAAR, 0);
+  // Kerzen: vor dem Trade als Welle vom Sweep aus, im Trade Kerze für Kerze bis ins Ziel, danach der Rest des Tages
+  const fT = T.iE + (T.iZ - T.iE + 1)*K.sanft(prog(t, 8.2, D.zielErreicht)) + (T.N - T.iZ)*K.aus3(prog(t, D.zielErreicht + 0.05, D.zielErreicht + 0.65));
   for(const kz of T.kerzen){
-    const imTrade = kz.i >= T.iE;
+    const imTrade = kz.i >= T.iE, danach = kz.i > T.iZ;
     if(imTrade && kz.i >= fT) break;
     const w0 = abs(kz.x - T.sx)*0.045, q = imTrade ? sat((fT - kz.i)*1.5) : K.aus3(prog(t, t0 + w0, t0 + 0.3 + w0));
     if(q <= 0) continue;
     const up = kz.C >= kz.O;
-    const c = imTrade ? (up ? mix3(C.gold, C.weissWarm, 0.25) : mix3(C.tealHell, C.silber, 0.3)) : (up ? C.silber : mix3(C.tealHell, C.silber, 0.25));
-    kerze(kz.x, kz.O, lerp(kz.O, kz.C, q), lerp(kz.O, kz.H, q), lerp(kz.O, kz.L, q), 0, c, (imTrade ? 1.1 : (up ? 0.9 : 0.55))*alpha, up ? 0.6 : 0.85, T.dx*0.34, up ? 0.35 : 0.5);
+    const c = imTrade && !danach ? (up ? mix3(C.gold, C.weissWarm, 0.35) : mix3(C.tealHell, C.silber, 0.3)) : (up ? C.silber : mix3(C.tealHell, C.silber, 0.2));
+    kerze(kz.x, kz.O, lerp(kz.O, kz.C, q), lerp(kz.O, kz.H, q), lerp(kz.O, kz.L, q), 0, c, (imTrade && !danach ? 1.1 : (up ? 0.9 : 0.5))*alpha, up ? 0.6 : 0.85, T.dx*0.32, up ? 0.35 : 0.6);
   }
-  // Long-Box: zieht sich auf den ersten Beat auf und füllt sich mit dem Kursverlauf mit Licht
+  // Preis-Etiketten rechts (wie die Preisachse im Screenshot)
+  const EF = { rot:C.rot, grau:C.silber, schwarz:C.weissWarm, blau:C.ldn, gruen:C.gruen, hell:C.weissWarm, lila:C.lila };
+  T.etiketten.forEach((e, j)=>{ const q = K.aus3(prog(t, t0 + 0.9 + 0.04*j, t0 + 1.3 + 0.04*j)); if(q <= 0) return;
+    spr(T.hw + 0.5, e.y, 0.005, 0.42, 0.072, 0, EF[e.art], 0.16*q*alpha, 0.5, 1, 0.5, 0);
+    spr(T.hw + 0.5, e.y, 0.012, 0.36, 0.09, 0, C.weissWarm, 0.8*q*alpha, 0, 2, Z_ETIKETT + e.n, 0); });
+  // Long-Box (blau wie im Chart): zieht sich auf den ersten Beat auf, füllt sich mit dem Kursverlauf mit Licht
   const qb = K.aus3(prog(t, b[0] - 0.05, b[0] + 0.5)); if(qb <= 0) return;
-  const xr = lerp(T.xE, T.xZ, qb), gw = T.xZ - T.xE, gold = sk(C.gold, 1.5*alpha, 0.5);
-  strecke(T.xE, T.yE, 0.02, xr, T.yE, 0.02, gold, 0.022);
-  strecke(T.xE, T.yZiel, 0.02, xr, T.yZiel, 0.02, sk(C.gold, 1.2*alpha, 0.5), 0.022);
-  for(let x = T.xE; x < xr; x += 0.18) strecke(x, T.yS, 0.02, min(x + 0.1, xr), T.yS, 0.02, sk(C.rot, 0.9*alpha, 0.4), 0.016);
-  strecke(T.xE, lerp(T.yE, T.yS, qb), 0.02, T.xE, lerp(T.yE, T.yZiel, qb), 0.02, gold, 0.016);
-  if(qb >= 1) strecke(T.xZ, T.yS, 0.02, T.xZ, T.yZiel, 0.02, sk(C.gold, 0.8*alpha, 0.4), 0.014);
-  spr((T.xE + xr)/2, (T.yE + T.yZiel)/2, -0.04, (xr - T.xE)/2, (T.yZiel - T.yE)/2, 0, C.ldn, 0.07*alpha, 0.12, 1, 0.3, 0);   // Ziel-Fläche (blau wie im Chart)
-  spr((T.xE + xr)/2, (T.yE + T.yS)/2, -0.04, (xr - T.xE)/2, (T.yE - T.yS)/2, 0, C.rot, 0.07*alpha, 0.12, 1, 0.3, 0);
+  const gw = T.xZ - T.xE, xr = T.xE + gw*qb, hb = (T.yZiel - T.yE)/2, xd = min(xr, T.xD);
+  spr((T.xE + xd)/2, T.yE + hb, -0.05, (xd - T.xE)/2, hb, 0, C.ldn, 0.13*alpha, 0.14, 1, 0.3, 0);
+  if(xr > T.xD) spr((T.xD + xr)/2, T.yE + hb, -0.05, (xr - T.xD)/2, hb, 0, C.ldn, 0.07*alpha, 0.08, 1, 0.2, 0);
+  strecke(T.xE, T.yE, 0.02, xr, T.yE, 0.02, sk(C.silber, 0.55*alpha, 0.3), 0.016);                 // Entry-Linie
+  strecke(T.xE, T.yZiel, 0.02, xr, T.yZiel, 0.02, sk(C.ldn, 1.1*alpha, 0.5), 0.018);                // Ziel-Kante
+  strecke(T.xE, T.yE, 0.02, T.xE, lerp(T.yE, T.yZiel, qb), 0.02, sk(C.ldn, 0.9*alpha, 0.4), 0.014);
   const pf = sat((fT - T.iE)/(T.iZ - T.iE + 1));
   if(pf > 0){
     const xf = T.xE + gw*pf;
-    spr((T.xE + xf)/2, (T.yE + T.yZiel)/2, -0.03, gw*pf/2, (T.yZiel - T.yE)/2, 0, C.gold, 0.12*alpha, 0.1, 1, 0.6, 0);
-    for(let x = T.xE; x < xf - 0.05; x += 0.16){   // gestrichelte Diagonale Entry → Ziel
-      const k1 = (x - T.xE)/gw, k2 = min(x + 0.09 - T.xE, gw*pf)/gw;
-      strecke(x, lerp(T.yE, T.yZiel, k1), 0.03, T.xE + gw*k2, lerp(T.yE, T.yZiel, k2), 0.03, sk(C.weissWarm, 0.5*alpha, 0.3), 0.01);
+    spr((T.xE + xf)/2, T.yE + hb, -0.03, gw*pf/2, hb, 0, C.gold, 0.08*alpha, 0.06, 1, 0.5, 0);
+    for(let x = T.xE; x < xf - 0.03; x += 0.12){   // gestrichelte Diagonale Entry → Ziel
+      const k1 = (x - T.xE)/gw, k2 = min(x + 0.06 - T.xE, gw*pf)/gw;
+      strecke(x, lerp(T.yE, T.yZiel, k1), 0.03, T.xE + gw*k2, lerp(T.yE, T.yZiel, k2), 0.03, sk(C.weissWarm, 0.45*alpha, 0.3), 0.009);
     }
-    const kz = T.kerzen.find(k=> k.i === min(T.iZ, floor(fT)));
-    if(kz && t < D.zielErreicht + 0.1) spr(kz.x, kz.C, 0.05, 0.3, 0.3, 0, C.gold, 1.1*alpha, 0, 3, 6, 1);
+    const kz = T.kerzen[min(T.N - 1, floor(fT))];
+    if(kz && t < D.zielErreicht + 0.1) spr(kz.x, kz.C, 0.05, 0.25, 0.25, 0, C.gold, 1.1*alpha, 0, 3, 6, 1);
   }
-  // Preis-Etiketten rechts der Box
-  [[T.yZiel, 0, C.gold], [T.yE, 1, C.weissWarm], [T.yS, 2, C.rot]].forEach(([y, z, c], j)=>{
-    const q = K.aus3(prog(t, b[0] + 0.3 + j*0.08, b[0] + 0.7 + j*0.08));
-    spr(T.xZ + 0.42, y, 0.02, 0.4, 0.1, 0, c, 0.75*q*alpha, 0, 2, Z_PREIS + z, 0);
-  });
   // Ziel erreicht: Lichtblitz an der Zielkante, die Box glüht kurz auf
   const gz = t >= D.zielErreicht ? exp(-(t - D.zielErreicht)*3) : 0;
   if(gz > 0.01){
     spr(T.xZ, T.yZiel, 0.1, 1.6, 0.06, 0, C.weissWarm, 2.2*gz*alpha, 0, 3, 4, 1); spr(T.xZ, T.yZiel, 0.1, 0.14, 0.14, 0, C.weissWarm, 4.5*gz*alpha, 0, 3, 3, 1);
-    spr(T.bx, T.by, -0.03, gw/2, (T.yZiel - T.yE)/2, 0, C.gold, 0.35*gz*alpha, 0, 1, 0.9, 0);
+    spr(T.bx, T.by, -0.03, gw/2, hb, 0, C.gold, 0.3*gz*alpha, 0, 1, 0.9, 0);
   }
 }
 function szDisziplin(t, F){

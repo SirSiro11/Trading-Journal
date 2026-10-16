@@ -97,7 +97,7 @@ const D = {
   look: { bloom:0.8, schwelle:0.7, streak:0.4, korn:0.042, vignette:0.5, ca:0.012, saettigung:0.94 },
   ton: { lautstaerke:0.72, einblenden:0.6, ausblenden:0.35, hallSek:3.6, nachklang:2.6 }
 };
-const INTRO_LIVE = false;   // Phase 2: nur über ?intro=… bzw. „Intro jetzt abspielen“. Phase 3 → true
+const INTRO_LIVE = true;   // GEÄNDERT (2026-10-16c): Phase 3 — nach dem Entsperren läuft das Intro gemäß Einstellung (tj_intro_v1)
 
 /* ---------- 2 HILFEN ------------------------------------------------------- */
 const { sin, cos, exp, pow, abs, min, max, floor, round, hypot, sqrt, tan, tanh, ceil, PI } = Math;

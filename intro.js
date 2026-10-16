@@ -29,8 +29,8 @@ const D = {
   kurzAb: 13.7,           // Kurzfassung startet hier: Drop → Titel → Übergang (~4,4 s)
   ruhigDauer: 2.2,        // prefers-reduced-motion: ruhige Titelkarte
   akte: {                 // [von, bis] in Sekunden
-    stille:[0, 1.2], chaos:[1.2, 4.4], verlust:[4.4, 7.0], disziplin:[7.0, 10.6],
-    aufstieg:[10.6, 13.6], drop:[13.6, 14.2], titel:[14.2, 16.85], uebergang:[16.85, 18.1]
+    stille:[0, 1.2], chaos:[1.2, 4.4], verlust:[4.4, 6.6], disziplin:[6.6, 11.0],   // GEÄNDERT (2026-10-16): mehr Zeit für den Trade
+    aufstieg:[11.0, 13.6], drop:[13.6, 14.2], titel:[14.2, 16.85], uebergang:[16.85, 18.1]
   },
   linieZuenden: 0.35,                              // Nulllinie zündet (auf dem Uhr-Tick)
   schnitte: [2.15, 3.3],                           // harte Schnitte im Chaos
@@ -39,11 +39,11 @@ const D = {
   bruchTau: 0.245,                                 // Szenenzeit, in der die Kerze die Stop-Linie durchschlägt
   beats: [7.6, 8.5, 9.4],                          // Disziplin: ein Wort und eine Linie pro Beat
   zielErreicht: 10.2,
-  staccato: { von:10.85, bis:13.55, start:0.27, ende:0.11 },  // Abstand der Pulse (s) wird kürzer
+  staccato: { von:11.15, bis:13.55, start:0.27, ende:0.11 },  // Abstand der Pulse (s) wird kürzer
   texte: {          // jede Tafel ist mindestens 1,0 s voll lesbar
     A:{ von:1.9, bis:4.15, ein:0.5, aus:0.35 },
-    B:{ von:5.0, bis:6.95, ein:0.55, aus:0.35 },
-    C:{ bis:10.95, ein:0.3, aus:0.3 },             // Wörter erscheinen auf den beats
+    B:{ von:4.75, bis:6.6, ein:0.45, aus:0.3 },
+    C:{ bis:11.05, ein:0.3, aus:0.3 },             // Wörter erscheinen auf den beats
     titel:{ von:14.2, bis:16.85, sweep:0.8, lsVon:0.3, lsBis:0.46 },  // Laufweite in em
     motto:{ von:14.95, ein:0.6 },
     daten:{ von:15.35, ein:0.5 }
@@ -53,13 +53,47 @@ const D = {
     { A:"Jeder will den großen Move.", B:"Wenige überstehen den Drawdown.", C:"Regeln. Risiko. Ruhe.", motto:"Disziplin schlägt Talent." },
     { A:"Gier schreit. Angst flüstert.", B:"Der Stop ist kein Fehler.", C:"Warten. Bestätigen. Handeln.", motto:"Tausend Trades zählen. Nicht einer." },
     { A:"Der Markt schuldet dir nichts.", B:"Jeder Verlust ist Lehrgeld.", C:"Setup. Stop. Ziel.", motto:"Heute zählt nur dein Prozess." },
-    { A:"Niemand gewinnt jeden Trade.", B:"Aber jeder kann seinen Plan halten.", C:"Kein Setup. Kein Trade.", motto:"Konstanz ist der Edge." }
+    { A:"Niemand gewinnt jeden Trade.", B:"Aber jeder bestimmt sein Risiko.", C:"Plan your trade. Trade your plan.", motto:"Konstanz ist der Edge." }   // GEÄNDERT (2026-10-16)
   ],
   titel: ["TRADING", "JOURNAL"],
   datenzeile: "Trade Nr. {n} wartet.",              // nur Anzahl, nie Gewinn/Verlust
   farben: {   // sRGB; Rot/Grün bewusst entsättigt; Session-Farben = --sess-ldn / --sess-nyc (dunkel)
     gold:"#f2c27a", weissWarm:"#fff0d6", teal:"#0e3943", tealHell:"#3d8c9a",
-    rot:"#b8473e", gruen:"#5aae84", ldn:"#409cff", nyc:"#30d158", lichtHell:"#f3ece1"
+    rot:"#b8473e", gruen:"#5aae84", ldn:"#409cff", nyc:"#30d158", lichtHell:"#f3ece1", lila:"#8c78d0", silber:"#c9d3d6"
+  },
+  /* NEU (2026-10-16): der Trade im Akt „Disziplin“ (GBP/USD, M5, 08.10.2026) — Zeiten „HH:MM“, Preise wie im Chart.
+     Gegen einen anderen Trade austauschbar: Stützpunkte des Kursverlaufs, Dochte, Zonen, Linien, Entry/Stop/Ziel. */
+  trade: {
+    paar:"GBP/USD · M5", mitte:1.32075, hochAb:"05:30",     // Hochformat zeigt den Chart erst ab 05:30
+    entry:1.31902, stop:1.31837, ziel:1.32176, start:"13:05", ende:"16:05",
+    kurs:[["23:00",1.3203],["23:30",1.3203],["00:30",1.3205],["00:45",1.3210],["01:30",1.3209],["01:50",1.3211],["02:20",1.3206],["02:40",1.3203],
+      ["03:00",1.3194],["03:15",1.3199],["03:30",1.31985],["03:45",1.3206],["04:00",1.3214],["04:15",1.32205],["04:25",1.3218],["04:45",1.3215],
+      ["05:00",1.3209],["05:15",1.31985],["05:30",1.3203],["05:50",1.3209],["06:10",1.3210],["06:30",1.3205],["06:45",1.3208],["07:00",1.3209],
+      ["07:30",1.3203],["07:45",1.3199],["08:00",1.3196],["08:10",1.3188],["08:20",1.3194],["08:40",1.3199],["08:50",1.3200],["09:00",1.3190],
+      ["09:10",1.3193],["09:30",1.3199],["09:45",1.3205],["10:00",1.3199],["10:10",1.3202],["10:20",1.3211],["10:35",1.3204],["10:50",1.3198],
+      ["11:00",1.3192],["11:10",1.3187],["11:30",1.3195],["11:45",1.3196],["12:00",1.3191],["12:10",1.3186],["12:25",1.3193],["12:45",1.3199],
+      ["12:55",1.3204],["13:05",1.3192],["13:20",1.3194],["13:40",1.3195],["14:00",1.3206],["14:15",1.3211],["14:30",1.3213],["14:45",1.3205],
+      ["15:00",1.3201],["15:10",1.3208],["15:25",1.3211],["15:40",1.3212],["15:55",1.3216],["16:05",1.3218]],
+    dochte:{ "23:15":[1.3215,0], "04:15":[1.32225,0], "08:10":[0,1.31835], "11:10":[0,1.3185], "12:10":[0,1.31845], "13:05":[0,1.31895], "16:00":[1.3219,0] },
+    zonen:[ { von:"04:15", bis:"16:05", p:[1.32172,1.32222], art:"angebot" },
+            { von:"23:00", bis:"13:30", p:[1.31812,1.31892], art:"nachfrage" },
+            { von:"09:05", bis:"12:00", p:[1.31877,1.31929], art:"nachfrage", label:"5" },
+            { von:"12:15", bis:"13:30", p:[1.31842,1.31895], art:"nachfrage", label:"15" },
+            { von:"13:05", bis:"16:05", p:[1.31837,1.31902], art:"lila", label:"2" } ],
+    linien:[ { von:"04:15", bis:"10:00", p:1.3213, art:"gold" }, { von:"04:15", bis:"10:00", p:1.32075, art:"hell" },
+             { von:"04:15", bis:"10:00", p:1.3200, art:"fein" }, { von:"04:15", bis:"10:00", p:1.31877, art:"fein" },
+             { von:"23:00", bis:"11:00", p:1.32176, art:"fein" }, { von:"23:00", bis:"11:00", p:1.3185, art:"fein" },
+             { von:"23:00", bis:"11:00", p:1.32335, art:"hell" }, { von:"12:00", bis:"12:50", p:1.3200, art:"hell", label:"C" } ]
+  },
+  /* NEU (2026-10-16): Übergänge — Kamera-Stöße [Zeit, Stärke], Glitch-Schnitte (2 Frames RGB-Versatz), radiale Zoom-Unschärfe
+     [von, bis, Stärke, Form], Lichteinfälle [von, bis, x von, x bis, Stärke] (x in Bildbreiten) */
+  effekte: {
+    stoesse:[[1.2,0.5],[2.15,0.3],[3.3,0.3],[4.4,1],[6.6,0.55],[14.2,0.25]],
+    glitch:[2.15, 3.3, 4.4, 6.6], glitchDauer:0.075,
+    zoom:[[1.18,1.6,0.07,"glocke"],[6.3,6.6,0.16,"auf"],[6.6,6.95,0.1,"ab"],[11.0,11.7,0.05,"glocke"]],
+    licht:[[1.12,1.75,-0.15,0.35,0.5],[6.45,7.15,1.15,0.6,0.3],[14.15,15.0,-0.2,0.25,0.18]],
+    sog:[6.3, 6.6],          // Verlust → Disziplin: Scherben frieren ein und stürzen ins Objektiv
+    blitz:[13.53, 13.6]      // 1 Frame Weiß vor der Stille
   },
   look: { bloom:0.8, schwelle:0.7, streak:0.4, korn:0.042, vignette:0.5, ca:0.012, saettigung:0.94 },
   ton: { lautstaerke:0.72, einblenden:0.6, ausblenden:0.35, hallSek:3.6, nachklang:2.6 }
@@ -169,8 +203,8 @@ function baueTon(ctx, t0, startAb){
   if(startAb < D.akte.disziplin[0]){
     sv(A.uw.frequency, 18000, max(t1, T(4.44)));
     er(A.uw.frequency, 420, max(t1, T(4.98)));
-    sv(A.uw.frequency, 420, max(t1, T(6.96)));
-    er(A.uw.frequency, 18000, max(t1, T(7.25)));
+    sv(A.uw.frequency, 420, max(t1, T(6.3)));       // GEÄNDERT (2026-10-16): taucht mit dem Sog auf
+    er(A.uw.frequency, 18000, max(t1, T(6.6)));
   }
   if(startAb < D.akte.drop[0]){
     sv(A.tor.gain, 1, T(13.6) - 0.008);
@@ -238,8 +272,8 @@ const I = {   // Instrumente; s = Drehbuch-Zeit
     [[f,1],[f*1.006,1],[f*2,.4]].forEach(([fr,l])=>{ const o = osz(A, "sawtooth", fr, T, 0.15), m = A.ctx.createGain(); m.gain.value = l*0.4; o.connect(m); m.connect(lp); });
     lp.connect(v); ziel(A, v, 0.15); },
   flaeche(A, s0, s1, g){ const T0 = A.T(s0), T1 = A.T(s1), c = A.ctx, lp = filt(A, "lowpass", 700, 0.7);
-    sv(lp.frequency, 700, max(T0, A.T(10.6))); er(lp.frequency, 2600, A.T(13.55));
-    const v = c.createGain(); sv(v.gain, 0, T0); lr(v.gain, g, T0 + 1.0); sv(v.gain, g, A.T(10.6)); lr(v.gain, g*1.8, A.T(13.55)); lr(v.gain, 0, T1);
+    sv(lp.frequency, 700, max(T0, A.T(11.0))); er(lp.frequency, 2600, A.T(13.55));
+    const v = c.createGain(); sv(v.gain, 0, T0); lr(v.gain, g, T0 + 1.0); sv(v.gain, g, A.T(11.0)); lr(v.gain, g*1.8, A.T(13.55)); lr(v.gain, 0, T1);
     const nrm = c.createGain(); nrm.gain.value = 0.125; nrm.connect(lp);
     [110, 164.81, 246.94, 261.63].forEach(f=>[-5,5].forEach(ct=>{ const o = osz(A, "triangle", f, T0, T1 - T0 + 0.05); o.detune.value = ct; o.connect(nrm); }));
     lp.connect(v); ziel(A, v, 0.4); },
@@ -248,6 +282,7 @@ const I = {   // Instrumente; s = Drehbuch-Zeit
     [[55,1],[82.6,.6],[110.4,.25]].forEach(([f,l])=>{ const o = osz(A, "sine", f, T0, T1 - T0 + 0.05), m = c.createGain(); m.gain.value = l; o.connect(m); m.connect(lp); });
     const n = rausch(A, T0, T1 - T0), m2 = c.createGain(); m2.gain.value = 0.35; n.connect(m2); m2.connect(lp);
     lp.connect(v); ziel(A, v, 0.2, 0, true); },
+  glitch(A, s, g){ for(let i=0;i<4;i++) I.klick(A, s + i*0.018, g*(1 - i*0.15), (i%2 ? 0.5 : -0.5)); },   // NEU (2026-10-16): digitales Stottern auf dem Schnitt
   schimmer(A, s, dauer, g){ const T = A.T(s), c = A.ctx, v = c.createGain();
     sv(v.gain, 0, T); lr(v.gain, g, T + 0.25); st(v.gain, 0, T + 0.4, dauer/3);
     [1318.5, 1975.5, 2637].forEach((f,i)=>{ const o = osz(A, "sine", f, T, dauer + 1); o.detune.value = (i-1)*6; o.connect(v); });
@@ -264,15 +299,20 @@ function tonPlan(startAb){
   ev(1.2, A=>I.riser(A, 1.2, 4.38, 0.15));
   for(let s=1.35, i=0; s<4.3; i++){ const q=s; ev(q, A=>I.herz(A, q, lerp(0.1, 0.19, prog(q, 1.35, 4.3)))); s += lerp(0.82, 0.46, prog(s, 1.35, 4.3)); }
   for(let s=1.25; s<4.36; ){ const q=s, p=(r()-.5)*1.4; ev(q, A=>I.klick(A, q, 0.03+r()*0.025, p)); s += 1/lerp(6, 28, prog(s, 1.25, 4.36)); }
-  D.schnitte.forEach(s=>{ ev(s, A=>{ I.tick(A, s, 0.07, 0); I.puls(A, s, 0.11); I.whoosh(A, s - 0.12, 0.3, 0.06); }); });
+  D.schnitte.forEach(s=>{ ev(s, A=>{ I.tick(A, s, 0.07, 0); I.puls(A, s, 0.11); I.whoosh(A, s - 0.12, 0.3, 0.06); I.glitch(A, s, 0.06); }); });
   ev(3.85, A=>I.swell(A, 4.4, 0.55, 0.035));
   ev(4.4, A=>{ I.braam(A, 4.4, 3.2, 0.2); I.boom(A, 4.4, 0.5); });
-  [5.0, 6.1].forEach(s=> ev(s, A=>I.herz(A, s, 0.27)));
-  ev(7.0, A=>I.flaeche(A, 7.0, 13.6, 0.045));
-  for(let s=7.15, i=0; s<10.6; s+=0.45, i++){ const q=s, p=i%2?0.25:-0.25; ev(q, A=>I.tick(A, q, 0.045, p)); }
+  [5.0, 5.95].forEach(s=> ev(s, A=>I.herz(A, s, 0.27)));
+  // NEU (2026-10-16): Sog ins Objektiv und Match-Cut auf den Trade
+  ev(6.25, A=>{ I.swell(A, 6.6, 0.35, 0.04); I.whoosh(A, 6.3, 0.32, 0.09); });
+  ev(6.6, A=>{ I.boom(A, 6.6, 0.28); I.tick(A, 6.6, 0.08, 0); I.glitch(A, 6.6, 0.05); });
+  ev(6.6, A=>I.flaeche(A, 6.6, 13.6, 0.045));
+  ev(10.95, A=>I.whoosh(A, 10.95, 0.7, 0.08));
+  ev(16.9, A=>I.whoosh(A, 16.9, 0.45, 0.07));
+  for(let s=6.75, i=0; s<11.0; s+=0.45, i++){ const q=s, p=i%2?0.25:-0.25; ev(q, A=>I.tick(A, q, 0.045, p)); }
   b.forEach(s=> ev(s, A=>I.puls(A, s, 0.2)));
   ev(D.zielErreicht, A=>I.schimmer(A, D.zielErreicht, 0.9, 0.018));
-  STACCATO.forEach((s,i)=>{ ev(s, A=>I.staccato(A, s, lerp(0.08, 0.22, pow(prog(s, 10.85, 13.55), 1.5)), 110)); if(i%4===0) ev(s, A=>I.herz(A, s, lerp(0.12, 0.2, prog(s, 10.85, 13.55)))); });
+  STACCATO.forEach((s,i)=>{ ev(s, A=>I.staccato(A, s, lerp(0.08, 0.22, pow(prog(s, 11.15, 13.55), 1.5)), 110)); if(i%4===0) ev(s, A=>I.herz(A, s, lerp(0.12, 0.2, prog(s, 11.15, 13.55)))); });
   ev(11.6, A=>I.riser(A, 11.6, 13.585, 0.26));
   ev(13.95, A=>I.swell(A, 14.2, 0.25, 0.03));
   ev(14.2, A=>{ I.boom(A, 14.2, 0.62); I.braam(A, 14.2, 4.6, 0.22); I.schimmer(A, 14.2, 2.2, 0.024); });
@@ -360,14 +400,18 @@ varying vec2 vUv;uniform sampler2D uS;uniform vec2 uTx;
 void main(){vec3 c=T(vec2(0.))*.2;c+=(T(uTx)+T(-uTx))*.17;c+=(T(uTx*2.)+texture2D(uS,vUv-uTx*2.).rgb)*.12;
 c+=(T(uTx*3.)+texture2D(uS,vUv-uTx*3.).rgb)*.07;c+=(T(uTx*4.)+texture2D(uS,vUv-uTx*4.).rgb)*.04;gl_FragColor=vec4(c,1.);}`;
 const GLSL_COMP = `precision highp float;varying vec2 vUv;uniform sampler2D uS,uBl,uSt;
-uniform vec2 uRes,uVel;uniform float uT,uIn,uBS,uSS,uExp,uCA,uKorn,uVig,uUW,uSat;uniform vec3 uSchatten,uLichter,uStC;
+uniform vec2 uRes,uVel,uLeak;uniform float uT,uIn,uBS,uSS,uExp,uCA,uKorn,uVig,uUW,uSat,uZoom,uGl,uWv;uniform vec3 uSchatten,uLichter,uStC;
 float h2(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
 vec3 aces(vec3 x){return clamp(x*(2.51*x+.03)/(x*(2.43*x+.59)+.14),0.,1.);}
-void main(){vec2 uv=vUv;if(uUW>0.)uv+=vec2(sin(uv.y*16.+uT*1.7),cos(uv.x*13.+uT*1.3))*.0007*uUW;
-vec2 d=uv-.5;vec2 ca=d*dot(d,d)*uCA;vec3 c=vec3(0.);
-if(dot(uVel,uVel)>1e-8){for(int i=0;i<8;i++){vec2 o=uVel*(float(i)/7.-.5);c+=vec3(texture2D(uS,uv+o+ca).r,texture2D(uS,uv+o).g,texture2D(uS,uv+o-ca).b);}c/=8.;}
+void main(){vec2 uv=vUv+vec2(sin(uT*37.)+sin(uT*13.),cos(uT*29.)+sin(uT*17.))*.00025*uWv;
+if(uUW>0.)uv+=vec2(sin(uv.y*16.+uT*1.7),cos(uv.x*13.+uT*1.3))*.0007*uUW;
+if(uGl>0.){float b=floor(uv.y*26.)+floor(uT*24.)*7.;uv.x+=(h2(vec2(b,3.))-.5)*.05*uGl*step(.55,h2(vec2(b,9.)));}
+vec2 d=uv-.5;vec2 ca=d*dot(d,d)*uCA+vec2(.009*uGl,0.);vec3 c=vec3(0.);
+if(uZoom>0.){for(int i=0;i<10;i++){vec2 q=.5+d*(1.-uZoom*float(i)/9.);c+=vec3(texture2D(uS,q+ca).r,texture2D(uS,q).g,texture2D(uS,q-ca).b);}c/=10.;}
+else if(dot(uVel,uVel)>1e-8){for(int i=0;i<8;i++){vec2 o=uVel*(float(i)/7.-.5);c+=vec3(texture2D(uS,uv+o+ca).r,texture2D(uS,uv+o).g,texture2D(uS,uv+o-ca).b);}c/=8.;}
 else c=vec3(texture2D(uS,uv+ca).r,texture2D(uS,uv).g,texture2D(uS,uv-ca).b);
 c*=uIn;c+=texture2D(uBl,uv).rgb*uIn*uBS;c+=texture2D(uSt,uv).rgb*uIn*uSS*uStC;c*=uExp;
+c+=vec3(1.,.52,.2)*uLeak.y*.22*exp(-pow((vUv.x-uLeak.x)*2.4,2.))*(.35+.65*vUv.y);
 float l=dot(c,vec3(.2126,.7152,.0722));
 c=mix(c,vec3(l)*vec3(.6,.95,1.05)+uSchatten*.6,uUW*.3);
 c+=uSchatten*(1.-smoothstep(0.,.3,l));c*=mix(vec3(1.),uLichter,smoothstep(.2,1.2,l));c=max(mix(vec3(l),c,uSat),0.);
@@ -439,7 +483,7 @@ function rtsAnlegen(g, w, h){
   g.rts = [g.S, g.St0, g.St1].concat(g.B);
 }
 // Zahlen-Atlas für Bokeh-Kursziffern und Beschriftungen (Canvas 2D, Systemschrift, mit Mipmaps)
-const Z_SL = 36, Z_ENTRY = 37, Z_STOP = 38, Z_ZIEL = 39;
+const Z_SL = 36, Z_ENTRY = 37, Z_STOP = 38, Z_ZIEL = 39, Z_LABEL = { "5":40, "15":41, "2":42, "C":43 }, Z_PREIS = 44, Z_PAAR = 47;   // GEÄNDERT (2026-10-16)
 function atlasBauen(g){
   const gl = g.gl, cv = document.createElement("canvas"); cv.width = cv.height = 1024;
   const x = cv.getContext("2d"), r = mulberry32(1234), txt = [];
@@ -449,7 +493,8 @@ function atlasBauen(g){
     if(k === 0) txt.push(fmt(4800 + r()*90, 2)); else if(k === 1) txt.push(fmt(17880 + r()*140, 1));
     else if(k === 2) txt.push(fmt(1.08 + r()*0.01, 4)); else txt.push(String(9 + (r()*6|0)).padStart(2,"0") + ":" + String(r()*60|0).padStart(2,"0") + ":" + String(r()*60|0).padStart(2,"0"));
   }
-  txt.push("SL", "ENTRY", "STOP", "ZIEL");
+  const pz = (v)=> v.toFixed(5).replace(".", ",");
+  txt.push("SL", "ENTRY", "STOP", "ZIEL", "5", "15", "2", "C", pz(D.trade.ziel), pz(D.trade.entry), pz(D.trade.stop), D.trade.paar);
   x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle";
   txt.forEach((s,i)=>{
     const lab = i >= 36;
@@ -568,18 +613,46 @@ function baueWelt(seed, hoch){
   }
   w.funken = []; for(let i=0;i<150;i++){ const a = R()*PI*2, el = (R()-0.3)*1.4, sp = 2+R()*8; w.funken.push({ vx:cos(a)*sp, vy:sin(a)*sp*0.7+el, vz:(R()-0.4)*sp*0.6, g:0.008+R()*0.016, life:0.18+R()*0.35 }); }
   w.fern = new Float32Array(3*160); { let fy = 4; for(let i=0;i<160;i++){ fy += (R()-0.58)*0.9; w.fern[i*3] = -60 + i*0.75; w.fern[i*3+1] = fy; w.fern[i*3+2] = -28; } }
-  w.kontext = []; { let c = -0.5; for(let i=0;i<7;i++){ const o = c; c = clamp(c + (R()-0.5)*0.7, -0.9, 0.4); w.kontext.push({ x:-3.3+i*0.5, O:o, C:c, H:max(o,c)+0.12+R()*0.15, L:min(o,c)-0.12-R()*0.15 }); } }
   // Equity-Kurve: viele kleine Trades, mit Rücksetzern, steigend
   const nT = 230, eq = [0], rs = [];
   for(let i=0;i<nT;i++){ const r = R() < 0.43 ? 1.2 + R()*1.4 : -(0.9 + R()*0.15); rs.push(r); eq.push(eq[i] + r); }
   const end = eq[nT] > 1 ? eq[nT] : 1, Wc = hoch ? 26 : 58, Hc = hoch ? 34 : 22;
   w.eq = { n:nT+1, rs, x:new Float32Array(nT+1), y:new Float32Array(nT+1) };
-  for(let i=0;i<=nT;i++){ w.eq.x[i] = 4.6 + Wc*i/nT; w.eq.y[i] = 2.0 + Hc*eq[i]/end; }
-  let x0 = -4.6, x1 = 4.6 + Wc + 7, y0 = -3.2, y1 = 2 + Hc + 5;
+  w.chart = baueChart(hoch);   // NEU (2026-10-16)
+  const ex = w.chart.hw + 0.7, ey = w.chart.yZiel;   // die Kurve beginnt am Ziel des Trades
+  for(let i=0;i<=nT;i++){ w.eq.x[i] = ex + Wc*i/nT; w.eq.y[i] = ey + Hc*eq[i]/end; }
+  let x0 = -w.chart.hw - 0.6, x1 = ex + Wc + 7, y0 = -w.chart.hh - 0.4, y1 = ey + Hc + 5;
   for(let i=0;i<=nT;i++){ y0 = min(y0, w.eq.y[i]-1); }
-  w.eq.licht = hoch ? [4.6 + Wc*0.9, 2 + Hc*1.16, -10] : [4.6 + Wc*1.08, 2 + Hc*1.12, -10];   // Hochformat: Licht nicht am Bildrand anschneiden
+  w.eq.licht = hoch ? [ex + Wc*0.9, ey + Hc*1.16, -10] : [ex + Wc*1.08, ey + Hc*1.12, -10];   // Hochformat: Licht nicht am Bildrand anschneiden
   w.eq.box = { cx:(x0+x1)/2, cy:(y0+y1)/2, hw:(x1-x0)/2, hh:(y1-y0)/2 };
   return w;
+}
+// NEU (2026-10-16): Trade aus D.trade in Weltkoordinaten (5-Minuten-Kerzen ab 23:00)
+function baueChart(hoch){
+  const T = D.trade, R = mulberry32(808);
+  const idx = (z)=>{ const [h, m] = z.split(":").map(Number); return ((h - 23 + 24) % 24)*12 + m/5; };
+  const iE = idx(T.start), iZ = idx(T.ende), N = iZ + 1, i0 = hoch ? idx(T.hochAb) : 0;
+  const hw = hoch ? 3.3 : 6.9, yk = hoch ? 1250 : 720, dx = 2*hw/(N - i0);   // Querformat flacher: Platz für die Texte darunter
+  const X = (i)=> -hw + (i - i0 + 0.5)*dx, Y = (p)=> (p - T.mitte)*yk;
+  const kp = T.kurs.map(([z, p])=> [idx(z), p]);
+  const pfad = (i)=>{ for(let k=1;k<kp.length;k++) if(i <= kp[k][0]){ const a = kp[k-1], b = kp[k]; return lerp(a[1], b[1], K.sanft((i-a[0])/(b[0]-a[0]))); } return kp[kp.length-1][1]; };
+  const dochte = {}; for(const z in T.dochte) dochte[idx(z)] = T.dochte[z];
+  const kerzen = []; let o = pfad(0);
+  for(let i=0;i<N;i++){
+    const c = pfad(i + 1) + (R() - 0.5)*0.00011;
+    let h = max(o, c) + R()*R()*0.00016 + 0.00002, l = min(o, c) - R()*R()*0.00016 - 0.00002;
+    if(dochte[i]){ if(dochte[i][0]) h = dochte[i][0]; if(dochte[i][1]) l = dochte[i][1]; }
+    if(i >= i0) kerzen.push({ i, x:X(i), O:Y(o), C:Y(c), H:Y(h), L:Y(l) });
+    o = c;
+  }
+  const iS = idx("12:10"), zx = (z)=> z ? X(clamp(idx(z), i0, N - 1)) : X(N - 1);
+  return { kerzen, hw, hh:2.7*yk/1000, dx, iE, iZ, i0, X, Y,
+    sx:X(iS), sy:Y(1.31845),                                  // Sweep in die Nachfragezone (Start der Szene)
+    xE:X(iE) - dx*0.5, xZ:X(iZ) + dx*0.5, yE:Y(T.entry), yS:Y(T.stop), yZiel:Y(T.ziel),
+    bx:(X(iE) + X(iZ))/2, by:(Y(T.entry) + Y(T.ziel))/2,
+    zonen:T.zonen.map(z=> ({ x0:max(zx(z.von), X(i0)) - dx*0.5, x1:zx(z.bis) + dx*0.5, y0:Y(z.p[0]), y1:Y(z.p[1]), art:z.art, label:z.label })),
+    linien:T.linien.filter(l=> idx(l.bis) > i0).map(l=> ({ x0:max(zx(l.von), X(i0)), x1:zx(l.bis), y:Y(l.p), art:l.art, label:l.label })),
+    flug:[0,1,2,3,4,5,6,7,8,9,10,11].map(()=> [R()-0.5, R()-0.5, R(), R()-0.5, R()-0.5]) };   // Startversatz der einfliegenden Striche
 }
 const kursIdx = (x)=> clamp((x - W.kurs.X0)/W.kurs.DX, 0, W.kurs.N-1.001);
 const kursAus = (arr, x)=>{ const f = kursIdx(x), i = f|0, k = f - i; return lerp(arr[i], arr[i+1], k); };
@@ -596,7 +669,7 @@ function zeitlupeTau(t){   // Szenenzeit im Verlust (Speed-Ramp)
 function kamStille(t){ const k = K.sanft(prog(t, 0, 1.2)); return { pos:[0, 0.22-0.08*k, 14.5-1.6*k], tgt:[0,0,0], fov:30, roll:0, bl:0.035, shot:"a" }; }
 function kamTrack(t){ const xh = kopfX(t), y = kursAus(W.kurs.ys, xh);   // Hochformat: flacher am Kurs entlang, die Linie läuft in die Tiefe
   return L.hoch ? { pos:[xh-6.2, y-0.35, 1.7], tgt:[xh+2.2, y+0.35, 0], fov:50, roll:9, bl:0.05 } : { pos:[xh-4.6, y-0.85, 3.3], tgt:[xh+1.4, y+0.25, 0], fov:44, roll:5, bl:0.05 }; }
-function kamBei(t){
+function kamRoh(t){
   const a = D.akte;
   if(t < a.chaos[0]) return kamStille(t);
   if(t < D.schnitte[0]){ const s = kamStille(1.2), r = kamTrack(t), m = K.inOut3(prog(t, 1.2, 1.62));
@@ -604,17 +677,50 @@ function kamBei(t){
   if(t < D.schnitte[1]){ const xh = kopfX(t), y = kursAus(W.kurs.ym, xh); return { pos:[xh-1.35, y+0.3, 1.05], tgt:[xh+0.6, y+0.02, 0], fov:38, roll:-3, bl:0.07, shot:"m" }; }
   if(t < a.verlust[0]){ const xh = kopfX(t), y = kursAus(W.kurs.ys, xh), k = K.ein2(prog(t, 3.3, 4.4));
     return { pos:[xh-7.5+1.5*k, y+4.2-1.0*k, (L.hoch?19:15)-3.8*k], tgt:[xh-3.2, y, 0], fov:38, roll:-4.5*k, bl:0.022, shot:"t" }; }
-  if(t < a.disziplin[0]){ const k = K.sanft(prog(t, 4.4, 7.0)), f = max(1, abstand(2.4, 3.6, 32)/9.6);
+  if(t < a.disziplin[0]){ const k = K.sanft(prog(t, 4.4, 6.6)), f = max(1, abstand(2.4, 3.6, 32)/9.6);
     const pos = [lerp(2.4,1.3,k)*f, lerp(1.05,0.35,k), lerp(9.6,7.4,k)*f], tgt = [lerp(0.35,0.15,k), lerp(0.45,-0.15,k)+(L.hoch?0.5:0), 0];
     const nah = dist3(pos, [0,0,0]), r = K.inOut3(prog(t, 5.55, 6.25));
     return { pos, tgt, fov:32, roll:lerp(-1.5,-4,k), bl:0.2, fok:lerp(nah, 30, r), shot:"v" }; }
-  if(t < a.drop[0]){
-    const fov = 28, d0 = abstand(4.9, 3.1, fov)*1.02, k = K.sanft(prog(t, 7.0, 10.6)), z = 1 - pow(1 - K.sanft(prog(t, 10.62, 13.5)), 2.2), B = W.eq.box;
-    const d1 = abstand(B.hw*1.04, B.hh*1.08, fov), d = d0*lerp(1, 0.93, k)*pow(d1/(d0*0.93), z);
-    const tgt = [lerp(0, B.cx, z), lerp(0.3, B.cy, z), 0], ph = 0.2*z;
-    const pos = [tgt[0] + lerp(lerp(0.25,-0.2,k), 0, z) + sin(ph)*d, tgt[1] + 0.1*d*z, cos(ph)*d];
-    return { pos, tgt, fov, roll:-1.5*z, bl:0.012, shiftY:lerp(L.hoch?0.2:0.17, 0.02, z), shot:"d" }; }
+  if(t < a.aufstieg[0]) return kamChart(t);
+  if(t < a.drop[0]){   // Aufstieg: weit zurück, der Trade wird zur ersten Kachel der Equity-Kurve
+    const k0 = kamChart(a.aufstieg[0]), fov = k0.fov, z = 1 - pow(1 - K.sanft(prog(t, a.aufstieg[0], 13.5)), 2.2), B = W.eq.box;
+    const d0 = dist3(k0.pos, k0.tgt), d1 = abstand(B.hw*1.04, B.hh*1.08, fov), d = d0*pow(d1/d0, z);
+    const tgt = mix3(k0.tgt, [B.cx, B.cy, 0], z), ph = 0.2*z;
+    const pos = [tgt[0] + lerp(k0.pos[0]-k0.tgt[0], 0, z) + sin(ph)*d, tgt[1] + lerp(k0.pos[1]-k0.tgt[1], 0.1*d, z), cos(ph)*d];
+    return { pos, tgt, fov, roll:lerp(k0.roll, -1.5, z), bl:0.012, shiftY:lerp(k0.shiftY, 0.02, z), shot:"d" }; }
   const k = K.sanft(prog(t, 14.2, 18)); return { pos:[0, 0, 10-0.8*k], tgt:[0,0,0], fov:30, roll:0, bl:0.06, fok:6, shot:"z" };
+}
+
+/* --- NEU (2026-10-16): Übergangs-Effekte aus D.effekte --- */
+function fx(t){
+  const E = D.effekte, o = { stoss:0, gl:0, zoom:0, leak:[0.5, 0] };
+  for(const [h, a] of E.stoesse) if(t >= h) o.stoss += a*exp(-(t-h)*7);
+  for(const g of E.glitch) if(t >= g && t < g + E.glitchDauer) o.gl = max(o.gl, 1 - (t-g)/E.glitchDauer);
+  for(const [a, b, st, form] of E.zoom){ if(t < a || t >= b) continue; const k = prog(t, a, b);
+    o.zoom += st*(form === "auf" ? K.ein2(k) : form === "ab" ? 1 - K.aus3(k) : sin(PI*k)); }
+  for(const [a, b, x0, x1, st] of E.licht){ if(t < a || t >= b) continue; const k = prog(t, a, b); o.leak = [lerp(x0, x1, K.sanft(k)), st*sin(PI*k)]; }
+  return o;
+}
+// Kamera mit Stößen (Erschütterung auf den Hits); kamRoh() bleibt ohne, für die Bewegungsunschärfe
+function kamBei(t){
+  const k = kamRoh(t), s = fx(t).stoss;
+  if(s < 0.002) return k;
+  const d = dist3(k.pos, k.tgt)*0.012*s, ox = (sin(t*53.1) + sin(t*31.7 + 1.3))*0.5*d, oy = (sin(t*47.3 + 2.1) + sin(t*29.9))*0.5*d;
+  k.pos = [k.pos[0] + ox, k.pos[1] + oy, k.pos[2]]; k.tgt = [k.tgt[0] + ox*0.6, k.tgt[1] + oy*0.6, k.tgt[2]];
+  k.roll = (k.roll || 0) + s*1.4*sin(t*41.7);
+  return k;
+}
+
+// NEU (2026-10-16): Kamera im Trade — Nahaufnahme am Sweep, Rückzug auf die Totale, langsamer Push auf die Long-Box
+function kamChart(t){
+  const T = W.chart, fov = 30;
+  const a = K.inOut3(prog(t, 7.15, 8.3)), p = K.sanft(prog(t, 8.3, D.akte.aufstieg[0])), r = K.aus3(prog(t, 6.6, 7.2));
+  const tn = tan(fov*PI/360), dVoll = max(T.hh*1.06/(0.53*tn), T.hw*1.05/(0.95*tn*L.aspI)), dNah = (L.hoch ? 3.4 : 2.7)*lerp(1.25, 1, r);   // Chart in der oberen Bildhälfte, Text darunter
+  const tgtNah = [T.sx + 0.35, T.sy + 0.45, 0], tgtVoll = [0, 0, 0], tgtBox = [lerp(0, T.bx, 0.35), lerp(0, T.by, 0.35), 0];
+  const tgt = mix3(mix3(tgtNah, tgtVoll, a), tgtBox, p), d = lerp(dNah, dVoll, a)*lerp(1, 0.88, p);
+  const yaw = lerp(-0.42, 0, a) + 0.05*p, pitch = lerp(-0.14, 0.015, a);
+  return { pos:[tgt[0] + sin(yaw)*d, tgt[1] + sin(pitch)*d, cos(yaw)*cos(pitch)*d], tgt, fov, roll:lerp(5, 0, a) - 0.8*p,
+    bl:lerp(0.1, 0.014, a), shiftY:lerp(0, 0.39, a), shot:"d" };
 }
 
 /* --- Bausteine --- */
@@ -692,7 +798,8 @@ function szStilleChaos(t, F){
   staub(t, chaos ? k.tgt : [0,0,4], chaos ? [16,10,16] : [18,11,16], chaos ? 0.55 : 0.75, mix3(C.weissWarm, C.gold, 0.5), lp);
 }
 function szVerlust(t, F){
-  const k = kamBei(t), tau = zeitlupeTau(t), tb = D.bruchTau;
+  const k = kamBei(t), sg = D.effekte.sog, tau = zeitlupeTau(min(t, sg[0])), tb = D.bruchTau;   // GEÄNDERT (2026-10-16): friert vor dem Sog ein
+  const sog = K.ein2(prog(t, sg[0], sg[1])), cp = k.pos, zieh = (x, y, z, f)=> [lerp(x, cp[0], sog*f), lerp(y, cp[1], sog*f), lerp(z, cp[2], sog*f)];
   ebeneKamera(k);
   const lp = [0.62, 1.08];
   hintergrund(F, [0.0008,0.0035,0.0052], mix3(C.weissWarm, C.rot, 0.35), lp, 0.3, 0.55, 0);
@@ -709,67 +816,109 @@ function szVerlust(t, F){
     const cs = cos(th), sn = sin(th), kd = s.ax;   // Rodrigues für (1,0,0)
     const rx = cs + s.ax*s.ax*(1-cs), ry = s.az*sn + s.ay*kd*(1-cs), rz = -s.ay*sn + s.az*kd*(1-cs);
     const glanz = 1 + 3*pow(abs(sin(th*1.3 + s.ph)), 16);
-    strecke(x-rx*s.hl, y-ry*s.hl, z-rz*s.hl, x+rx*s.hl, y+ry*s.hl, z+rz*s.hl, sk(C.gold, glanz, 0.6), 0.028);
+    const f = 0.9 + 0.08*s.ph/6, a0 = zieh(x-rx*s.hl, y-ry*s.hl, z-rz*s.hl, f), a1 = zieh(x+rx*s.hl, y+ry*s.hl, z+rz*s.hl, f);
+    strecke(a0[0], a0[1], a0[2], a1[0], a1[1], a1[2], sk(C.gold, glanz*(1 + 2*sog), 0.6), 0.028);
   }
   if(tau >= tb){ const d = tau - tb;
     for(const f of W.funken){ if(d > f.life) continue; const e = (1-exp(-3.5*d))/3.5, q = 1 - d/f.life;
-      spr(f.vx*e, f.vy*e - 1.5*d*d, f.vz*e, f.g, f.g, 0, mix3(C.rot, C.weissWarm, q), 2.2*q*q, 0, 0, 0, 1); } }
+      const z3 = zieh(f.vx*e, f.vy*e - 1.5*d*d, f.vz*e, 0.88); spr(z3[0], z3[1], z3[2], f.g, f.g, 0, mix3(C.rot, C.weissWarm, q), 2.2*q*q, 0, 0, 0, 1); } }
   // SL-Beschriftung am rechten Bildrand
   const lx = min(7.4, sicht*0.78 + k.tgt[0]), ld = max(0, tau - tb - 0.03);
   spr(lx, 0.24 - 3*ld*ld, -0.02, 0.11*4, 0.11, -ld*1.6, C.gold, 0.5*(1 - sat(ld*4)), 0, 2, Z_SL, 0);
   // die Kerze: fällt durch den Stop
   const Cl = tau < tb ? 3.2 - (3.2/tb)*tau : -1.6*(1 - exp(-(tau-tb)*5.5));
-  kerze(0, 3.2, Cl, 3.42, Cl - 0.22, 0.05, C.rot, 0.62, 0.94, 0.34, 1.35);
-  spr(0, Cl, 0.1, 0.7, 0.35, 0, C.rot, 0.55, 0, 3, 4, 1);
+  kerze(0, 3.2, Cl, 3.42, Cl - 0.22, 0.05, C.rot, 0.62*(1 - sog), 0.94*(1 - sog), 0.34, 1.35);
+  spr(0, Cl, 0.1, 0.7, 0.35, 0, C.rot, 0.55*(1 - sog), 0, 3, 4, 1);
+  F.post.exp = 1 + 1.6*sog*sog;
   if(tau >= tb && tau < tb + 0.08){ const q = 1 - (tau-tb)/0.08; spr(0, 0, 0.12, 1.1, 0.12, 0, C.weissWarm, 2.4*q, 0, 3, 4, 1); }
   staub(tau*6, k.tgt, [12,9,12], 0.45, mix3(C.weissWarm, C.tealHell, 0.4), lp, 0.8);
 }
-function setupZeichnen(t, alpha){
-  const b = D.beats;
-  // Raster baut sich von der Mitte her auf
-  for(let i=-5;i<=5;i++){ const ts = 7.0 + abs(i)*0.05, p = K.ausExpo(prog(t, ts, ts+0.7)); if(p <= 0) continue;
-    const q = (i%2 ? 0.035 : 0.06)*alpha; strecke(-4.2*p, i*0.5, -0.3, 4.2*p, i*0.5, -0.3, sk(C.tealHell, q, 0), 0.012); }
-  for(let i=-8;i<=8;i++){ const ts = 7.05 + abs(i)*0.035, p = K.ausExpo(prog(t, ts, ts+0.7)); if(p <= 0) continue;
-    const q = (i%2 ? 0.03 : 0.05)*alpha; strecke(i*0.5, -2.7*p, -0.3, i*0.5, 2.7*p, -0.3, sk(C.tealHell, q, 0), 0.012); }
-  const kp = K.aus3(prog(t, 7.25, 7.9));
-  for(const kz of W.kontext) kerze(kz.x, kz.O, kz.C, kz.H, kz.L, -0.15, mix3(C.tealHell, C.weissWarm, 0.3), 0.3*kp*alpha, 0.3, 0.1, 0.35);
-  // Linien für Entry, Stop und Ziel — präzise auf die Beats gezogen
-  [[0, b[0], Z_ENTRY, false], [-1.2, b[1], Z_STOP, true], [2.0, b[2], Z_ZIEL, false]].forEach(([y, bt, z, gestrichelt])=>{
-    const p = K.aus3(prog(t, bt-0.04, bt+0.5)); if(p <= 0) return;
-    const x1 = -3.8 + 7.6*p, gc = sk(C.gold, 1.5*alpha, 0.5);
-    if(gestrichelt){ for(let x=-3.8; x<x1; x+=0.36) strecke(x, y, 0, min(x+0.22, x1), y, 0, gc, 0.026); }
-    else strecke(-3.8, y, 0, x1, y, 0, gc, 0.026);
-    const kopf = 1 - K.sanft(prog(t, bt+0.45, bt+0.8));
-    spr(x1, y, 0.02, 0.28, 0.28, 0, C.gold, (0.6 + 1.4*kopf)*alpha*kopf, 0, 3, 6, 1);
-    spr(x1, y, 0.02, 0.04, 0.04, 0, C.weissWarm, 4*kopf*alpha, 0, 3, 3, 1);
-    spr(4.62, y, 0, 0.42, 0.105, 0, C.gold, 0.55*K.aus3(prog(t, bt+0.3, bt+0.7))*alpha, 0, 2, z, 0);
+// NEU (2026-10-16): der Trade aus D.trade — Match-Transition, Zonen, Long-Box, Kerzen bis ins Ziel
+function chartZeichnen(t, alpha){
+  const T = W.chart, b = D.beats, t0 = D.akte.disziplin[0], ty = eb.kam.tgt[1];
+  const farbe = { gold:sk(C.gold, 1.2, 0.5), hell:sk(C.weissWarm, 0.32, 0.3), fein:sk(C.tealHell, 0.16, 0) };
+  // Linien fliegen aus dem Objektiv herein und rasten ein (Fortsetzung der Scherben aus dem Verlust)
+  T.linien.forEach((l, j)=>{
+    const fl = T.flug[j % T.flug.length], q = K.aus3(prog(t, t0 + 0.02*j, t0 + 0.6 + 0.02*j)); if(q <= 0) return;
+    const w = 1 - q, ox = fl[0]*3.2*w, oy = (ty - l.y)*w + fl[1]*1.2*w, oz = (0.6 + fl[2]*1.4)*w, sx = fl[3]*1.6*w, sy = fl[4]*1.2*w;   // Start in der Bildmitte, nah vor der Kamera
+    const c = l.art === "gold" ? farbe.gold : l.art === "hell" ? farbe.hell : farbe.fein, g = (1 + 5*w)*alpha;
+    strecke(l.x0 + ox + sx, l.y + oy + sy, oz, l.x1 + ox - sx, l.y + oy - sy, oz, [c[0]*g, c[1]*g, c[2]*g, c[3]], l.art === "fein" ? 0.012 : 0.018);
+    if(l.label) spr(l.x0 - 0.16, l.y + 0.12, 0, 0.2, 0.1, 0, C.weissWarm, 0.5*q*alpha, 0, 2, Z_LABEL[l.label], 0);
   });
-  // die Kerze formt sich ruhig
-  const kz = K.inOut3(prog(t, 8.2, D.zielErreicht)), sp = K.aus3(prog(t, 7.9, 8.3));
-  if(sp > 0){ const Cl = 0.05 + 1.95*kz; kerze(1.5, 0.05, Cl, Cl + 0.18*kz + 0.02, -0.3*sp, 0.05, mix3(C.gruen, C.gold, 0.35), 0.8*sp*alpha, 0.7, 0.2, 1.2); }
-  const gz = exp(-max(0, t - D.zielErreicht)*3)*(t >= D.zielErreicht ? 1 : 0);
-  if(gz > 0.01){ spr(1.5, 2.0, 0.1, 1.2, 0.05, 0, C.weissWarm, 1.8*gz*alpha, 0, 3, 4, 1); spr(1.5, 2.0, 0.1, 0.1, 0.1, 0, C.weissWarm, 4*gz*alpha, 0, 3, 3, 1); }
+  // Zonen als Glasflächen, gestaffelt
+  T.zonen.forEach((z, j)=>{
+    const q = K.aus3(prog(t, t0 + 0.05 + 0.08*j, t0 + 0.55 + 0.08*j)); if(q <= 0) return;
+    const c = z.art === "angebot" ? C.rot : z.art === "lila" ? C.lila : mix3(C.tealHell, C.silber, 0.4);
+    const hy = (z.y1 - z.y0)/2*q, my = (z.y0 + z.y1)/2;
+    spr((z.x0 + z.x1)/2, my, -0.08, (z.x1 - z.x0)/2, max(0.005, hy), 0, c, (z.art === "angebot" ? 0.32 : 0.24)*alpha, 0.2, 1, 0.45, 0);
+    if(z.label) spr(z.x1 - 0.25, my, -0.06, 0.2, 0.1, 0, C.weissWarm, 0.45*q*alpha, 0, 2, Z_LABEL[z.label], 0);
+  });
+  spr(-T.hw + 0.6, T.hh - 0.05, 0, 0.62, 0.155, 0, C.weissWarm, 0.38*K.aus3(prog(t, t0 + 0.6, t0 + 1.1))*alpha, 0, 2, Z_PAAR, 0);
+  // Kerzen: vor dem Entry als Welle vom Sweep aus, im Trade Kerze für Kerze bis ins Ziel
+  const fT = T.iE + (T.iZ - T.iE + 1)*K.sanft(prog(t, 8.2, D.zielErreicht));
+  for(const kz of T.kerzen){
+    const imTrade = kz.i >= T.iE;
+    if(imTrade && kz.i >= fT) break;
+    const w0 = abs(kz.x - T.sx)*0.045, q = imTrade ? sat((fT - kz.i)*1.5) : K.aus3(prog(t, t0 + w0, t0 + 0.3 + w0));
+    if(q <= 0) continue;
+    const up = kz.C >= kz.O;
+    const c = imTrade ? (up ? mix3(C.gold, C.weissWarm, 0.25) : mix3(C.tealHell, C.silber, 0.3)) : (up ? C.silber : mix3(C.tealHell, C.silber, 0.25));
+    kerze(kz.x, kz.O, lerp(kz.O, kz.C, q), lerp(kz.O, kz.H, q), lerp(kz.O, kz.L, q), 0, c, (imTrade ? 1.1 : (up ? 0.9 : 0.55))*alpha, up ? 0.6 : 0.85, T.dx*0.34, up ? 0.35 : 0.5);
+  }
+  // Long-Box: zieht sich auf den ersten Beat auf und füllt sich mit dem Kursverlauf mit Licht
+  const qb = K.aus3(prog(t, b[0] - 0.05, b[0] + 0.5)); if(qb <= 0) return;
+  const xr = lerp(T.xE, T.xZ, qb), gw = T.xZ - T.xE, gold = sk(C.gold, 1.5*alpha, 0.5);
+  strecke(T.xE, T.yE, 0.02, xr, T.yE, 0.02, gold, 0.022);
+  strecke(T.xE, T.yZiel, 0.02, xr, T.yZiel, 0.02, sk(C.gold, 1.2*alpha, 0.5), 0.022);
+  for(let x = T.xE; x < xr; x += 0.18) strecke(x, T.yS, 0.02, min(x + 0.1, xr), T.yS, 0.02, sk(C.rot, 0.9*alpha, 0.4), 0.016);
+  strecke(T.xE, lerp(T.yE, T.yS, qb), 0.02, T.xE, lerp(T.yE, T.yZiel, qb), 0.02, gold, 0.016);
+  if(qb >= 1) strecke(T.xZ, T.yS, 0.02, T.xZ, T.yZiel, 0.02, sk(C.gold, 0.8*alpha, 0.4), 0.014);
+  spr((T.xE + xr)/2, (T.yE + T.yZiel)/2, -0.04, (xr - T.xE)/2, (T.yZiel - T.yE)/2, 0, C.ldn, 0.07*alpha, 0.12, 1, 0.3, 0);   // Ziel-Fläche (blau wie im Chart)
+  spr((T.xE + xr)/2, (T.yE + T.yS)/2, -0.04, (xr - T.xE)/2, (T.yE - T.yS)/2, 0, C.rot, 0.07*alpha, 0.12, 1, 0.3, 0);
+  const pf = sat((fT - T.iE)/(T.iZ - T.iE + 1));
+  if(pf > 0){
+    const xf = T.xE + gw*pf;
+    spr((T.xE + xf)/2, (T.yE + T.yZiel)/2, -0.03, gw*pf/2, (T.yZiel - T.yE)/2, 0, C.gold, 0.12*alpha, 0.1, 1, 0.6, 0);
+    for(let x = T.xE; x < xf - 0.05; x += 0.16){   // gestrichelte Diagonale Entry → Ziel
+      const k1 = (x - T.xE)/gw, k2 = min(x + 0.09 - T.xE, gw*pf)/gw;
+      strecke(x, lerp(T.yE, T.yZiel, k1), 0.03, T.xE + gw*k2, lerp(T.yE, T.yZiel, k2), 0.03, sk(C.weissWarm, 0.5*alpha, 0.3), 0.01);
+    }
+    const kz = T.kerzen.find(k=> k.i === min(T.iZ, floor(fT)));
+    if(kz && t < D.zielErreicht + 0.1) spr(kz.x, kz.C, 0.05, 0.3, 0.3, 0, C.gold, 1.1*alpha, 0, 3, 6, 1);
+  }
+  // Preis-Etiketten rechts der Box
+  [[T.yZiel, 0, C.gold], [T.yE, 1, C.weissWarm], [T.yS, 2, C.rot]].forEach(([y, z, c], j)=>{
+    const q = K.aus3(prog(t, b[0] + 0.3 + j*0.08, b[0] + 0.7 + j*0.08));
+    spr(T.xZ + 0.42, y, 0.02, 0.4, 0.1, 0, c, 0.75*q*alpha, 0, 2, Z_PREIS + z, 0);
+  });
+  // Ziel erreicht: Lichtblitz an der Zielkante, die Box glüht kurz auf
+  const gz = t >= D.zielErreicht ? exp(-(t - D.zielErreicht)*3) : 0;
+  if(gz > 0.01){
+    spr(T.xZ, T.yZiel, 0.1, 1.6, 0.06, 0, C.weissWarm, 2.2*gz*alpha, 0, 3, 4, 1); spr(T.xZ, T.yZiel, 0.1, 0.14, 0.14, 0, C.weissWarm, 4.5*gz*alpha, 0, 3, 3, 1);
+    spr(T.bx, T.by, -0.03, gw/2, (T.yZiel - T.yE)/2, 0, C.gold, 0.35*gz*alpha, 0, 1, 0.9, 0);
+  }
 }
 function szDisziplin(t, F){
   const k = kamBei(t); ebeneKamera(k);
-  const z = prog(t, 10.62, 13.5), aufst = t >= D.akte.aufstieg[0];
+  const A = D.akte.aufstieg[0], t0 = D.akte.disziplin[0], z = prog(t, A, 13.5), aufst = t >= A;
   const lp0 = [0.5, 1.12];
   let lp = lp0, li = 0.2, kern = 0;
-  if(aufst){ const s = aufSchirm(eb.VP, W.eq.licht); lp = [lerp(lp0[0], s[0], K.sanft(prog(t,10.6,11.4))), lerp(lp0[1], s[1], K.sanft(prog(t,10.6,11.4)))];
-    li = lerp(0.2, 1.5, K.ein2(prog(t, 10.8, 13.5))); kern = 0.5*li; }
-  hintergrund(F, [0.0005,0.003,0.0042], aufst ? mix3(C.gold, C.weissWarm, 0.3) : mix3(C.weissWarm, C.tealHell, 0.4), lp, li, aufst ? 0.22 : 0.35, kern);
-  // Lichtbänder in den Session-Farben streichen durch
-  const bw = L.asp*cos(1.15) + sin(1.15);
-  const b1 = prog(t, 7.7, 9.3), b2 = prog(t, 8.85, 10.45);
-  F.bg.b1 = [lerp(-0.4, bw+0.4, b1), 0.26, 0.028*sin(PI*b1), 1.15]; F.bg.b1c = C.ldn;
-  F.bg.b2 = [lerp(-0.4, bw+0.4, b2), 0.26, 0.022*sin(PI*b2), 1.15]; F.bg.b2c = C.nyc;
-  setupZeichnen(t, aufst ? lerp(1, 0.75, z) : 1);
+  if(aufst){ const s = aufSchirm(eb.VP, W.eq.licht), m = K.sanft(prog(t, A, A + 0.8)); lp = [lerp(lp0[0], s[0], m), lerp(lp0[1], s[1], m)];
+    li = lerp(0.2, 1.5, K.ein2(prog(t, A + 0.2, 13.5))); kern = 0.5*li; }
+  hintergrund(F, [0.0005,0.003,0.0042], aufst ? mix3(C.gold, C.weissWarm, 0.3) : mix3(C.weissWarm, C.tealHell, 0.4), lp, li, aufst ? 0.22 : 0.3, kern);
+  // Lichtbänder in den Session-Farben streichen durch (London, New York)
+  const bw = L.asp*cos(1.15) + sin(1.15), b1 = prog(t, 7.4, 9.0), b2 = prog(t, 8.7, 10.3);
+  F.bg.b1 = [lerp(-0.4, bw+0.4, b1), 0.26, 0.022*sin(PI*b1), 1.15]; F.bg.b1c = C.ldn;
+  F.bg.b2 = [lerp(-0.4, bw+0.4, b2), 0.26, 0.018*sin(PI*b2), 1.15]; F.bg.b2c = C.nyc;
+  chartZeichnen(t, aufst ? lerp(1, 0.8, z) : 1);
   if(aufst) equityZeichnen(t, z);
-  staub(t, k.tgt, aufst ? [lerp(14,90,z), lerp(9,50,z), lerp(14,60,z)] : [14,9,14], aufst ? 0.4 : 0.32, mix3(C.weissWarm, C.gold, 0.4), lp, aufst ? 1 : 0.5);
-  F.post.exp = 1 + 1.3*K.ein2(prog(t, 13.3, 13.6)); F.post.streak = aufst ? 0.55 : 0.35;
+  staub(t, k.tgt, aufst ? [lerp(16,90,z), lerp(10,50,z), lerp(14,60,z)] : [16,10,14], aufst ? 0.4 : 0.3, mix3(C.weissWarm, C.gold, 0.4), lp, aufst ? 1 : 0.5);
+  const bl = D.effekte.blitz, bz = t >= bl[0] && t < bl[1] ? sin(PI*prog(t, bl[0], bl[1])) : 0;   // 1 Frame Weiß vor der Stille
+  const glut = 0.45*K.ein2(1 - prog(t, t0, t0 + 0.3));                                              // Nachglühen des Match-Cuts
+  F.post.exp = (1 + 1.3*K.ein2(prog(t, 13.3, 13.6)))*(1 + 5*bz) + glut; F.post.streak = aufst ? 0.55 : 0.4;
 }
 function equityZeichnen(t, z){
-  const E = W.eq, p = prog(t, 10.9, 13.45), f = (E.n-1)*pow(p, 1.25);
+  const E = W.eq, p = prog(t, D.akte.aufstieg[0] + 0.25, 13.45), f = (E.n-1)*pow(p, 1.25);
   if(f <= 0) return;
   const kmax = min(E.n-1, floor(f)), fr = f - kmax;
   let n = 0;
@@ -779,10 +928,10 @@ function equityZeichnen(t, z){
   linie(PKT, n, null, 0.07, (i, c)=>{ const q = 0.8 + 2.4*exp(-(f - i)/5); c[0] = C.gold[0]*q; c[1] = C.gold[1]*q; c[2] = C.gold[2]*q; c[3] = 0.6; });
   // Pulse der Staccato-Schläge lassen die Trades am Kopf aufleuchten
   const boost = {};
-  for(const s of STACCATO){ if(s > t || t - s > 0.5) continue; const ps = prog(s, 10.9, 13.45), idx = round((E.n-1)*pow(ps, 1.25)); boost[idx] = (boost[idx] || 0) + 2.2*exp(-(t-s)*9); }
+  for(const s of STACCATO){ if(s > t || t - s > 0.5) continue; const ps = prog(s, D.akte.aufstieg[0] + 0.25, 13.45), idx = round((E.n-1)*pow(ps, 1.25)); boost[idx] = (boost[idx] || 0) + 2.2*exp(-(t-s)*9); }
   for(let i=1;i<=kmax;i++){ const r = E.rs[i-1], c = r > 0 ? C.gruen : C.rot; spr(E.x[i], E.y[i], 0.02, 0.11, 0.11, 0, c, 0.6 + (boost[i] || 0), 0, 0, 0, 1); }
   spr(hx, hy, 0.05, 0.9, 0.9, 0, C.gold, 1.1, 0, 3, 5, 1); spr(hx, hy, 0.05, 0.12, 0.12, 0, C.weissWarm, 5, 0, 3, 3, 1);
-  const li = K.ein2(prog(t, 10.8, 13.55)), Lp = E.licht;
+  const li = K.ein2(prog(t, D.akte.aufstieg[0] + 0.2, 13.55)), Lp = E.licht;
   spr(Lp[0], Lp[1], Lp[2], 30, 30, 0, C.gold, 0.35*li, 0, 3, 8, 1);   // groß + steil: keine sichtbare Sprite-Kante
   spr(Lp[0], Lp[1], Lp[2], 2.2, 2.2, 0, C.weissWarm, 3.5*li, 0, 3, 3, 1);
 }
@@ -807,7 +956,7 @@ function szTitel(t, F, r){
   const atem = 0.85 + 0.15*sin((t - 14.2)*2.2);
   spr((r.left + r.right)/2, (r.top + r.bottom)/2, 0, r.width*0.62, r.height*1.25, 0, C.gold, 0.06*atem*K.aus3(prog(t, 14.2, 14.8)), 0, 3, 3, 0);
   if(t > 16.85){ const a = K.sanft(prog(t, 16.9, 17.15))*(1 - K.sanft(prog(t, 17.2, 17.6)));
-    spr(L.w/2, (r.top + r.bottom)/2, 0, L.w*1.1, L.h*0.8, 0, mix3(C.gold, C.weissWarm, 0.5), 0.75*a, 0, 3, 6, 0); F.post.exp *= 1 + 0.35*a; }
+    spr(L.w/2, (r.top + r.bottom)/2, 0, L.w*1.1, L.h*0.8, 0, mix3(C.gold, C.weissWarm, 0.5), 0.45*a, 0, 3, 6, 0); F.post.exp *= 1 + 0.25*a; }
 }
 
 /* --- Zeichnen eines Bildes --- */
@@ -826,7 +975,7 @@ function szene(t, titelRect){
 }
 function bewegung(t){   // Bewegungsunschärfe aus der Kamerafahrt (Verschluss ~1/100 s)
   if(t >= D.akte.drop[0]) return [0,0];
-  const a = kamBei(t), b = kamBei(t - 0.012);
+  const a = kamRoh(t), b = kamRoh(t - 0.012);
   if(a.shot !== b.shot) return [0,0];
   const P = M.neu(), V = M.neu(), V1 = M.neu(), V0 = M.neu();
   vpAus(a, P, V, V1); vpAus(b, P, V, V0);
@@ -877,6 +1026,7 @@ function zeichne(g, F, t){
   U(p,"uRes",[g.w,g.h]); U(p,"uVel",bewegung(t)); U(p,"uT",t); U(p,"uIn",1/out); U(p,"uBS",P.bloom*0.22); U(p,"uSS",P.streak*0.5); U(p,"uExp",P.exp);
   U(p,"uCA",P.ca); U(p,"uKorn",P.korn); U(p,"uVig",P.vig); U(p,"uUW",P.uw); U(p,"uSat",P.sat);
   U(p,"uSchatten",[0.0,0.001,0.0016]); U(p,"uLichter",[1.06,1.0,0.9]); U(p,"uStC",P.stc);
+  const e = fx(t); U(p,"uZoom",e.zoom); U(p,"uGl",e.gl); U(p,"uLeak",e.leak); U(p,"uWv",t < D.akte.drop[0] ? 1 : 0);
   voll();
 }
 
@@ -909,7 +1059,7 @@ function domBauen(){
       </div></div>
     </div>
     <div class="intro-bar top"></div><div class="intro-bar bot"></div>
-    <div class="intro-photo"><i></i><b></b></div>
+    <div class="intro-photo"><i></i><b></b></div><div class="intro-wisch"></div>
   </div>
   <div class="intro-ctl">
     <button type="button" class="intro-btn intro-ton"></button>
@@ -919,7 +1069,7 @@ function domBauen(){
   const q = (s)=> r.querySelector(s);
   const el = { root:r, canvas:q(".intro-canvas"), safe:q(".intro-safe"), a:q(".intro-a"), b:q(".intro-b"), c:q(".intro-c"), t:q(".intro-t"), title:q(".intro-title"),
     t1:q(".t1"), t2:q(".t2"), sweep:q(".intro-sweep"), motto:q(".intro-motto"), daten:q(".intro-daten"), barT:q(".intro-bar.top"), barB:q(".intro-bar.bot"),
-    photo:q(".intro-photo"), photoI:q(".intro-photo i"), photoB:q(".intro-photo b"), ctl:q(".intro-ctl"), ton:q(".intro-ton"), skip:q(".intro-skip") };
+    photo:q(".intro-photo"), wisch:q(".intro-wisch"), photoI:q(".intro-photo i"), photoB:q(".intro-photo b"), ctl:q(".intro-ctl"), ton:q(".intro-ton"), skip:q(".intro-skip") };
   const satz = satzDesTages();
   el.a.textContent = satz.A; el.b.textContent = satz.B; el.motto.textContent = satz.motto;
   el.t1.textContent = D.titel[0]; el.t2.textContent = D.titel[1];
@@ -1014,11 +1164,15 @@ function uebergang(t){
   const el = S.el, hellModus = document.documentElement.getAttribute("data-theme") !== "dark";
   if(S.art === "ruhig"){ const a = 1 - K.sanft(prog(t, 1.6, D.ruhigDauer)); css(el.root, "background-color", `rgba(0,0,0,${a.toFixed(3)})`); css(el.safe, "opacity", a.toFixed(3)); if(t >= 1.6) freigeben(); return; }
   css(el.canvas, "opacity", (1 - K.sanft(prog(t, 17.25, 17.55))).toFixed(3));
-  if(t < 16.95){ css(el.photo, "opacity", "0"); return; }
+  if(t < 16.95){ css(el.photo, "opacity", "0"); css(el.wisch, "opacity", "0"); return; }
   if(!S.hero && !S.heroGeprueft){ S.heroGeprueft = true; S.hero = heroMessen();
     if(S.hero){ const h = S.hero, i = el.photoI; i.style.top = (h.oben*100) + "%"; i.style.bottom = (h.unten*100) + "%"; i.style.backgroundImage = h.bild;
       i.style.backgroundSize = h.groesse; i.style.backgroundPosition = h.lage; i.style.transform = h.tf === "none" ? "" : h.tf; el.photoB.style.backgroundImage = h.nach; } }
-  const ein = K.sanft(prog(t, 17.0, 17.32)), hell = 1 - K.aus3(prog(t, 17.0, 17.45));
+  /* GEÄNDERT (2026-10-16): Whip-Wipe — eine Lichtkante reißt horizontal über das Bild und legt das Foto frei */
+  const ein = 1, wk = K.inOut3(prog(t, 16.98, 17.3)), mp = lerp(-20, 125, wk), hell = 1 - K.aus3(prog(t, 17.0, 17.45));
+  const maske = wk >= 1 ? "none" : `linear-gradient(90deg,#000 ${(mp - 9).toFixed(1)}%,transparent ${(mp + 1).toFixed(1)}%)`;
+  css(el.photo, "-webkit-mask-image", maske); css(el.photo, "mask-image", maske);
+  css(el.wisch, "opacity", (sin(PI*prog(t, 16.98, 17.34))*0.95).toFixed(3)); css(el.wisch, "transform", `translateX(${(L.w*(mp - 4)/100).toFixed(1)}px)`);
   css(el.photo, "filter", hell > 0.01 ? `brightness(${(1 + 1.1*hell).toFixed(3)}) blur(${(hell*8).toFixed(2)}px)` : "none");
   const z = K.inOut3(prog(t, 17.3, 17.9)), raus = K.sanft(prog(t, 17.72, D.dauer));
   let x = 0, y = 0, w = L.w, h = L.h, rad = 0;

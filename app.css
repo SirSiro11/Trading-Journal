@@ -1504,3 +1504,9 @@ html.intro-open, html.intro-open body{overflow:hidden;}
 .intro-set-note{margin-top:12px; font-size:12.5px; line-height:1.45; color:var(--text-faint);}
 .intro-set-note code{font-family:var(--code); font-size:12px;}
 @media (max-width:480px){ .intro-set-row .btn{margin-left:0;} }
+/* NEU (2026-10-16): Lichtkante des Whip-Wipes vom Titel auf das Foto (intro.js, uebergang) */
+.intro-wisch{
+  position:absolute; top:-10%; bottom:-10%; left:0; width:22vw; margin-left:-11vw; opacity:0; pointer-events:none;
+  background:linear-gradient(90deg, rgba(255,206,140,0), rgba(255,230,196,.7) 42%, #fffaf0 50%, rgba(255,230,196,.7) 58%, rgba(255,206,140,0));
+  filter:blur(8px); mix-blend-mode:screen; will-change:transform, opacity;
+}

@@ -65,7 +65,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.10.16c)
+## Aktueller Stand (Version 2026.10.17)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -79,6 +79,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - 2026.10.16: Intro 2.0 — der Akt „Disziplin“ zeigt jetzt Clemens' echten Trade (GBP/USD M5, 08.10.2026, Long 1,31902 → Ziel 1,32176) als 3D-Chart; Daten in `D.trade` im Drehbuch (austauschbar). Neue Übergänge aus `D.effekte`: Kamera-Stöße, Glitch-Schnitte, radiale Zoom-Unschärfe, Lichteinfälle, Sog der Scherben ins Objektiv mit Match-Cut auf den Chart, Whip-Wipe vom Titel aufs Foto. Satz 5: „Aber jeder bestimmt sein Risiko.“ / „Plan your trade. Trade your plan.“
 - 2026.10.16b: Der Chart im Akt „Disziplin“ ist jetzt 1:1 aus Clemens' TradingView-Screenshot vermessen: 232 Kerzen (22:50–18:05), alle Zonen, Linien, Labels (5, 15, 2, C), Preis-Etiketten und die Long-Box (Entry 1,31902, Ziel 1,32170, lila Stop-Zone). Die Daten stehen in `D.trade` (Kerzen als O,H,L,C in 0,00001 über 1,3170, Zeiten als „HH:MM“). Die Totale zeigt denselben Bildausschnitt wie der Screenshot, Text C liegt im leeren Streifen darunter.
 - 2026.10.16c: **Intro freigeschaltet (Phase 3):** `INTRO_LIVE = true` in `intro.js`. Nach jedem echten Entsperren läuft das Intro gemäß Einstellung `tj_intro_v1` (Standard „Immer“; „Einmal am Tag, sonst kurz“, „Nur Kurzfassung“, „Aus“ — je Gerät).
+- 2026.10.17: **Intro-Texte auf Englisch** (Wunsch Clemens): alle 5 Textsätze in `D.saetze` (rotieren täglich über `satzDesTages()`), Datenzeile „Trade #{n} awaits.“, Pille „Skip“, Ton-Knopf „Sound on/off“; `lang="en"` am Intro. Ausnahme von Regel 1 (Sprache) nur für das Intro, die Einstellungen bleiben deutsch.
 
 **Offen / bekannt:**
 - Am iPhone noch prüfen (Intro): Ton nach dem Entsperren, Stummschalter, flüssige Wiedergabe (60 fps), Safe Areas in der PWA, Lesbarkeit der Texte, Match-Cut auf den Hero.

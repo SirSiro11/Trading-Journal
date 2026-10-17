@@ -48,15 +48,15 @@ const D = {
     motto:{ von:14.95, ein:0.6 },
     daten:{ von:15.35, ein:0.5 }
   },
-  saetze: [
-    { A:"Der Markt ist Lärm.", B:"Verluste gehören dazu.", C:"Plan. Geduld. Ausführung.", motto:"Prozess vor Ergebnis." },
-    { A:"Jeder will den großen Move.", B:"Wenige überstehen den Drawdown.", C:"Regeln. Risiko. Ruhe.", motto:"Disziplin schlägt Talent." },
-    { A:"Gier schreit. Angst flüstert.", B:"Der Stop ist kein Fehler.", C:"Warten. Bestätigen. Handeln.", motto:"Tausend Trades zählen. Nicht einer." },
-    { A:"Der Markt schuldet dir nichts.", B:"Jeder Verlust ist Lehrgeld.", C:"Setup. Stop. Ziel.", motto:"Heute zählt nur dein Prozess." },
-    { A:"Niemand gewinnt jeden Trade.", B:"Aber jeder bestimmt sein Risiko.", C:"Plan your trade. Trade your plan.", motto:"Konstanz ist der Edge." }   // GEÄNDERT (2026-10-16)
+  saetze: [   // GEÄNDERT (2026-10-17): alle Intro-Texte auf Englisch (Wunsch Clemens)
+    { A:"The market is noise.", B:"Losses are part of the game.", C:"Plan. Patience. Execution.", motto:"Process over outcome." },
+    { A:"Everyone wants the big move.", B:"Few survive the drawdown.", C:"Rules. Risk. Calm.", motto:"Discipline beats talent." },
+    { A:"Greed screams. Fear whispers.", B:"A stop is not a mistake.", C:"Wait. Confirm. Execute.", motto:"A thousand trades count. Not one." },
+    { A:"The market owes you nothing.", B:"Every loss is tuition.", C:"Setup. Stop. Target.", motto:"Only your process counts today." },
+    { A:"Nobody wins every trade.", B:"But everyone controls their risk.", C:"Plan your trade. Trade your plan.", motto:"Consistency is the edge." }
   ],
   titel: ["TRADING", "JOURNAL"],
-  datenzeile: "Trade Nr. {n} wartet.",              // nur Anzahl, nie Gewinn/Verlust
+  datenzeile: "Trade #{n} awaits.",   // GEÄNDERT (2026-10-17): Englisch              // nur Anzahl, nie Gewinn/Verlust
   farben: {   // sRGB; Rot/Grün bewusst entsättigt; Session-Farben = --sess-ldn / --sess-nyc (dunkel)
     gold:"#f2c27a", weissWarm:"#fff0d6", teal:"#0e3943", tealHell:"#3d8c9a",
     rot:"#b8473e", gruen:"#5aae84", ldn:"#409cff", nyc:"#30d158", lichtHell:"#f3ece1", lila:"#8c78d0", silber:"#c9d3d6"
@@ -1036,7 +1036,7 @@ function datenzeile(){
 }
 function domBauen(){
   const r = document.createElement("div");
-  r.className = "intro"; r.id = "introRoot";
+  r.className = "intro"; r.id = "introRoot"; r.lang = "en";   // GEÄNDERT (2026-10-17): Intro-Texte englisch
   r.innerHTML = `<div class="intro-stage" aria-hidden="true">
     <canvas class="intro-canvas"></canvas>
     <div class="intro-safe">
@@ -1053,7 +1053,7 @@ function domBauen(){
   </div>
   <div class="intro-ctl">
     <button type="button" class="intro-btn intro-ton"></button>
-    <button type="button" class="intro-btn intro-skip">Überspringen ${SVG_WEITER}</button>
+    <button type="button" class="intro-btn intro-skip">Skip ${SVG_WEITER}</button>
   </div>`;
   document.body.insertBefore(r, document.body.firstChild);   // zuerst im Tab-Fokus
   const q = (s)=> r.querySelector(s);
@@ -1255,7 +1255,7 @@ function tonRuhig(ctx){   // reduzierte Bewegung: nur ein weicher Akkord
   [110, 164.81, 220, 277.18].forEach(f=>{ const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = f; o.connect(lp); o.start(A.t0); o.stop(A.t0 + 3.5); });
   A.plan = []; A.idx = 0; return A;
 }
-function tonKnopf(){ const b = S.el.ton; b.innerHTML = S.tonAn ? SVG_TON_AN : SVG_TON_AUS; b.setAttribute("aria-label", S.tonAn ? "Ton ausschalten" : "Ton einschalten"); b.setAttribute("aria-pressed", S.tonAn ? "false" : "true"); b.title = S.tonAn ? "Ton aus" : "Ton an"; b.hidden = !S.ctx; }
+function tonKnopf(){ const b = S.el.ton; b.innerHTML = S.tonAn ? SVG_TON_AN : SVG_TON_AUS; b.setAttribute("aria-label", S.tonAn ? "Sound off" : "Sound on"); b.setAttribute("aria-pressed", S.tonAn ? "false" : "true"); b.title = S.tonAn ? "Sound off" : "Sound on"; b.hidden = !S.ctx; }
 function groesse(){
   if(!S.g) return;
   const dpr = min(window.devicePixelRatio || 1, 2);

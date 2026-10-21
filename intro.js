@@ -56,7 +56,7 @@ const D = {
     { A:"The market owes you nothing.", B:"Every loss is tuition.", C:"Setup. Stop. Target.", motto:"Only your process counts today." },
     { A:"Nobody wins every trade.", B:"But everyone controls their risk.", C:"Plan your trade. Trade your plan.", motto:"Consistency is the edge." }
   ],
-  gruss: { oben:"Welcome back,", name:"Meister Clemens" },   // NEU (2026-10-21)
+  gruss: { oben:"Welcome back,", name:"Meister Clemens", unten:"Remember..." },   // NEU (2026-10-21); GEÄNDERT (2026-10-21c): „unten“ steht unter der Nulllinie
   titel: ["TRADING", "JOURNAL"],
   datenzeile: "Trade #{n} awaits.",   // GEÄNDERT (2026-10-17): Englisch              // nur Anzahl, nie Gewinn/Verlust
   farben: {   // sRGB; Rot/Grün bewusst entsättigt; Session-Farben = --sess-ldn / --sess-nyc (dunkel)
@@ -1109,6 +1109,7 @@ function domBauen(){
     <canvas class="intro-canvas"></canvas>
     <div class="intro-safe">
       <div class="intro-slot intro-slot-g"><div class="intro-txt intro-g"><div class="intro-g1"></div><div class="intro-g2"></div></div></div>
+      <div class="intro-slot intro-slot-g3"><div class="intro-txt intro-g3"></div></div>
       <div class="intro-slot intro-slot-a"><div class="intro-txt intro-a"></div></div>
       <div class="intro-slot intro-slot-b"><div class="intro-txt intro-b"></div></div>
       <div class="intro-slot intro-slot-c"><div class="intro-c"></div></div>
@@ -1127,11 +1128,13 @@ function domBauen(){
   </div>`;
   document.body.insertBefore(r, document.body.firstChild);   // zuerst im Tab-Fokus
   const q = (s)=> r.querySelector(s);
-  const el = { root:r, canvas:q(".intro-canvas"), safe:q(".intro-safe"), g:q(".intro-g"), g1:q(".intro-g1"), g2:q(".intro-g2"), a:q(".intro-a"), b:q(".intro-b"), c:q(".intro-c"), t:q(".intro-t"), title:q(".intro-title"),
+  const el = { root:r, canvas:q(".intro-canvas"), safe:q(".intro-safe"), g:q(".intro-g"), g1:q(".intro-g1"), g2:q(".intro-g2"), g3:q(".intro-g3"), a:q(".intro-a"), b:q(".intro-b"), c:q(".intro-c"), t:q(".intro-t"), title:q(".intro-title"),
     t1:q(".t1"), t2:q(".t2"), sweep:q(".intro-sweep"), motto:q(".intro-motto"), daten:q(".intro-daten"), barT:q(".intro-bar.top"), barB:q(".intro-bar.bot"),
     photo:q(".intro-photo"), wisch:q(".intro-wisch"), photoI:q(".intro-photo i"), photoB:q(".intro-photo b"), ctl:q(".intro-ctl"), ton:q(".intro-ton"), skip:q(".intro-skip"), hud:q(".intro-hud"), hudV:q(".intro-hud-v"), hudN:q(".intro-hud-n") };
   const satz = satzDesTages();
   el.g1.textContent = D.gruss.oben; el.g2.textContent = D.gruss.name;
+  { const m = /^(.*?)(\.*)$/.exec(D.gruss.unten || ""); el.g3.textContent = m[1];   // NEU (2026-10-21c): Punkte am Ende erscheinen einzeln
+    el.g3p = m[2].split("").map(()=>{ const p = document.createElement("span"); p.textContent = "."; p.style.opacity = "0"; el.g3.appendChild(p); return p; }); }
   el.a.textContent = satz.A; el.b.textContent = satz.B; el.motto.textContent = satz.motto;
   el.t1.textContent = D.titel[0]; el.t2.textContent = D.titel[1];
   el.cw = woerter(satz.C).map(w=>{ const s = document.createElement("span"); s.textContent = w; el.c.appendChild(s); return s; });
@@ -1161,13 +1164,17 @@ function texte(t){
   // NEU (2026-10-21): Begrüßung — Zeile 1 blendet ein, der Name zieht von unscharf zu scharf nach; beim Chaos-Einsatz Glitch und weg
   { const G = Tx.G, k1 = K.ausExpo(prog(t, G.von, G.von + G.ein*1.6)), k2 = K.ausExpo(prog(t, G.von + 0.2, G.von + 0.2 + G.ein*1.8)), aus = prog(t, G.schnitt, G.bis);
     const e = ruhig || t >= G.bis ? 0 : 1 - K.ein2(aus);
-    css(el.g, "opacity", e.toFixed(3));
+    css(el.g, "opacity", e.toFixed(3)); if(e <= 0) css(el.g3, "opacity", "0");
     if(e > 0){
       const gl = t >= G.schnitt && t < G.schnitt + 0.09, jx = gl ? (sin(t*173) > 0 ? 1 : -1)*(8 + 10*abs(sin(t*97))) : 0;
       css(el.g, "transform", `translateX(${jx.toFixed(1)}px) scale(${lerp(1, 1.08, K.ein2(aus)).toFixed(4)})`);
       css(el.g, "filter", aus > 0 ? `blur(${(aus*12).toFixed(2)}px)` : "none");
       css(el.g, "text-shadow", gl ? "-6px 0 rgba(255,60,60,.75), 6px 0 rgba(60,200,255,.75)" : "");
       css(el.g1, "opacity", k1.toFixed(3)); css(el.g1, "transform", `translateY(${((1-k1)*6).toFixed(2)}px)`);
+      const k3 = K.ausExpo(prog(t, G.von + 0.4, G.von + 0.4 + G.ein*1.6));   // NEU (2026-10-21c): „Remember…“ unter der Linie, gleiches Verhalten
+      css(el.g3, "opacity", (k3*e).toFixed(3)); css(el.g3, "transform", `translate(${jx.toFixed(1)}px, ${((1-k3)*-6).toFixed(2)}px) scale(${lerp(1, 1.08, K.ein2(aus)).toFixed(4)})`);
+      css(el.g3, "filter", aus > 0 ? `blur(${(aus*12).toFixed(2)}px)` : "none"); css(el.g3, "text-shadow", gl ? "-6px 0 rgba(255,60,60,.75), 6px 0 rgba(60,200,255,.75)" : "");
+      el.g3p.forEach((p, i)=> css(p, "opacity", K.aus3(prog(t, G.von + 0.6 + i*0.12, G.von + 0.7 + i*0.12)).toFixed(3)));
       css(el.g2, "opacity", k2.toFixed(3)); css(el.g2, "filter", k2 < 1 ? `blur(${((1-k2)*14).toFixed(2)}px)` : "none"); css(el.g2, "transform", `scale(${lerp(1.05, 1, k2).toFixed(4)})`);
     } }
   // A: von unscharf zu scharf, leicht zurückweichend (Laufweite nicht animieren: würde den Zeilenumbruch verschieben)

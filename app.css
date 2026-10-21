@@ -1443,6 +1443,9 @@ html.intro-open, html.intro-open body{overflow:hidden;}
 /* NEU (2026-10-21): Begrüßung in der Stille, über der Nulllinie */
 .intro-slot-g{top:14%; bottom:52%;}
 .intro-g{text-align:center;}
+.intro-slot-g3{top:54%; bottom:32%;}   /* NEU (2026-10-21c): „Remember…“ unter der Nulllinie, Format wie „Welcome back,“ */
+.intro-g3{font-size:clamp(12px, .7vw + .9vh, 19px); font-weight:500; letter-spacing:.34em; padding-left:.34em; text-transform:uppercase; color:rgba(242,194,122,.9);}
+.intro-g3 span{letter-spacing:.34em;}
 .intro-g1{font-size:clamp(12px, .7vw + .9vh, 19px); font-weight:500; letter-spacing:.34em; padding-left:.34em; text-transform:uppercase; color:rgba(242,194,122,.9); opacity:0; will-change:opacity, transform;}
 .intro-g2{margin-top:.28em; font-size:clamp(30px, 2.8vw + 1.3vh, 58px); font-weight:300; letter-spacing:.02em; line-height:1.1; color:#f6f1e7; opacity:0; will-change:opacity, transform, filter;}
 .intro-slot-b{top:62%; bottom:3%;}

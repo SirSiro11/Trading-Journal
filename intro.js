@@ -28,7 +28,10 @@ const D = {
   obergrenze: 22,         // harte Obergrenze in Sekunden (Sicherheitsnetz)
   kurzAb: 13.7,           // Kurzfassung startet hier: Drop → Titel → Übergang (~4,4 s)
   ruhigDauer: 2.2,        // prefers-reduced-motion: ruhige Titelkarte
-  akte: {                 // [von, bis] in Sekunden
+  // NEU (2026-10-21d): Die erste Sequenz (Stille) ist 1 s länger. Alle Zeiten im Drehbuch bleiben „Drehbuchzeit“; die Laufzeit
+  // (Uhr, Ton, Ende) läuft zwischen von und bis in weicher Zeitlupe und ist danach um plus verschoben — siehe drehbuchZeit()/laufZeit().
+  dehnung: { von:0.6, bis:1.2, plus:1.0 },
+  akte: {                 // [von, bis] in Sekunden (Drehbuchzeit)
     stille:[0, 1.2], chaos:[1.2, 4.4], verlust:[4.4, 6.6], disziplin:[6.6, 11.0],   // GEÄNDERT (2026-10-16): mehr Zeit für den Trade
     aufstieg:[11.0, 13.6], drop:[13.6, 14.2], titel:[14.2, 16.85], uebergang:[16.85, 18.1]
   },
@@ -41,7 +44,7 @@ const D = {
   zielErreicht: 10.2,
   staccato: { von:11.15, bis:13.55, start:0.27, ende:0.11 },  // Abstand der Pulse (s) wird kürzer
   texte: {          // jede Tafel ist mindestens 1,0 s voll lesbar
-    G:{ von:0.06, bis:1.42, ein:0.4, schnitt:1.2 },  // NEU (2026-10-21): Begrüßung in der Stille, der Chaos-Einsatz reißt sie weg
+    G:{ von:0.06, bis:2.42, ein:0.45, schnitt:2.2 }, // NEU (2026-10-21), GEÄNDERT (2026-10-21d): Begrüßung in der Stille — in LAUFZEIT; der Chaos-Einsatz (Laufzeit 2,2) reißt sie weg
     A:{ von:1.9, bis:4.15, ein:0.5, aus:0.35 },
     B:{ von:4.75, bis:6.6, ein:0.45, aus:0.3 },
     C:{ bis:11.05, ein:0.3, aus:0.3 },             // Wörter erscheinen auf den beats
@@ -110,6 +113,13 @@ const K = {   // Bewegungskurven — nie linear
   inOut3:k=>k<.5?4*k*k*k:1-pow(-2*k+2,3)/2,
   ausExpo:k=>k>=1?1:1-pow(2,-10*k)
 };
+// NEU (2026-10-21d): Laufzeit ↔ Drehbuchzeit. Zwischen D.dehnung.von und .bis läuft die Szene in Zeitlupe (Hermite-Kurve,
+// an beiden Enden Tempo 1 — kein Ruck), danach ist alles um D.dehnung.plus verschoben.
+const DH = D.dehnung, DH_L = DH.bis - DH.von, DH_N = DH_L + DH.plus, DH_M = DH_N/DH_L;
+function drehbuchZeit(t){ if(t <= DH.von) return t; if(t >= DH.von + DH_N) return t - DH.plus;
+  const s = (t - DH.von)/DH_N, h = (s*s*s - 2*s*s + s)*DH_M + (-2*s*s*s + 3*s*s) + (s*s*s - s*s)*DH_M; return DH.von + DH_L*h; }
+function laufZeit(l){ if(l <= DH.von) return l; if(l >= DH.bis) return l + DH.plus;
+  let a = DH.von, b = DH.von + DH_N; for(let i=0;i<40;i++){ const m = (a + b)/2; if(drehbuchZeit(m) < l) a = m; else b = m; } return (a + b)/2; }
 function huelle(t,von,bis,ein,aus){ if(t<=von||t>=bis) return 0; return min(K.aus3(prog(t,von,von+ein)), 1-K.sanft(prog(t,bis-aus,bis))); }
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 function hexLin(h){ const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255].map(c=>pow(c/255,2.2)); }
@@ -172,7 +182,7 @@ const sv = (p, v, t)=> p.setValueAtTime(v, t), lr = (p, v, t)=> p.linearRampToVa
 function kurve(n, fn){ const c = new Float32Array(n); for(let i=0;i<n;i++) c[i] = fn(i/(n-1)*2-1); return c; }
 // Mischpult: Quellen → Bus (+ Hall-Send) → Tiefpass („unter Wasser“) → Drop-Tor → Limiter → Master → Soft-Clip (−1 dBFS)
 function baueTon(ctx, t0, startAb){
-  const A = { ctx, t0, startAb, T:s=> t0 + (s - startAb), r:mulberry32(4711) };
+  const n0 = laufZeit(startAb), A = { ctx, t0, startAb, neu0:n0, T:s=> t0 + (laufZeit(s) - n0), r:mulberry32(4711) };   // GEÄNDERT (2026-10-21d): Drehbuchzeit → Laufzeit
   const sr = ctx.sampleRate;
   A.nb = ctx.createBuffer(1, sr*2, sr);
   const nd = A.nb.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i] = A.r()*2-1;
@@ -330,7 +340,7 @@ function tonStumm(A, aus){ try{ const g = A.stumm.gain, t = A.ctx.currentTime; g
 // Für Tests/Abnahme: rendert den Ton offline (Spitzenpegel, WAV, Knackser beim Überspringen)
 function tonOffline(opt){
   opt = opt || {};
-  const sr = opt.sr || 48000, dauer = opt.dauer || 21.5;
+  const sr = opt.sr || 48000, dauer = opt.dauer || 22.5;   // GEÄNDERT (2026-10-21d): +1 s Stille
   const c = new OfflineAudioContext(2, ceil(sr*dauer), sr);
   const A = baueTon(c, 0.05, opt.startAb || 0);
   tonPlanen(A, 1e9);
@@ -1158,23 +1168,23 @@ function layoutMessen(){
   ti.style.fontSize = floor(fs) + "px"; ti._c = null;
   S.titelRect = null;
 }
-function texte(t){
+function texte(t, tl){
   const el = S.el, Tx = D.texte, ruhig = S.art === "ruhig";
   const blurTxt = (n, k, aus, st)=> css(n, "filter", (k < 1 || aus > 0) ? `blur(${((1-k)*st + aus*6).toFixed(2)}px)` : "none");
   // NEU (2026-10-21): Begrüßung — Zeile 1 blendet ein, der Name zieht von unscharf zu scharf nach; beim Chaos-Einsatz Glitch und weg
-  { const G = Tx.G, k1 = K.ausExpo(prog(t, G.von, G.von + G.ein*1.6)), k2 = K.ausExpo(prog(t, G.von + 0.2, G.von + 0.2 + G.ein*1.8)), aus = prog(t, G.schnitt, G.bis);
-    const e = ruhig || t >= G.bis ? 0 : 1 - K.ein2(aus);
+  { const G = Tx.G, k1 = K.ausExpo(prog(tl, G.von, G.von + G.ein*1.6)), k2 = K.ausExpo(prog(tl, G.von + 0.3, G.von + 0.3 + G.ein*1.8)), aus = prog(tl, G.schnitt, G.bis);
+    const e = ruhig || tl >= G.bis ? 0 : 1 - K.ein2(aus);
     css(el.g, "opacity", e.toFixed(3)); if(e <= 0) css(el.g3, "opacity", "0");
     if(e > 0){
-      const gl = t >= G.schnitt && t < G.schnitt + 0.09, jx = gl ? (sin(t*173) > 0 ? 1 : -1)*(8 + 10*abs(sin(t*97))) : 0;
+      const gl = tl >= G.schnitt && tl < G.schnitt + 0.09, jx = gl ? (sin(tl*173) > 0 ? 1 : -1)*(8 + 10*abs(sin(tl*97))) : 0;
       css(el.g, "transform", `translateX(${jx.toFixed(1)}px) scale(${lerp(1, 1.08, K.ein2(aus)).toFixed(4)})`);
       css(el.g, "filter", aus > 0 ? `blur(${(aus*12).toFixed(2)}px)` : "none");
       css(el.g, "text-shadow", gl ? "-6px 0 rgba(255,60,60,.75), 6px 0 rgba(60,200,255,.75)" : "");
       css(el.g1, "opacity", k1.toFixed(3)); css(el.g1, "transform", `translateY(${((1-k1)*6).toFixed(2)}px)`);
-      const k3 = K.ausExpo(prog(t, G.von + 0.4, G.von + 0.4 + G.ein*1.6));   // NEU (2026-10-21c): „Remember…“ unter der Linie, gleiches Verhalten
+      const k3 = K.ausExpo(prog(tl, G.von + 0.75, G.von + 0.75 + G.ein*1.6));   // NEU (2026-10-21c): „Remember…“ unter der Linie, gleiches Verhalten
       css(el.g3, "opacity", (k3*e).toFixed(3)); css(el.g3, "transform", `translate(${jx.toFixed(1)}px, ${((1-k3)*-6).toFixed(2)}px) scale(${lerp(1, 1.08, K.ein2(aus)).toFixed(4)})`);
       css(el.g3, "filter", aus > 0 ? `blur(${(aus*12).toFixed(2)}px)` : "none"); css(el.g3, "text-shadow", gl ? "-6px 0 rgba(255,60,60,.75), 6px 0 rgba(60,200,255,.75)" : "");
-      el.g3p.forEach((p, i)=> css(p, "opacity", K.aus3(prog(t, G.von + 0.6 + i*0.12, G.von + 0.7 + i*0.12)).toFixed(3)));
+      el.g3p.forEach((p, i)=> css(p, "opacity", K.aus3(prog(tl, G.von + 1.1 + i*0.17, G.von + 1.22 + i*0.17)).toFixed(3)));
       css(el.g2, "opacity", k2.toFixed(3)); css(el.g2, "filter", k2 < 1 ? `blur(${((1-k2)*14).toFixed(2)}px)` : "none"); css(el.g2, "transform", `scale(${lerp(1.05, 1, k2).toFixed(4)})`);
     } }
   // A: von unscharf zu scharf, leicht zurückweichend (Laufweite nicht animieren: würde den Zeilenumbruch verschieben)
@@ -1316,8 +1326,8 @@ function starten(){
       if(!S.g && S.art !== "bild") S.art = "kurz";
       el.root.classList.toggle("ohne-gl", !S.g);
     }
-    S.startAb = S.art === "kurz" ? D.kurzAb : S.art === "bild" ? S.bildT : 0;
-    S.ende = S.art === "ruhig" ? D.ruhigDauer : D.dauer;
+    S.startAb = S.art === "kurz" ? laufZeit(D.kurzAb) : S.art === "bild" ? S.bildT : 0;   // GEÄNDERT (2026-10-21d): S.startAb, S.ende, S.t in Laufzeit
+    S.ende = S.art === "ruhig" ? D.ruhigDauer : laufZeit(D.dauer);
     S.skala = 1; groesse();
     const d = new Date(); W = baueWelt(d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(), L.hoch); S.weltHoch = L.hoch;
     // Bedienung
@@ -1334,12 +1344,12 @@ function starten(){
     if(S.ctx && S.art !== "bild"){
       try{
         if(S.art === "ruhig"){ S.A = tonRuhig(S.ctx); }
-        else { S.A = baueTon(S.ctx, S.ctx.currentTime + 0.06, S.startAb); }
+        else { S.A = baueTon(S.ctx, S.ctx.currentTime + 0.06, drehbuchZeit(S.startAb)); }
         if(!S.tonAn) tonStumm(S.A, true);
       }catch(err){ console.warn("Intro: Ton nicht verfügbar", err); S.A = null; }
     }
     S.real0 = performance.now();
-    if(S.art !== "bild") S.timers.push(setTimeout(()=> beenden(), D.obergrenze*1000));
+    if(S.art !== "bild") S.timers.push(setTimeout(()=> beenden(), (D.obergrenze + DH.plus)*1000));
     S.timers.push(setTimeout(()=>{ if(S && S.el) S.el.ctl.classList.add("is-on"); }, 800));
     S.raf = requestAnimationFrame(schleife);
   }catch(err){ console.warn("Intro: Start fehlgeschlagen", err); abbrechen(); }
@@ -1380,7 +1390,7 @@ function zeit(now){
   let t = S.startAb + (now - S.real0)/1000;
   const A = S.A;
   if(A && A.ctx.state === "running" && !S.ohneAudioUhr){   // Das Bild folgt dem Ton: sanft auf die Audio-Uhr nachführen
-    const tc = A.startAb + (A.ctx.currentTime - A.t0);   // reine Audio-Uhr
+    const tc = (A.neu0 != null ? A.neu0 : A.startAb) + (A.ctx.currentTime - A.t0);   // reine Audio-Uhr (Laufzeit)
     if(t - tc > 0.5) S.ohneAudioUhr = true;   // Ton hängt (überlastetes Gerät): Bild läuft auf der Echtzeit weiter, statt mit hängen zu bleiben
     else { const d = tc - (A.ctx.outputLatency || 0) - (t + S.korr); if(abs(d) > 0.15) S.korr += d; else S.korr += d*0.06; }   // Ziel: was gerade zu hören ist (inkl. Bluetooth-Latenz)
   }
@@ -1394,16 +1404,17 @@ function schleife(now){
     const t = zeit(now);
     messen(now);
     if(t >= S.ende){ beenden(); return; }
-    if(S.A && S.art !== "ruhig") tonPlanen(S.A, t + 0.9);
+    if(S.A && S.art !== "ruhig") tonPlanen(S.A, drehbuchZeit(t + 0.9));
     if(S.art === "bild" && S.gezeigt === t) return;   // Standbild: nur neu zeichnen, wenn sich etwas ändert
     S.gezeigt = t;
     const c0 = performance.now(); bild(t); if(S) S.cpu.push(performance.now() - c0);
   }catch(err){ console.warn("Intro: Fehler im Ablauf", err); abbrechen(); }
 }
-function bild(t){
-  S.t = t;
+function bild(tl){   // GEÄNDERT (2026-10-21d): tl = Laufzeit; Bild, Balken, Texte und Übergang rechnen in Drehbuchzeit
+  S.t = tl;
+  const t = S.art === "ruhig" ? tl : drehbuchZeit(tl);
   balken(t);
-  texte(t);
+  texte(t, tl);
   if(S.g){ const F = szene(t, t >= D.akte.titel[0] && t < 17.6 ? titelRect() : null); zeichne(S.g, F, t); }
   uebergang(t);
 }

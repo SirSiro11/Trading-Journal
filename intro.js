@@ -41,6 +41,7 @@ const D = {
   zielErreicht: 10.2,
   staccato: { von:11.15, bis:13.55, start:0.27, ende:0.11 },  // Abstand der Pulse (s) wird kürzer
   texte: {          // jede Tafel ist mindestens 1,0 s voll lesbar
+    G:{ von:0.06, bis:1.42, ein:0.4, schnitt:1.2 },  // NEU (2026-10-21): Begrüßung in der Stille, der Chaos-Einsatz reißt sie weg
     A:{ von:1.9, bis:4.15, ein:0.5, aus:0.35 },
     B:{ von:4.75, bis:6.6, ein:0.45, aus:0.3 },
     C:{ bis:11.05, ein:0.3, aus:0.3 },             // Wörter erscheinen auf den beats
@@ -55,6 +56,7 @@ const D = {
     { A:"The market owes you nothing.", B:"Every loss is tuition.", C:"Setup. Stop. Target.", motto:"Only your process counts today." },
     { A:"Nobody wins every trade.", B:"But everyone controls their risk.", C:"Plan your trade. Trade your plan.", motto:"Consistency is the edge." }
   ],
+  gruss: { oben:"Welcome back,", name:"Meister Clemens" },   // NEU (2026-10-21)
   titel: ["TRADING", "JOURNAL"],
   datenzeile: "Trade #{n} awaits.",   // GEÄNDERT (2026-10-17): Englisch              // nur Anzahl, nie Gewinn/Verlust
   farben: {   // sRGB; Rot/Grün bewusst entsättigt; Session-Farben = --sess-ldn / --sess-nyc (dunkel)
@@ -1106,6 +1108,7 @@ function domBauen(){
   r.innerHTML = `<div class="intro-stage" aria-hidden="true">
     <canvas class="intro-canvas"></canvas>
     <div class="intro-safe">
+      <div class="intro-slot intro-slot-g"><div class="intro-txt intro-g"><div class="intro-g1"></div><div class="intro-g2"></div></div></div>
       <div class="intro-slot intro-slot-a"><div class="intro-txt intro-a"></div></div>
       <div class="intro-slot intro-slot-b"><div class="intro-txt intro-b"></div></div>
       <div class="intro-slot intro-slot-c"><div class="intro-c"></div></div>
@@ -1124,10 +1127,11 @@ function domBauen(){
   </div>`;
   document.body.insertBefore(r, document.body.firstChild);   // zuerst im Tab-Fokus
   const q = (s)=> r.querySelector(s);
-  const el = { root:r, canvas:q(".intro-canvas"), safe:q(".intro-safe"), a:q(".intro-a"), b:q(".intro-b"), c:q(".intro-c"), t:q(".intro-t"), title:q(".intro-title"),
+  const el = { root:r, canvas:q(".intro-canvas"), safe:q(".intro-safe"), g:q(".intro-g"), g1:q(".intro-g1"), g2:q(".intro-g2"), a:q(".intro-a"), b:q(".intro-b"), c:q(".intro-c"), t:q(".intro-t"), title:q(".intro-title"),
     t1:q(".t1"), t2:q(".t2"), sweep:q(".intro-sweep"), motto:q(".intro-motto"), daten:q(".intro-daten"), barT:q(".intro-bar.top"), barB:q(".intro-bar.bot"),
     photo:q(".intro-photo"), wisch:q(".intro-wisch"), photoI:q(".intro-photo i"), photoB:q(".intro-photo b"), ctl:q(".intro-ctl"), ton:q(".intro-ton"), skip:q(".intro-skip"), hud:q(".intro-hud"), hudV:q(".intro-hud-v"), hudN:q(".intro-hud-n") };
   const satz = satzDesTages();
+  el.g1.textContent = D.gruss.oben; el.g2.textContent = D.gruss.name;
   el.a.textContent = satz.A; el.b.textContent = satz.B; el.motto.textContent = satz.motto;
   el.t1.textContent = D.titel[0]; el.t2.textContent = D.titel[1];
   el.cw = woerter(satz.C).map(w=>{ const s = document.createElement("span"); s.textContent = w; el.c.appendChild(s); return s; });
@@ -1154,6 +1158,18 @@ function layoutMessen(){
 function texte(t){
   const el = S.el, Tx = D.texte, ruhig = S.art === "ruhig";
   const blurTxt = (n, k, aus, st)=> css(n, "filter", (k < 1 || aus > 0) ? `blur(${((1-k)*st + aus*6).toFixed(2)}px)` : "none");
+  // NEU (2026-10-21): Begrüßung — Zeile 1 blendet ein, der Name zieht von unscharf zu scharf nach; beim Chaos-Einsatz Glitch und weg
+  { const G = Tx.G, k1 = K.ausExpo(prog(t, G.von, G.von + G.ein*1.6)), k2 = K.ausExpo(prog(t, G.von + 0.2, G.von + 0.2 + G.ein*1.8)), aus = prog(t, G.schnitt, G.bis);
+    const e = ruhig || t >= G.bis ? 0 : 1 - K.ein2(aus);
+    css(el.g, "opacity", e.toFixed(3));
+    if(e > 0){
+      const gl = t >= G.schnitt && t < G.schnitt + 0.09, jx = gl ? (sin(t*173) > 0 ? 1 : -1)*(8 + 10*abs(sin(t*97))) : 0;
+      css(el.g, "transform", `translateX(${jx.toFixed(1)}px) scale(${lerp(1, 1.08, K.ein2(aus)).toFixed(4)})`);
+      css(el.g, "filter", aus > 0 ? `blur(${(aus*12).toFixed(2)}px)` : "none");
+      css(el.g, "text-shadow", gl ? "-6px 0 rgba(255,60,60,.75), 6px 0 rgba(60,200,255,.75)" : "");
+      css(el.g1, "opacity", k1.toFixed(3)); css(el.g1, "transform", `translateY(${((1-k1)*6).toFixed(2)}px)`);
+      css(el.g2, "opacity", k2.toFixed(3)); css(el.g2, "filter", k2 < 1 ? `blur(${((1-k2)*14).toFixed(2)}px)` : "none"); css(el.g2, "transform", `scale(${lerp(1.05, 1, k2).toFixed(4)})`);
+    } }
   // A: von unscharf zu scharf, leicht zurückweichend (Laufweite nicht animieren: würde den Zeilenumbruch verschieben)
   { const a = Tx.A, e = ruhig ? 0 : huelle(t, a.von, a.bis, a.ein, a.aus), k = K.ausExpo(prog(t, a.von, a.von + a.ein*1.8)), aus = prog(t, a.bis - a.aus, a.bis);
     css(el.a, "opacity", e.toFixed(3)); if(e > 0){ blurTxt(el.a, k, aus, 16); css(el.a, "transform", `scale(${lerp(1.06, 1, k).toFixed(4)})`); } }

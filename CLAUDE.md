@@ -65,7 +65,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.10.21)
+## Aktueller Stand (Version 2026.10.21b)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -81,6 +81,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - 2026.10.16c: **Intro freigeschaltet (Phase 3):** `INTRO_LIVE = true` in `intro.js`. Nach jedem echten Entsperren läuft das Intro gemäß Einstellung `tj_intro_v1` (Standard „Immer“; „Einmal am Tag, sonst kurz“, „Nur Kurzfassung“, „Aus“ — je Gerät).
 - 2026.10.17: **Intro-Texte auf Englisch** (Wunsch Clemens): alle 5 Textsätze in `D.saetze` (rotieren täglich über `satzDesTages()`), Datenzeile „Trade #{n} awaits.“, Pille „Skip“, Ton-Knopf „Sound on/off“; `lang="en"` am Intro. Ausnahme von Regel 1 (Sprache) nur für das Intro, die Einstellungen bleiben deutsch.
 - 2026.10.21: **Aufstieg (11,0–13,6 s) neu:** Kamera reißt aus dem Trade zurück und fährt dem Kopf der Equity-Kurve nach, zum Schluss die ganze Kurve im Licht. Kurve mit Lichtvorhang, R-Stufen (+25R …, Achse wandert mit dem Kopf), Drawdowns rot mit gestrichelter Hochwassermarke, Lichtsäulen bei neuen Allzeithochs, Funken, Komet-Kopf, Zähler oben links (`.intro-hud`: Equity in R, Trades). Die Kurve ist ein erfundenes, realistisches Konto (Seed = Datum, endet auf dem Allzeithoch); Zeitachse `EQ_T`/`eqKopf()` in `intro.js`.
+- 2026.10.21b: **Begrüßung** in der Stille (0,06–1,42 s) über der Nulllinie: „Welcome back,“ / „Meister Clemens“ (`D.gruss`, Zeiten `D.texte.G`); der Chaos-Einsatz bei 1,2 s reißt sie mit Glitch weg. Nur in der vollen Fassung (nicht in Kurzfassung/ruhiger Titelkarte).
 
 **Offen / bekannt:**
 - Am iPhone noch prüfen (Intro): Ton nach dem Entsperren, Stummschalter, flüssige Wiedergabe (60 fps), Safe Areas in der PWA, Lesbarkeit der Texte, Match-Cut auf den Hero.

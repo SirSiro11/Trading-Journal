@@ -1440,6 +1440,11 @@ html.intro-open, html.intro-open body{overflow:hidden;}
 }
 .intro-slot{position:absolute; left:0; right:0; display:flex; align-items:center; justify-content:center; padding:0 max(24px, 6vw); text-align:center;}
 .intro-slot-a{top:0; bottom:0;}
+/* NEU (2026-10-21): Begrüßung in der Stille, über der Nulllinie */
+.intro-slot-g{top:14%; bottom:52%;}
+.intro-g{text-align:center;}
+.intro-g1{font-size:clamp(12px, .7vw + .9vh, 19px); font-weight:500; letter-spacing:.34em; padding-left:.34em; text-transform:uppercase; color:rgba(242,194,122,.9); opacity:0; will-change:opacity, transform;}
+.intro-g2{margin-top:.28em; font-size:clamp(30px, 2.8vw + 1.3vh, 58px); font-weight:300; letter-spacing:.02em; line-height:1.1; color:#f6f1e7; opacity:0; will-change:opacity, transform, filter;}
 .intro-slot-b{top:62%; bottom:3%;}
 .intro-slot-c{top:82%; bottom:0;}   /* GEÄNDERT (2026-10-16b): im leeren Streifen unter dem Chart (wie im Screenshot) */
 .intro-slot-t{top:0; bottom:0;}

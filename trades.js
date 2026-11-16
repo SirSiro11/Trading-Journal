@@ -339,10 +339,12 @@ function resultBadgeHtml(t, offenText){
   const nb = hatNachBE(t);
   return `<span class="badge ${resultBadgeClass(t.ergebnis)}${nb?" badge-nachbe":""}"${nb?` title="${escAttr(nachBEText(t))}"`:""}>${escHtml(t.ergebnis)}${nb?`${NACH_BE_ICON}<span class="nachbe-${t.nachBE}">${t.nachBE}</span>`:""}</span>`;
 }
-// Kleine Zeile unter der R-Zahl in der Liste: "danach TP +2,50R"
+// Kleine Zeile unter der R-Zahl in der Liste: "TP +2,50R"
+/* GEÄNDERT (2026-11-16): ohne "danach" — der Text war zu breit und ragte ins Vorschaubild */
 function nachBEListHtml(t){
   if(!hatNachBE(t)) return "";
-  return `<span class="trade-r-nachbe ${t.nachBE==="TP"?"pos":"neg"}">${escHtml(nachBEText(t))}</span>`;
+  const r = nachBEWert(t, false);
+  return `<span class="trade-r-nachbe ${t.nachBE==="TP"?"pos":"neg"}">${t.nachBE}${r !== null ? " " + formatR(r) : ""}</span>`;
 }
 
 function formatR(r){
@@ -778,7 +780,7 @@ function tradeListRowHtml(t){
     <div class="trade-market" title="${escAttr(t.markt||"")}">${escHtml(t.markt||"—")}</div>
     <div class="trade-date-badge">${formatDateDE(t.date)}</div>
     ${catCells}
-    <div class="trade-r ${rClass}" title="${isOpen?"offen":escAttr(t.ergebnis + (hatNachBE(t)?" · "+nachBEText(t):""))}">${rDisplay}${nachBEListHtml(t)}</div>
+    <div class="trade-r ${rClass}${hatNachBE(t)?" has-nachbe":""}" title="${isOpen?"offen":escAttr(t.ergebnis + (hatNachBE(t)?" · "+nachBEText(t):""))}">${rDisplay}${nachBEListHtml(t)}</div>
     ${thumbCell}
     <div class="trade-actions">
       ${eodExtra}

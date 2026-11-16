@@ -25,6 +25,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 | `intro.js` | Cinematisches Intro nach dem Entsperren: Drehbuch (Datenstruktur am Dateianfang), WebGL-Bild, Web-Audio-Ton, Einstellungen `tj_intro_v1` |
 | `init.js` | Sperrbildschirm, globale Tasten- und Fehler-Handler, Fokus |
 | `design.js` | Animationen, Navigations-Schieber, Hell/Dunkel |
+| Schrift | `inter-latin.woff2`, `inter-latin-ext.woff2` (Inter, lokal; `@font-face` in `app.css` Abschnitt 00) |
 | Bilder | `icon-192/512.png`, `apple-touch-icon.png`, `favicon-32.png`, `start-bg.jpg`, Strategie-PNGs |
 | `manifest.webmanifest` | PWA-Einstellungen |
 
@@ -65,7 +66,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.10.21d)
+## Aktueller Stand (Version 2026.11.16)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -83,6 +84,8 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - 2026.10.21: **Aufstieg (11,0–13,6 s) neu:** Kamera reißt aus dem Trade zurück und fährt dem Kopf der Equity-Kurve nach, zum Schluss die ganze Kurve im Licht. Kurve mit Lichtvorhang, R-Stufen (+25R …, Achse wandert mit dem Kopf), Drawdowns rot mit gestrichelter Hochwassermarke, Lichtsäulen bei neuen Allzeithochs, Funken, Komet-Kopf, Zähler oben links (`.intro-hud`: Equity in R, Trades). Die Kurve ist ein erfundenes, realistisches Konto (Seed = Datum, endet auf dem Allzeithoch); Zeitachse `EQ_T`/`eqKopf()` in `intro.js`.
 - 2026.10.21b: **Begrüßung** in der Stille (0,06–1,42 s) über der Nulllinie: „Welcome back,“ / „Meister Clemens“ (`D.gruss`, Zeiten `D.texte.G`); der Chaos-Einsatz bei 1,2 s reißt sie mit Glitch weg. Nur in der vollen Fassung (nicht in Kurzfassung/ruhiger Titelkarte). 2026.10.21c: darunter, unter der Nulllinie, „Remember...“ im Format von „Welcome back,“ (`D.gruss.unten`, die Punkte erscheinen einzeln).
 - 2026.10.21d: **Erste Sequenz 1 s länger** (Intro jetzt ~19,1 s). Das Drehbuch behält seine Zeiten („Drehbuchzeit“); `D.dehnung` + `drehbuchZeit()`/`laufZeit()` in `intro.js` lassen die Stille zwischen 0,6 und 1,2 s weich in Zeitlupe laufen und verschieben alles danach (Bild und Ton) um 1 s. Uhr, Ende, `?intro=bild:` und `INTRO.bild()` rechnen in Laufzeit; die Begrüßung (`D.texte.G`) ebenfalls (0,06–2,42 s, Chaos-Einsatz bei 2,2 s).
+
+- 2026.11.16: **Schrift Inter lokal** statt von Google Fonts (`inter-latin*.woff2`, variable Schrift 100–900). Windows fiel vorher auf Arial zurück, wenn der Google-Abruf scheiterte (offline, Werbeblocker). Rückfall-Reihenfolge jetzt SF Pro → Inter → Segoe UI → Helvetica Neue → Arial. Die App lädt keine Schrift mehr aus dem Internet.
 
 **Offen / bekannt:**
 - Am iPhone noch prüfen (Intro): Ton nach dem Entsperren, Stummschalter, flüssige Wiedergabe (60 fps), Safe Areas in der PWA, Lesbarkeit der Texte, Match-Cut auf den Hero.

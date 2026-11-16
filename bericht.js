@@ -992,7 +992,8 @@ function drawEquityChart(canvas, labels, datasets){
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
-  ctx.font = "11px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, 'Helvetica Neue', Arial, sans-serif";
+  /* GEÄNDERT (2026-11-16): "Segoe UI" als Rückfall vor Arial */
+  ctx.font = "11px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
   const colGrid = cssColor("var(--separator)", "#e3e3e8");
   const colAxis = cssColor("var(--text-dim)", "#6e6e73");
   const colZero = cssColor("var(--border-light)", "#d2d2d7");
@@ -1071,7 +1072,8 @@ function drawEquityChart(canvas, labels, datasets){
   // Legende oben links
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, 'Helvetica Neue', Arial, sans-serif";
+  /* GEÄNDERT (2026-11-16): "Segoe UI" als Rückfall vor Arial */
+  ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
   let lx = padL;
   const ly = 14;
   datasets.forEach(ds => {

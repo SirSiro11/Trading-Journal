@@ -418,6 +418,11 @@ main.main-narrow{max-width:1240px;}
 .stat-card .label .label-sub{display:block; font-weight:400; color:var(--text-faint); font-size:12px; margin-top:2px;}
 .stat-card .value{font-family:var(--font-display); font-size:34px; font-weight:700; letter-spacing:-.03em; line-height:1.1;}
 .stat-card .sub{color:var(--text-dim); font-size:13px; margin-top:6px;}
+/* NEU (2026-11-16): Zusatzzeilen für BE-Aufteilung und Break-Even-Check */
+.stat-card .sub-faint{margin-top:4px; font-size:12px; color:var(--text-faint); white-space:nowrap; display:flex; align-items:center; gap:3px;}
+.stat-card .sub-faint-inline{font-size:12px; color:var(--text-faint);}
+.stat-card .becheck-row{font-size:13px; color:var(--text-dim); margin:2px 0 4px; font-variant-numeric:tabular-nums;}
+.stat-card .becheck-row span{font-weight:600;}
 .pos{color:var(--green);}
 .neg{color:var(--red);}
 .ratio-bars{margin-top:14px; display:flex; flex-direction:column; gap:9px;}
@@ -498,6 +503,13 @@ main.main-narrow{max-width:1240px;}
 .badge-result-SL{background:var(--red-dim); color:var(--red);}
 .badge-result-BE{background:var(--amber-dim); color:var(--amber);}
 .badge-eod-copied{background:var(--info-dim); color:var(--info);}
+/* NEU (2026-11-16): „Nach dem BE“ — Badge "BE → TP/SL", Zeile unter der R-Zahl, Detail */
+.badge-nachbe{display:inline-flex; align-items:center; gap:3px;}
+.badge-nachbe .nachbe-ico{opacity:.75; flex:0 0 auto;}
+.badge-nachbe .nachbe-TP{color:var(--green);}
+.badge-nachbe .nachbe-SL{color:var(--red);}
+.trade-r-nachbe{display:block; margin-top:2px; font-size:11px; font-weight:600; letter-spacing:0;}
+.view-nachbe{margin-top:8px; font-size:13.5px; color:var(--text-dim);}
 /* GEÄNDERT (2026-10-04): EOD-Button und EOD-Badge als inline-flex mit SVG-Symbol + Label, damit
    Symbol und "EOD" exakt mittig sitzen (vorher Text ca. 1,5 px zu hoch, Pfeil ca. 2 px zu tief). */
 .eod-inline-btn, .badge-eod-copied{display:inline-flex; align-items:center; justify-content:center; gap:4px; line-height:1;}
@@ -752,6 +764,8 @@ main.main-narrow{max-width:1240px;}
 .tm-result{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 18px; align-items:start;}
 .tm-note{color:var(--text-dim); font-size:13.5px; background:var(--bg-panel); border:1px solid transparent; border-radius:10px; padding:10px 12px;}
 .tm-note-faint{color:var(--text-faint); background:transparent; padding:8px 0;}
+.tm-nachbe{margin-top:4px; padding-top:14px; border-top:1px solid var(--separator);} /* NEU (2026-11-16) */
+.field-group label.fg-label .fg-label-sub{font-weight:400; color:var(--text-faint); margin-left:4px;}
 .field-group .tm-count{display:inline-block; margin-left:6px; padding:0 7px; border-radius:999px; background:var(--accent-dim); color:var(--accent); font-size:11px;}
 .trade-modal .chip-group{display:flex; flex-wrap:wrap; gap:8px;}
 .trade-modal .chip{flex:1 1 auto; min-width:56px; text-align:center; padding:8px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}

@@ -21,7 +21,7 @@ function getAreaFilteredTrades(area){
 // alle Kategorien-Werte (inkl. eigener Kategorien), Ergebnis, Notizen und der Grund
 // für "nicht genommen". Reine Anzeige-Filterung, am Trade selbst ändert sich nichts.
 function tradeSearchText(t){
-  const parts = [t.markt, formatDateDE(t.date), t.date, t.ergebnis || "offen", t.notizen, t.grundNichtGenommen, t.mentor ? "mentor-trade mentor" : ""];
+  const parts = [t.markt, formatDateDE(t.date), t.date, t.ergebnis || "offen", nachBEText(t), t.notizen, t.grundNichtGenommen, t.mentor ? "mentor-trade mentor" : ""];
   tradeCategoryColumns(t.area).forEach(col=> tradeCategoryCellValues(t, col).forEach(v=> parts.push(v.text)));
   return parts.filter(Boolean).join(" \u0001 ").toLowerCase();
 }
@@ -120,7 +120,7 @@ function dayDetailItemHtml(t){
     return `<div class="day-detail-item" data-viewtrade="${t.id}" tabindex="0" role="button">
       <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
       <div class="trade-tags" style="flex:1;">${genommenTag}</div>
-      <span class="badge ${t.ergebnis?resultBadgeClass(t.ergebnis):"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
+      ${resultBadgeHtml(t)}
       <span class="trade-r ${rClass}">${rDisplay}</span>
     </div>`;
   }
@@ -129,7 +129,7 @@ function dayDetailItemHtml(t){
   return `<div class="day-detail-item" data-viewtrade="${t.id}" tabindex="0" role="button">
     <span class="trade-market" style="min-width:76px;">${escHtml(t.markt||"—")}</span>
     <div class="trade-tags" style="flex:1;">${subtags.map(x=>`<span class="tag">${escHtml(x)}</span>`).join("")}</div>
-    <span class="badge ${t.ergebnis?resultBadgeClass(t.ergebnis):"badge-open"}">${t.ergebnis?t.ergebnis:"offen"}</span>
+    ${resultBadgeHtml(t)}
     <span class="trade-r ${rClass}">${rDisplay}</span>
   </div>`;
 }
@@ -185,7 +185,7 @@ function eodReasonsListHtml(items, query){
       <div class="note-item-head">
         <span class="tag">${formatDateDE(t.date)}</span>
         <span class="tag">${escHtml(t.markt||"—")}</span>
-        ${t.ergebnis ? `<span class="badge ${resultBadgeClass(t.ergebnis)}">${t.ergebnis}</span>` : `<span class="badge badge-open">kein Ergebnis</span>`}
+        ${resultBadgeHtml(t, "kein Ergebnis")}
         ${rDisplay ? `<span class="trade-r ${rClass}" style="margin-left:auto;">${rDisplay}</span>` : ""}
       </div>
       <div class="note-item-text">${highlightQuery(t.grundNichtGenommen, q)}</div>
@@ -309,6 +309,40 @@ function calendarHtml(area){
 // CSS-Klasse für das Ergebnis-Badge (TP grün, SL rot, BE amber, sonst neutral).
 function resultBadgeClass(ergebnis){
   return (ergebnis==="TP"||ergebnis==="SL"||ergebnis==="BE") ? "badge-closed badge-result-"+ergebnis : "badge-closed";
+}
+
+/* NEU (2026-11-16): „Nach dem BE“ — bei einem BE-Trade lässt sich festhalten, ob er danach noch
+   ins Ziel gelaufen wäre (nachBE "TP") oder den SL gehittet hätte ("SL"), optional mit R-Wert
+   (nachBER, mit Vorzeichen wie r: TP positiv, SL negativ). Der Trade selbst bleibt 0R. */
+const NACH_BE_ICON = `<svg class="nachbe-ico" width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 5.5h8M6.5 2.5l3 3-3 3"/></svg>`;
+function hatNachBE(t){
+  return !!t && t.ergebnis === "BE" && (t.nachBE === "TP" || t.nachBE === "SL");
+}
+// R-Wert nach dem BE mit Vorzeichen; null ohne Angabe. mitAnnahme: fehlendes SL = −1R (voller Stop).
+function nachBEWert(t, mitAnnahme){
+  if(!hatNachBE(t)) return null;
+  const v = Number(t.nachBER);
+  if(t.nachBER !== null && t.nachBER !== undefined && t.nachBER !== "" && isFinite(v)){
+    return t.nachBE === "TP" ? Math.abs(v) : -Math.abs(v);
+  }
+  return (mitAnnahme && t.nachBE === "SL") ? -1 : null;
+}
+// Klartext, z. B. "danach TP +2,50R" (Suche, Export, Tooltips)
+function nachBEText(t){
+  if(!hatNachBE(t)) return "";
+  const r = nachBEWert(t, false);
+  return "danach " + t.nachBE + (r !== null ? " " + formatR(r) : "");
+}
+// Ergebnis-Badge inkl. „→ TP/SL“ bei BE-Trades. Ersetzt das bisher mehrfach kopierte Badge-HTML.
+function resultBadgeHtml(t, offenText){
+  if(!t.ergebnis) return `<span class="badge badge-open">${offenText||"offen"}</span>`;
+  const nb = hatNachBE(t);
+  return `<span class="badge ${resultBadgeClass(t.ergebnis)}${nb?" badge-nachbe":""}"${nb?` title="${escAttr(nachBEText(t))}"`:""}>${escHtml(t.ergebnis)}${nb?`${NACH_BE_ICON}<span class="nachbe-${t.nachBE}">${t.nachBE}</span>`:""}</span>`;
+}
+// Kleine Zeile unter der R-Zahl in der Liste: "danach TP +2,50R"
+function nachBEListHtml(t){
+  if(!hatNachBE(t)) return "";
+  return `<span class="trade-r-nachbe ${t.nachBE==="TP"?"pos":"neg"}">${escHtml(nachBEText(t))}</span>`;
 }
 
 function formatR(r){
@@ -744,7 +778,7 @@ function tradeListRowHtml(t){
     <div class="trade-market" title="${escAttr(t.markt||"")}">${escHtml(t.markt||"—")}</div>
     <div class="trade-date-badge">${formatDateDE(t.date)}</div>
     ${catCells}
-    <div class="trade-r ${rClass}" title="${isOpen?"offen":escAttr(t.ergebnis)}">${rDisplay}</div>
+    <div class="trade-r ${rClass}" title="${isOpen?"offen":escAttr(t.ergebnis + (hatNachBE(t)?" · "+nachBEText(t):""))}">${rDisplay}${nachBEListHtml(t)}</div>
     ${thumbCell}
     <div class="trade-actions">
       ${eodExtra}
@@ -787,6 +821,8 @@ function emptyTrade(area){
     zeiteinheit: null,
     ergebnis: null,
     r: null,
+    nachBE: null,  // NEU (2026-11-16): "TP" | "SL" | null — nur bei ergebnis "BE"
+    nachBER: null, // NEU (2026-11-16): R nach dem BE, mit Vorzeichen
     genommen: area==="eod" ? null : undefined,
     grundNichtGenommen: "",
     mentor: false, // von einem Mentor bestätigt / selbst genommen (nur Formular, Detail & Filter)
@@ -818,6 +854,8 @@ function copyTradeToEod(liveTrade){
     zeiteinheit: liveTrade.zeiteinheit,
     ergebnis: liveTrade.ergebnis,
     r: liveTrade.r,
+    nachBE: liveTrade.nachBE || null,     // NEU (2026-11-16)
+    nachBER: liveTrade.nachBER ?? null,   // NEU (2026-11-16)
     genommen: true, // war ein echter Live-Trade, wurde also genommen
     mentor: !!liveTrade.mentor,
     notizen: liveTrade.notizen || "",
@@ -916,6 +954,8 @@ function openTradeModal(area, existing){
   STATE.modalFreshOpen = true;
   const d = STATE.draft;
   d._rMagnitudeInput = (d.r !== null && d.r !== undefined) ? String(Math.abs(d.r)).replace(".", ",") : "";
+  // NEU (2026-11-16): eingetippter R-Wert nach dem BE (Betrag ohne Vorzeichen)
+  d._nachBEInput = (d.nachBER !== null && d.nachBER !== undefined && d.nachBER !== "") ? String(Math.abs(d.nachBER)).replace(".", ",") : "";
   STATE.draftSnapshot = draftFingerprint(d);
   renderModal();
 }
@@ -924,7 +964,7 @@ function openTradeModal(area, existing){
 // der eingetippte R-Betrag aber schon.
 function draftFingerprint(d){
   if(!d) return "";
-  return JSON.stringify(d, (k, v)=> (k && k.charAt(0) === "_" && k !== "_rMagnitudeInput") ? undefined : v);
+  return JSON.stringify(d, (k, v)=> (k && k.charAt(0) === "_" && k !== "_rMagnitudeInput" && k !== "_nachBEInput") ? undefined : v); /* GEÄNDERT (2026-11-16): R nach BE zählt mit */
 }
 
 // Schließen über ✕, Abbrechen, Klick daneben oder Escape: bei ungespeicherten Eingaben
@@ -1014,8 +1054,9 @@ function renderTradeDetail(t){
       <div class="view-row">
         <div class="view-label">Ergebnis</div>
         <div class="view-value">
-          ${t.ergebnis ? `<span class="badge ${resultBadgeClass(t.ergebnis)}">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
+          ${resultBadgeHtml(t)}
           ${rDisplay ? `<span class="trade-r ${rClass}" style="margin-left:10px;">${rDisplay}</span>` : ""}
+          ${hatNachBE(t) ? `<div class="view-nachbe">Nach dem BE: <strong class="${t.nachBE==="TP"?"pos":"neg"}">${t.nachBE==="TP"?"wäre TP geworden":"hätte SL gehittet"}${nachBEWert(t,false)!==null?" ("+formatR(nachBEWert(t,false))+")":""}</strong></div>` : ""}
         </div>
       </div>
 
@@ -1213,6 +1254,23 @@ function renderModal(){
               <div class="tm-note tm-note-faint">Wähle SL, TP oder BE, um das R-Ergebnis einzutragen.</div>
             </div>`}
           </div>
+          ${d.ergebnis === "BE" ? `
+          <!-- NEU (2026-11-16): Wie wäre es nach dem BE weitergegangen? -->
+          <div class="tm-result tm-nachbe">
+            <div class="field-group">
+              <label class="fg-label">Nach dem BE <span class="fg-label-sub">optional</span></label>
+              ${chipGroupHtml("nachBE", ["TP","SL"], d.nachBE, {resultStyle:true, labels:{TP:"wäre TP geworden", SL:"hätte SL gehittet"}})}
+            </div>
+            ${(d.nachBE === "TP" || d.nachBE === "SL") ? `
+            <div class="field-group">
+              <label class="fg-label">${d.nachBE==="TP" ? "Wie viel R wären es geworden?" : "Wie viel R hätte es gekostet?"} <span class="fg-label-sub">optional</span></label>
+              <input type="text" id="f_nachBER" inputmode="decimal" placeholder="${d.nachBE==="TP" ? "z.B. 2,5" : "leer = 1R"}" value="${escAttr(d._nachBEInput||"")}" class="${d._nachBEError?"has-error":""}">
+              ${d._nachBEError ? `<div class="field-error">Bitte eine Zahl eingeben, z. B. 2 oder 1,5.</div>` : ""}
+              <div style="color:var(--text-dim); font-size:12px; margin-top:6px;">
+                Zählt nur für den Break-Even-Check im Bericht, der Trade bleibt <strong style="color:var(--amber)">0R</strong>.
+              </div>
+            </div>` : ""}
+          </div>` : ""}
         </section>
 
         <section class="tm-card" aria-label="Notizen">
@@ -1308,7 +1366,15 @@ function wireModal(){
       }else{
         target[targetKey] = (target[targetKey]===val) ? null : val;
       }
+      // NEU (2026-11-16): "Nach dem BE" blendet das R-Feld ein/aus → Formular neu aufbauen
+      if(g === "nachBE"){
+        if(!d.nachBE){ d.nachBER = null; d._nachBEInput = ""; d._nachBEError = false; }
+        renderModal();
+        return;
+      }
       if(g === "ergebnis"){
+        // NEU (2026-11-16): "Nach dem BE" gilt nur für BE-Trades
+        if(d.ergebnis !== "BE"){ d.nachBE = null; d.nachBER = null; d._nachBEInput = ""; d._nachBEError = false; }
         if(d.ergebnis === "BE"){
           d.r = 0;
           d._rMagnitudeInput = "";
@@ -1438,6 +1504,19 @@ function wireModal(){
     }
   });
   if(rInput) rInput.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); saveDraft(); } });
+
+  // NEU (2026-11-16): R-Wert nach dem BE
+  const nbInput = document.getElementById("f_nachBER");
+  if(nbInput) nbInput.addEventListener("input", (e)=>{
+    STATE.draft._nachBEInput = e.target.value;
+    if(STATE.draft._nachBEError){
+      STATE.draft._nachBEError = false;
+      nbInput.classList.remove("has-error");
+      const err = nbInput.parentElement.querySelector(".field-error");
+      if(err) err.remove();
+    }
+  });
+  if(nbInput) nbInput.addEventListener("keydown", (e)=>{ if(e.key === "Enter"){ e.preventDefault(); saveDraft(); } });
 
   document.getElementById("modalSaveBtn").addEventListener("click", saveDraft);
 }
@@ -1590,6 +1669,31 @@ function saveDraft(){
   }else{
     d.r = null;
   }
+  // NEU (2026-11-16): "Nach dem BE" nur bei BE-Trades speichern, R-Wert prüfen
+  if(d.ergebnis === "BE" && (d.nachBE === "TP" || d.nachBE === "SL")){
+    const nbInput = document.getElementById("f_nachBER");
+    const nbRaw = (nbInput ? nbInput.value : (d._nachBEInput||"")).trim();
+    if(nbRaw === ""){
+      d.nachBER = null;
+    }else{
+      const nbNorm = nbRaw.replace(",", ".");
+      const nbMag = Math.abs(Number(nbNorm));
+      if(!/^[+-]?\d*\.?\d+$/.test(nbNorm) || isNaN(nbMag)){
+        d._nachBEError = true;
+        d._nachBEInput = nbRaw;
+        renderModal();
+        const el = document.getElementById("f_nachBER");
+        if(el){ el.focus(); el.scrollIntoView({ block:"center" }); }
+        return;
+      }
+      d.nachBER = d.nachBE === "TP" ? nbMag : -nbMag;
+    }
+  }else{
+    d.nachBE = null;
+    d.nachBER = null;
+  }
+  delete d._nachBEInput;
+  delete d._nachBEError;
   delete d._rMagnitudeInput; // nur ein UI-Hilfsfeld, nicht mit abspeichern
   delete d._rError;
   d.updatedAt = Date.now();

@@ -66,7 +66,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.11.16)
+## Aktueller Stand (Version 2026.11.16b)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -86,6 +86,8 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - 2026.10.21d: **Erste Sequenz 1 s länger** (Intro jetzt ~19,1 s). Das Drehbuch behält seine Zeiten („Drehbuchzeit“); `D.dehnung` + `drehbuchZeit()`/`laufZeit()` in `intro.js` lassen die Stille zwischen 0,6 und 1,2 s weich in Zeitlupe laufen und verschieben alles danach (Bild und Ton) um 1 s. Uhr, Ende, `?intro=bild:` und `INTRO.bild()` rechnen in Laufzeit; die Begrüßung (`D.texte.G`) ebenfalls (0,06–2,42 s, Chaos-Einsatz bei 2,2 s).
 
 - 2026.11.16: **Schrift Inter lokal** statt von Google Fonts (`inter-latin*.woff2`, variable Schrift 100–900). Windows fiel vorher auf Arial zurück, wenn der Google-Abruf scheiterte (offline, Werbeblocker). Rückfall-Reihenfolge jetzt SF Pro → Inter → Segoe UI → Helvetica Neue → Arial. Die App lädt keine Schrift mehr aus dem Internet.
+
+- 2026.11.16b: **„Nach dem BE“:** Bei BE-Trades (Live und EOD) lässt sich festhalten, ob der Trade danach TP geworden wäre oder den SL gehittet hätte, optional mit R-Wert. Felder `nachBE` („TP“/„SL“/null) und `nachBER` (R mit Vorzeichen wie `r`), nur bei `ergebnis === "BE"`. Der Trade bleibt 0R, die Kennzahlen ändern sich nicht. Zu sehen in Formular, Liste (Zeile unter 0,00R), Detail, Kalender/Notizen (Badge „BE → TP“ über `resultBadgeHtml()`), Suche, Bericht (Filter „Nach dem BE“, nicht in der Auswertung nach Kategorie; Kachel „Break-Even-Check“ mit „erspart“/„verschenkt“, SL ohne R-Angabe zählt 1R; Zeile in der Gegenüberstellung) und im CSV/Excel-Export. Helfer in `trades.js`: `hatNachBE()`, `nachBEWert()`, `nachBEText()`.
 
 **Offen / bekannt:**
 - Am iPhone noch prüfen (Intro): Ton nach dem Entsperren, Stummschalter, flüssige Wiedergabe (60 fps), Safe Areas in der PWA, Lesbarkeit der Texte, Match-Cut auf den Hero.

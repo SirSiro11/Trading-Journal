@@ -14,6 +14,10 @@ const FILTER_DIMENSIONS_BASE = [
   {key:"invalidierung", label:"Invalidierung", cfgKey:"invalidierung", field:"invalidierung", multi:true},
   // Kein Eintrag in den Kategorien — feste Ja/Nein-Werte aus dem Feld "mentor"
   {key:"mentor", label:"Mentor-Trade", field:"mentor", options:["Ja","Nein"], getValue: t=> t.mentor ? "Ja" : "Nein"},
+  // NEU (2026-11-16): Nur BE-Trades haben einen Wert. Nicht in der Auswertung nach Kategorie,
+  // weil BE-Trades dort alle 0R hätten — die Zahlen dazu zeigt die Kachel "Break-Even-Check".
+  {key:"nachBE", label:"Nach dem BE", field:"nachBE", options:["danach TP","danach SL","keine Angabe"], noBreakdown:true,
+    getValue: t=> t.ergebnis !== "BE" ? null : (hatNachBE(t) ? "danach " + t.nachBE : "keine Angabe")},
 ];
 // Dynamische Filter-/Aufschlüsselungs-Dimensionen für den Bericht — berücksichtigt
 // umbenannte Überschriften (categoryLabel) und hängt frei erstellte Kategorien
@@ -110,6 +114,11 @@ function compareSectionHtml(){
     { label:"Größter Rückgang", live: liveStats.maxDrawdown!==null?-Math.abs(liveStats.maxDrawdown):null, eod: eodStats.maxDrawdown!==null?-Math.abs(eodStats.maxDrawdown):null, kind:"r" },
     { label:"Längste Verlustserie", live: liveStats.longestSlStreak, eod: eodStats.longestSlStreak, kind:"n", suffix:" in Folge" }
   ];
+  // NEU (2026-11-16): Bilanz des Break-Even-Checks, nur wenn eine Seite Angaben hat
+  const beBilanz = st=> (st.beCheck.tp + st.beCheck.sl) ? st.beCheck.slR - st.beCheck.tpR : null;
+  if(beBilanz(liveStats)!==null || beBilanz(eodStats)!==null){
+    rows.push({ label:"Bilanz des BE (erspart − verschenkt)", live: beBilanz(liveStats), eod: beBilanz(eodStats), kind:"r" });
+  }
 
   const rowsHtml = rows.map(r=>{
     const liveVal = r.label==="Trades" ? `${liveStats.count} <span style="color:var(--text-faint); font-size:11.5px;">(${liveStats.open} offen)</span>` : fmt(r.live, r.kind, r.suffix);
@@ -206,6 +215,7 @@ function renderBericht(){
       ${profitFactorCardHtml(stats)}
       ${daysPlusCardHtml(stats)}
       ${avgRatioCardHtml(stats)}
+      ${beCheckCardHtml(stats)}
     </div>
     <div style="color:var(--text-faint); font-size:12px; margin:-14px 0 20px;">
       Alles in R. Ein Break-Even-Trade (0R) zählt in die Anzahl, nicht in die Trefferquote. <strong style="color:var(--text-dim)">Tage im Plus</strong> zählt Kalendertage, nicht Trades — nur Tage mit mindestens einem Ergebnis.
@@ -231,7 +241,7 @@ function renderBericht(){
       <div style="margin-bottom:14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         <span style="color:var(--text-dim); font-size:13px;">Gruppieren nach:</span>
         <div class="chip-group" id="breakdownDimSelector">
-          ${getFilterDimensions().filter(d=>!d.multi).map(d=>`<button type="button" class="chip ${STATE.breakdownDim===d.key?"selected":""}" data-dim="${d.key}">${d.label}</button>`).join("")}
+          ${getFilterDimensions().filter(d=>!d.multi && !d.noBreakdown).map(d=>`<button type="button" class="chip ${STATE.breakdownDim===d.key?"selected":""}" data-dim="${d.key}">${d.label}</button>`).join("")}
         </div>
       </div>
       ${breakdownTableHtml(filteredTrades)}
@@ -288,6 +298,7 @@ function winrateCardHtml(stats){
       <div class="gauge" style="background:${donutBg(pct)};">${stats.winrate===null?"—":pct+"%"}</div>
       <div class="sub" style="margin-top:0;">
         ${stats.winners} Gewinner<br>${stats.be} Break-Even<br>${stats.losers} Verlierer
+        ${(stats.beCheck.tp + stats.beCheck.sl) ? `<div class="sub-faint" title="Nach dem BE: ${stats.beCheck.tp}× TP, ${stats.beCheck.sl}× SL">BE${NACH_BE_ICON}${stats.beCheck.tp}× TP · ${stats.beCheck.sl}× SL</div>` : ""}
       </div>
     </div>
   </div>`;
@@ -306,6 +317,33 @@ function profitFactorCardHtml(stats){
       </div>
     </div>
     <div class="sub" style="margin-top:12px;">1,0 = die Gewinne decken die Verluste</div>
+  </div>`;
+}
+
+/* NEU (2026-11-16): Break-Even-Check — was wäre aus den BE-Trades geworden? "danach SL" = Verlust
+   erspart (ohne R-Angabe zählt der volle Stop, 1R), "danach TP" = Gewinn verschenkt (nur mit R-Angabe
+   in der R-Summe). Erscheint nur, wenn mindestens ein BE-Trade eine Angabe hat. */
+function beCheckCardHtml(stats){
+  const b = stats.beCheck;
+  if(!(b.tp + b.sl)) return "";
+  const maxMag = Math.max(b.slR, b.tpR, 0.0001);
+  const slPct = Math.round((b.slR/maxMag)*100);
+  const tpPct = Math.round((b.tpR/maxMag)*100);
+  const fmt = v=> formatNumberDE(v, 2) + "R";
+  const bilanz = b.slR - b.tpR;
+  const hinweise = [];
+  if(b.tpOhneR) hinweise.push(`${b.tpOhneR}× TP ohne R-Angabe`);
+  if(b.slOhneR) hinweise.push(`SL ohne Angabe = 1R`);
+  if(b.ohne) hinweise.push(`${b.ohne} BE ohne Angabe`);
+  return `<div class="stat-card">
+    <div class="label">Break-Even-Check <span class="label-sub">Was wäre nach dem BE passiert?</span></div>
+    <div class="ratio-bars" style="margin-top:14px;">
+      <div class="becheck-row"><span class="pos">${b.sl}× SL</span> · ${fmt(b.slR)} erspart</div>
+      <div class="ratio-bar-row"><div class="ratio-track"><div class="ratio-fill seg-pos" style="width:${slPct}%"></div></div></div>
+      <div class="becheck-row"><span class="neg">${b.tp}× TP</span> · ${fmt(b.tpR)} verschenkt</div>
+      <div class="ratio-bar-row"><div class="ratio-track"><div class="ratio-fill seg-neg" style="width:${tpPct}%"></div></div></div>
+    </div>
+    <div class="sub" style="margin-top:12px;">Bilanz des BE: <strong class="${bilanz>0?"pos":(bilanz<0?"neg":"")}">${formatR(bilanz)}</strong>${hinweise.length ? `<br><span class="sub-faint-inline">${hinweise.join(" · ")}</span>` : ""}</div>
   </div>`;
 }
 
@@ -612,7 +650,7 @@ function notesListHtml(trades, query){
         <span class="tag">${AREA_LABEL[t.area]}</span>
         <span class="tag">${formatDateDE(t.date)}</span>
         <span class="tag">${escHtml(t.markt||"—")}</span>
-        ${t.ergebnis ? `<span class="badge ${resultBadgeClass(t.ergebnis)}">${t.ergebnis}</span>` : `<span class="badge badge-open">offen</span>`}
+        ${resultBadgeHtml(t)}
         ${t.r!==null && t.r!==undefined ? `<span class="trade-r ${t.r>0?"pos":(t.r<0?"neg":"")}" style="margin-left:auto;">${formatR(t.r)}</span>` : ""}
       </div>
       <div class="note-item-text">${highlightQuery(t.notizen, q)}</div>
@@ -667,7 +705,7 @@ function filterDimValue(t, dimDef){
 }
 
 function breakdownTableHtml(trades){
-  const dims = getFilterDimensions();
+  const dims = getFilterDimensions().filter(d=>!d.noBreakdown); /* GEÄNDERT (2026-11-16) */
   const dimDef = dims.find(d=>d.key===STATE.breakdownDim) || dims[0];
   const groups = {};
   trades.forEach(t=>{
@@ -796,7 +834,23 @@ function computeStats(trades){
     else currentSlStreak = 0;
   });
 
+  // NEU (2026-11-16): Break-Even-Check (siehe beCheckCardHtml)
+  const beCheck = { tp:0, sl:0, ohne:0, tpR:0, slR:0, tpOhneR:0, slOhneR:0 };
+  closed.filter(t=> t.ergebnis === "BE").forEach(t=>{
+    if(!hatNachBE(t)){ beCheck.ohne++; return; }
+    const exakt = nachBEWert(t, false);
+    if(t.nachBE === "TP"){
+      beCheck.tp++;
+      if(exakt === null) beCheck.tpOhneR++; else beCheck.tpR += Math.abs(exakt);
+    }else{
+      beCheck.sl++;
+      if(exakt === null) beCheck.slOhneR++;
+      beCheck.slR += Math.abs(nachBEWert(t, true));
+    }
+  });
+
   return {
+    beCheck,
     count: trades.length, open, closed: closed.length,
     winners, losers, be, totalR, avgR, sumPos, sumNeg,
     profitFactor, winrate, best, worst, avgWin, avgLoss,
@@ -1138,6 +1192,8 @@ function tradesToRows(trades){
     Zeiteinheit: t.zeiteinheit || "",
     Ergebnis: t.ergebnis || "",
     R: t.r===null||t.r===undefined ? "" : t.r,
+    "Nach BE": hatNachBE(t) ? t.nachBE : "",                                 // NEU (2026-11-16)
+    "R nach BE": nachBEWert(t, false) === null ? "" : nachBEWert(t, false),  // NEU (2026-11-16)
     Status: t.ergebnis ? "geschlossen" : "offen",
     "Setup genommen": t.genommen===true ? "Ja" : (t.genommen===false ? "Nein" : ""),
     "Warum nicht genommen": t.grundNichtGenommen || "",

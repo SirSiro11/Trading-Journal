@@ -405,6 +405,7 @@ function renderSettingsModal(){
         <button type="button" class="btn" id="addNewCategoryBtn">+ Neue Kategorie erstellen</button>
       </div>
       ${/* NEU (2026-10-15): Intro-Einstellungen (nur dieses Gerät, siehe intro.js) */ typeof INTRO !== "undefined" ? INTRO.einstellungenHtml() : ""}
+      ${/* NEU (2026-11-17): Hintergrundmusik (nur dieses Gerät, siehe musik.js) */ typeof MUSIK !== "undefined" ? MUSIK.einstellungenHtml() : ""}
       <div class="modal-footer" style="justify-content:flex-end;">
         <button class="btn btn-primary" id="settingsDoneBtn">Fertig</button>
       </div>
@@ -417,6 +418,7 @@ function renderSettingsModal(){
 function wireSettingsModal(){
   const backdrop = document.getElementById("settingsBackdrop");
   if(typeof INTRO !== "undefined") INTRO.einstellungenVerdrahten(backdrop); // NEU (2026-10-15)
+  if(typeof MUSIK !== "undefined") MUSIK.einstellungenVerdrahten(backdrop); // NEU (2026-11-17)
   backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeSettingsModal(); });
   document.getElementById("settingsCloseBtn").addEventListener("click", closeSettingsModal);
   document.getElementById("settingsDoneBtn").addEventListener("click", closeSettingsModal);

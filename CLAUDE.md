@@ -23,6 +23,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 | `erkenntnisse.js` | Erkenntnisse-Liste |
 | `strategie.js` | Strategie-Reiter, Erkenntnis-Formular |
 | `intro.js` | Cinematisches Intro nach dem Entsperren: Drehbuch (Datenstruktur am Dateianfang), WebGL-Bild, Web-Audio-Ton, Einstellungen `tj_intro_v1` |
+| `musik.js` | Lo-Fi-Hintergrundmusik, live mit Web Audio erzeugt (Komponist + Klangerzeuger), Header-Knopf, Einstellungen `tj_musik_v1` |
 | `init.js` | Sperrbildschirm, globale Tasten- und Fehler-Handler, Fokus |
 | `design.js` | Animationen, Navigations-Schieber, Hell/Dunkel |
 | Schrift | `inter-latin.woff2`, `inter-latin-ext.woff2` (Inter, lokal; `@font-face` in `app.css` Abschnitt 00) |
@@ -32,7 +33,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 **Warum keine Unterordner:** Clemens lädt Dateien teils per GitHub-Web-Upload hoch, und der legt alles flach ab. Mit Ordnern fehlten Pfade und die App startete nicht.
 
 ## Architektur – das muss man wissen
-- **Normale `<script>`-Dateien, keine Module.** Sie teilen sich einen globalen Namensraum, und die Reihenfolge ist fest: `core → sync → news → state → start → trades → bericht → erkenntnisse → strategie → intro → init → design` (`intro` vor `init`, weil `init.js` es beim Entsperren aufruft). Code, der schon beim Laden läuft, darf nur Funktionen aus derselben oder einer früheren Datei aufrufen.
+- **Normale `<script>`-Dateien, keine Module.** Sie teilen sich einen globalen Namensraum, und die Reihenfolge ist fest: `core → sync → news → state → start → trades → bericht → erkenntnisse → strategie → intro → musik → init → design` (`intro` und `musik` vor `init`, weil `init.js` sie beim Entsperren aufruft). Code, der schon beim Laden läuft, darf nur Funktionen aus derselben oder einer früheren Datei aufrufen.
 - **Daten:** Sie liegen primär in `localStorage` (Schlüssel `tj_*_v1`), damit die App offline voll funktioniert. Die Cloud-Kopie ist eine einzige JSON-Datei in Google Drive.
 - **Cloud-Zugriff nur über den Proxy `journalProxy` (Cloud Run).** Das Google-Token bleibt auf dem Server, ein Login direkt im Browser macht in der iPhone-PWA Probleme. Neue Backend-Funktionen kommen als Erweiterung in diesen Proxy, Geheimnisse liegen als Umgebungsvariablen und nie im Repo.
 - **Sync:**
@@ -66,7 +67,7 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 - **Am Ende kurz auf Deutsch zusammenfassen:** was geändert wurde, welche Dateien betroffen sind, die neue Versionsnummer und was am iPhone noch zu prüfen ist.
 - **Diese Datei pflegen:** Nach jeder größeren Änderung den Abschnitt „Aktueller Stand“ unten aktualisieren und im selben Commit mitpushen.
 
-## Aktueller Stand (Version 2026.11.16c)
+## Aktueller Stand (Version 2026.11.17)
 **Was funktioniert:**
 - Live- und EOD-Listen, Kalender, Trade-Detail und Formular. Screenshots per Upload oder Link, doppelte Bilder werden nur einmal gespeichert.
 - Kategorien: anlegen, Überschriften und Werte umbenennen (wirkt auf alle Trades).
@@ -89,7 +90,10 @@ Ein persönliches Trading-Journal von Clemens für Live-Trades, EOD-Setups, Erke
 
 - 2026.11.16b: **„Nach dem BE“:** Bei BE-Trades (Live und EOD) lässt sich festhalten, ob der Trade danach TP geworden wäre oder den SL gehittet hätte, optional mit R-Wert. Felder `nachBE` („TP“/„SL“/null) und `nachBER` (R mit Vorzeichen wie `r`), nur bei `ergebnis === "BE"`. Der Trade bleibt 0R, die Kennzahlen ändern sich nicht. Zu sehen in Formular, Liste (Zeile unter 0,00R), Detail, Kalender/Notizen (Badge „BE → TP“ über `resultBadgeHtml()`), Suche, Bericht (Filter „Nach dem BE“, nicht in der Auswertung nach Kategorie; Kachel „Break-Even-Check“ mit „erspart“/„verschenkt“, SL ohne R-Angabe zählt 1R; Zeile in der Gegenüberstellung) und im CSV/Excel-Export. Helfer in `trades.js`: `hatNachBE()`, `nachBEWert()`, `nachBEText()`. 2026.11.16c: In der Liste steht nur noch „TP +4,00R“ (ohne „danach“), rechtsbündig unter der R-Zahl (`.trade-r.has-nachbe`), damit nichts ins Vorschaubild ragt.
 
+- 2026.11.17: **Lo-Fi-Hintergrundmusik** (`musik.js`): komplett live erzeugt (Rhodes-Akkorde per FM, Bass, Boom-Bap-Drums mit Swing, gelegentliche Melodie, Vinyl-Knistern, Tape-Leiern, Hall, Sidechain-Pumpen), keine Audiodateien. Tonart, Tempo (70–82 BPM) und Akkordfolgen je Sitzung zufällig, Muster wechseln laufend. Regler und Mischung oben in `K`. An/Aus über den Equalizer-Knopf im Header (`#btnMusik`, Balken bewegen sich beim Spielen) oder im Modal „⚙ Einstellungen“ (Stil „Lo-Fi Beats“/„Ohne Beat“, „Neu mischen“, Lautstärke). Standard aus, je Gerät (`tj_musik_v1`). Ablauf: `MUSIK.vorbereiten()` in der Entsperr-Geste (`tryUnlock`), `MUSIK.starten()` in `startApp()` wartet selbst, bis das Intro vorbei ist, und blendet 5 s ein; im Hintergrund wird ausgeblendet und der `AudioContext` angehalten. `audioSession.type = "ambient"` (folgt dem Stummschalter). Test ohne Lautsprecher: `MUSIK.offline(sek, {seed, stimmung})`.
+
 **Offen / bekannt:**
+- Am iPhone noch prüfen (Musik): Start nach dem Entsperren/Intro, Stummschalter, Weiterlaufen nach Rückkehr in die PWA (ggf. erst nach einer Berührung), Klang über Lautsprecher und Kopfhörer.
 - Am iPhone noch prüfen (Intro): Ton nach dem Entsperren, Stummschalter, flüssige Wiedergabe (60 fps), Safe Areas in der PWA, Lesbarkeit der Texte, Match-Cut auf den Hero.
 - `intro.js` ist ~108 KB (Richtwert 80 KB, gzip ~40 KB): Trade-Daten (232 Kerzen), drei Ersatzfassungen und Test-Hilfen (`INTRO.tonOffline`, `?intro=bild:`) sind mit drin.
 - Am iPhone (Safari) noch prüfen: Start-Hero, „g“ in der Begrüßung, Detail-Kategorien (2026.10.02b), EOD-Buttons (2026.10.04) und Milchglas von „+ Erkenntnis“ beim Wechsel auf Start sowie die Login-Animation des Hero-Fotos (2026.10.15b).

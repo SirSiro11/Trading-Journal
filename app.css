@@ -215,6 +215,18 @@ header.topnav.is-compact::before{background:var(--glass-strong); border-bottom-c
 .theme-toggle .ico-sun{opacity:0; transform:rotate(-90deg) scale(.5);}
 :root[data-theme="dark"] .theme-toggle .ico-moon{opacity:0; transform:rotate(90deg) scale(.5);}
 :root[data-theme="dark"] .theme-toggle .ico-sun{opacity:1; transform:none;}
+/* NEU (2026-11-17): Musik-Knopf — Equalizer-Balken, bewegen sich, solange Musik läuft */
+.musik-toggle{width:34px; height:34px; color:var(--text);}
+.musik-toggle svg{width:18px; height:18px; overflow:visible;}
+.musik-toggle .eq{transform-box:fill-box; transform-origin:center; transform:scaleY(.42); transition:transform .4s var(--spring);}
+.musik-toggle.is-on{background:var(--accent-dim); color:var(--accent);}
+.musik-toggle.is-on .eq{transform:none;}
+.musik-toggle.is-playing .eq{animation:musikEq 1.1s ease-in-out infinite alternate;}
+.musik-toggle.is-playing .eq2{animation-duration:.82s; animation-delay:-.3s;}
+.musik-toggle.is-playing .eq3{animation-duration:.96s; animation-delay:-.55s;}
+.musik-toggle.is-playing .eq4{animation-duration:.7s; animation-delay:-.15s;}
+@keyframes musikEq{ 0%{transform:scaleY(.35);} 100%{transform:scaleY(1.15);} }
+@media (prefers-reduced-motion: reduce){ .musik-toggle.is-playing .eq{animation:none;} }
 /* Weicher Hell/Dunkel-Wechsel (GEÄNDERT): Überblendung per View Transition — nur zwei
    Bildebenen statt Transitions auf jedem einzelnen Element. */
 /* Die neue Ansicht liegt voll deckend darunter, das Standbild der alten blendet darüber
@@ -1551,6 +1563,9 @@ html.intro-open, html.intro-open body{overflow:hidden;}
 .intro-set-note{margin-top:12px; font-size:12.5px; line-height:1.45; color:var(--text-faint);}
 .intro-set-note code{font-family:var(--code); font-size:12px;}
 @media (max-width:480px){ .intro-set-row .btn{margin-left:0;} }
+/* NEU (2026-11-17): Lautstärkeregler der Hintergrundmusik */
+.musik-laut{flex:1 1 180px; max-width:320px; accent-color:var(--accent); height:22px; cursor:pointer;}
+.musik-set .intro-set-label{min-width:74px;}   /* Chips der drei Zeilen untereinander ausrichten */
 /* NEU (2026-10-16): Lichtkante des Whip-Wipes vom Titel auf das Foto (intro.js, uebergang) */
 .intro-wisch{
   position:absolute; top:-10%; bottom:-10%; left:0; width:22vw; margin-left:-11vw; opacity:0; pointer-events:none;

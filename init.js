@@ -45,6 +45,7 @@ function startApp(){
     render();
     gdrivePull();
     if(mitIntro){ try{ INTRO.starten(); }catch(e){ console.warn("Intro konnte nicht starten", e); } }
+    try{ if(typeof MUSIK !== "undefined") MUSIK.starten(); }catch(e){ console.warn("Musik konnte nicht starten", e); } // NEU (2026-11-17): wartet selbst aufs Intro
   }, 460);
 }
 
@@ -55,6 +56,8 @@ function tryUnlock(){
   if(simpleHash(val) === LOCK_PIN_CHECK){
     // NEU (2026-10-15): Intro vorbereiten — muss in dieser Geste passieren (iOS gibt Ton nur nach einer Geste frei)
     try{ if(typeof INTRO !== "undefined") INTRO.vorbereiten(); }catch(e){ console.warn("Intro-Vorbereitung fehlgeschlagen", e); }
+    // NEU (2026-11-17): Hintergrundmusik ebenfalls in dieser Geste vorbereiten (startet erst nach dem Intro)
+    try{ if(typeof MUSIK !== "undefined") MUSIK.vorbereiten(); }catch(e){ console.warn("Musik-Vorbereitung fehlgeschlagen", e); }
     startApp();
   }else{
     document.getElementById("lockError").style.display = "block";

@@ -13,7 +13,7 @@
      4 Komponist      — Takt- und Schrittplanung
      5 Ablauf         — Start nach dem Intro, Pause im Hintergrund, Ein-/Ausblenden
      6 Bedienung      — Header-Knopf, Abschnitt im Modal „Einstellungen“
-   Einstellung je Gerät: tj_musik_v1 { an, lautstaerke (0–1), stimmung ("lofi" | "ruhig") }
+   Einstellung je Gerät: tj_musik_v1 { an, lautstaerke (0–1), stimmung ("lofi" | "ruhig"), vinyl (Rauschen + Knistern, GEÄNDERT 2026-11-18) }
    Schnittstelle: MUSIK.vorbereiten() (in einer Geste!), MUSIK.starten(), MUSIK.umschalten(),
    MUSIK.einstellungenHtml(), MUSIK.einstellungenVerdrahten(root), MUSIK.zustand(),
    MUSIK.offline(sek, opt) (Test: rendert ohne Lautsprecher in einen AudioBuffer)
@@ -121,14 +121,15 @@ function graphBauen(P){
   P.wow = knoten(c, 9); wow.connect(P.wow); wow.start(0);
   const flutter = c.createOscillator(); flutter.frequency.value = 5.9;
   const flutterG = knoten(c, 2.2); flutter.connect(flutterG); flutterG.connect(P.wow); flutter.start(0);
-  // Rauschen und Vinyl
+  // Rauschen und Vinyl — GEÄNDERT (2026-11-18): über einen eigenen Bus, damit der Schalter „Vinyl“ live greift
+  P.vinyl = knoten(c, vinylAnfangs(P) ? 1 : 0.0001); P.vinyl.connect(P.summe);
   P.rausch = rauschPuffer(c, P.rnd, 1.3);
   const kn = c.createBufferSource(); kn.buffer = knisterPuffer(c, P.rnd); kn.loop = true;
   const knHp = c.createBiquadFilter(); knHp.type = "highpass"; knHp.frequency.value = 900;
-  const knG = knoten(c, K.mix.knistern); kn.connect(knHp); knHp.connect(knG); knG.connect(P.summe); kn.start(0);
+  const knG = knoten(c, K.mix.knistern); kn.connect(knHp); knHp.connect(knG); knG.connect(P.vinyl); kn.start(0);
   const rs = c.createBufferSource(); rs.buffer = P.rausch; rs.loop = true;
   const rsBp = c.createBiquadFilter(); rsBp.type = "bandpass"; rsBp.frequency.value = 3800; rsBp.Q.value = 0.4;
-  const rsG = knoten(c, K.mix.rauschen); rs.connect(rsBp); rsBp.connect(rsG); rsG.connect(P.summe); rs.start(0);
+  const rsG = knoten(c, K.mix.rauschen); rs.connect(rsBp); rsBp.connect(rsG); rsG.connect(P.vinyl); rs.start(0);
   P.panOk = typeof c.createStereoPanner === "function";
 }
 // Rhodes: FM (Träger + Modulator 1:1) mit abklingendem Index = weicher Anschlag mit „Bark“
@@ -219,8 +220,16 @@ function neueSitzung(P){
   P.grund = wahl(P, K.tonarten);
   P.folge = wahl(P, K.folgen);
 }
+function vinylAnfangs(P){ return P.vinylAn !== false; }
+// NEU (2026-11-18): Vinyl-Rauschen und Knistern weich ein-/ausblenden
+function vinylSetzen(P, an){
+  P.vinylAn = an;
+  const g = P.vinyl.gain, t = P.ctx.currentTime;
+  g.cancelScheduledValues(t); g.setValueAtTime(Math.max(g.value, 0.0001), t);
+  g.exponentialRampToValueAtTime(an ? 1 : 0.0001, t + 0.35);
+}
 function playerAnlegen(ctx, opt){
-  const P = { ctx, rnd:mulberry32((opt.seed >>> 0) || 1), ohneBeat:opt.stimmung === "ruhig", naechste:0, schritt:0, taktNr:-1 };
+  const P = { ctx, rnd:mulberry32((opt.seed >>> 0) || 1), ohneBeat:opt.stimmung === "ruhig", vinylAn:opt.vinyl !== false, naechste:0, schritt:0, taktNr:-1 };
   graphBauen(P);
   neueSitzung(P);
   P.startTakt = 0;
@@ -285,7 +294,7 @@ function schrittPlanen(P, schritt, t){
 
 /* ---------- 5 ABLAUF ------------------------------------------------------------- */
 const LS_MUSIK = "tj_musik_v1";
-const STANDARD = { an:false, lautstaerke:0.5, stimmung:"lofi" };
+const STANDARD = { an:false, lautstaerke:0.5, stimmung:"lofi", vinyl:true };   // GEÄNDERT (2026-11-18): vinyl
 function ladeEinst(){
   try{ const e = JSON.parse(localStorage.getItem(LS_MUSIK) || "null"); if(e && typeof e === "object") return { ...STANDARD, ...e }; }catch(_){}
   return { ...STANDARD };
@@ -333,7 +342,7 @@ function starten(){
   if(typeof INTRO !== "undefined" && INTRO.aktiv()){ L.warte = setTimeout(starten, 400); return; }
   if(document.visibilityState === "hidden") return;   // startet bei Rückkehr (visibilitychange)
   if(L.ctx.state !== "running" && L.ctx.resume) L.ctx.resume();
-  L.P = playerAnlegen(L.ctx, { seed:Date.now(), stimmung:e.stimmung });
+  L.P = playerAnlegen(L.ctx, { seed:Date.now(), stimmung:e.stimmung, vinyl:e.vinyl });
   L.P.naechste = L.ctx.currentTime + 0.15;
   fader(L.P, zielPegel(e), K.einblenden);
   laufen();
@@ -383,7 +392,7 @@ function offline(sek, opt){
   opt = opt || {};
   const sr = opt.sr || 44100;
   const c = new OfflineAudioContext(2, Math.ceil(sr * sek), sr);
-  const P = playerAnlegen(c, { seed:opt.seed || 7, stimmung:opt.stimmung || "lofi" });
+  const P = playerAnlegen(c, { seed:opt.seed || 7, stimmung:opt.stimmung || "lofi", vinyl:opt.vinyl });
   P.master.gain.value = zielPegel({ lautstaerke: opt.lautstaerke !== undefined ? opt.lautstaerke : 0.7 });
   P.naechste = 0.05;
   while(P.naechste < sek - 0.3){ schrittPlanen(P, P.schritt, P.naechste); P.naechste += P.schrittDauer; P.schritt++; }
@@ -419,6 +428,11 @@ function einstellungenHtml(){
       <button type="button" class="btn btn-sm" id="musikNeuBtn" title="Neue Tonart, neues Tempo, neue Akkorde">Neu mischen</button>
     </div>
     <div class="intro-set-row">
+      <span class="intro-set-label">Vinyl</span>
+      ${chipGroupHtml("musikVinyl", ["an","aus"], e.vinyl ? "an" : "aus", { labels:{ an:"An", aus:"Aus" } })}
+      <span class="intro-set-hint musik-vinyl-hint">Rauschen und Knistern wie von alter Platte</span>
+    </div>
+    <div class="intro-set-row">
       <span class="intro-set-label">Lautstärke</span>
       <input type="range" class="musik-laut" id="musikLaut" min="0" max="100" step="1" value="${Math.round(e.lautstaerke * 100)}" aria-label="Lautstärke der Hintergrundmusik">
     </div>
@@ -433,6 +447,7 @@ function einstellungenVerdrahten(root){
       const g = b.dataset.group, v = b.dataset.value;
       syncChipGroup(b.closest("[data-chipgroup]"), v, false);
       if(g === "musikAn"){ setzeAn(v === "an"); return; }
+      if(g === "musikVinyl"){ const e = ladeEinst(); e.vinyl = v === "an"; speichereEinst(e); if(L && L.P) vinylSetzen(L.P, e.vinyl); return; }   // NEU (2026-11-18)
       if(g === "musikStil"){ const e = ladeEinst(); e.stimmung = v; speichereEinst(e); if(L && L.P) L.P.ohneBeat = v === "ruhig"; }
       return;
     }

@@ -13,7 +13,8 @@
      4 Komponist      — Takt- und Schrittplanung
      5 Ablauf         — Start nach dem Intro, Pause im Hintergrund, Ein-/Ausblenden
      6 Bedienung      — Header-Knopf, Abschnitt im Modal „Einstellungen“
-   Einstellung je Gerät: tj_musik_v1 { an, lautstaerke (0–1), stimmung ("lofi" | "ruhig"), vinyl (Rauschen + Knistern, GEÄNDERT 2026-11-18) }
+   Einstellung je Gerät: tj_musik_v1 { an, lautstaerke (0–1), stimmung ("lofi" | "ruhig"), vinyl (Rauschen + Knistern, GEÄNDERT 2026-11-18),
+   hintergrund (weiterspielen in anderem Tab/Fenster, GEÄNDERT 2026-11-18b) }
    Schnittstelle: MUSIK.vorbereiten() (in einer Geste!), MUSIK.starten(), MUSIK.umschalten(),
    MUSIK.einstellungenHtml(), MUSIK.einstellungenVerdrahten(root), MUSIK.zustand(),
    MUSIK.offline(sek, opt) (Test: rendert ohne Lautsprecher in einen AudioBuffer)
@@ -38,7 +39,8 @@ const K = {
   lage: { keys:[52, 76], bass:[33, 45], melodie:[70, 84] },   // Tonumfang (MIDI)
   mix: { drums:0.85, keys:0.8, bass:0.42, melodie:0.42, hall:0.8, knistern:0.05, rauschen:0.006 },
   lautMax: 0.55,                       // Pegel bei Lautstärke 100 %
-  einblenden: 5, ausblenden: 0.8, zurueck: 1.5   // Sekunden
+  einblenden: 5, ausblenden: 0.8, zurueck: 1.5,  // Sekunden
+  vorlauf: 0.3, vorlaufHintergrund: 1.6         // NEU (2026-11-18b): so weit wird vorausgeplant; im Hintergrund drosseln Browser Timer auf ~1 s
 };
 const KEYS_MUSTER = [   // [Sechzehntel, Dauer in Sechzehnteln, Anschlag]
   [[0,14,0.9]],
@@ -294,7 +296,7 @@ function schrittPlanen(P, schritt, t){
 
 /* ---------- 5 ABLAUF ------------------------------------------------------------- */
 const LS_MUSIK = "tj_musik_v1";
-const STANDARD = { an:false, lautstaerke:0.5, stimmung:"lofi", vinyl:true };   // GEÄNDERT (2026-11-18): vinyl
+const STANDARD = { an:false, lautstaerke:0.5, stimmung:"lofi", vinyl:true, hintergrund:true };   // GEÄNDERT (2026-11-18): vinyl, hintergrund
 function ladeEinst(){
   try{ const e = JSON.parse(localStorage.getItem(LS_MUSIK) || "null"); if(e && typeof e === "object") return { ...STANDARD, ...e }; }catch(_){}
   return { ...STANDARD };
@@ -330,7 +332,8 @@ function tick(){
   const jetzt = L.ctx.currentTime;
   if(P.naechste < jetzt - 0.05) P.naechste = jetzt + 0.05;   // Timer kam zu spät: nicht alles auf einmal nachholen
   let n = 0;
-  while(P.naechste < jetzt + 0.3 && n++ < 64){ schrittPlanen(P, P.schritt, P.naechste); P.naechste += P.schrittDauer; P.schritt++; }
+  const vorlauf = L.vorlauf || K.vorlauf;   // GEÄNDERT (2026-11-18b): im Hintergrund länger vorausplanen
+  while(P.naechste < jetzt + vorlauf && n++ < 128){ schrittPlanen(P, P.schritt, P.naechste); P.naechste += P.schrittDauer; P.schritt++; }
 }
 function laufen(){ if(L && !L.timer){ L.timer = setInterval(tick, 50); tick(); } }
 function anhalten(){ if(L && L.timer){ clearInterval(L.timer); L.timer = 0; } }
@@ -340,7 +343,8 @@ function starten(){
   if(!e.an || !L || L.P) return;
   clearTimeout(L.warte);
   if(typeof INTRO !== "undefined" && INTRO.aktiv()){ L.warte = setTimeout(starten, 400); return; }
-  if(document.visibilityState === "hidden") return;   // startet bei Rückkehr (visibilitychange)
+  if(document.visibilityState === "hidden" && !e.hintergrund) return;   // startet bei Rückkehr (visibilitychange)
+  if(document.visibilityState === "hidden") L.vorlauf = K.vorlaufHintergrund;
   if(L.ctx.state !== "running" && L.ctx.resume) L.ctx.resume();
   L.P = playerAnlegen(L.ctx, { seed:Date.now(), stimmung:e.stimmung, vinyl:e.vinyl });
   L.P.naechste = L.ctx.currentTime + 0.15;
@@ -362,22 +366,29 @@ function setzeAn(an){
   knopfAktualisieren();
 }
 function umschalten(){ setzeAn(!ladeEinst().an); }
-// Im Hintergrund pausieren (spart Akku, iOS würde sonst abwürgen), bei Rückkehr weich weiter
+/* GEÄNDERT (2026-11-18b): Im Hintergrund (anderer Tab, minimiert) spielt die Musik weiter, wenn
+   „Im Hintergrund: Weiterspielen“ gewählt ist — dann wird nur weiter vorausgeplant, weil Browser die
+   Timer dort drosseln. Sonst wie bisher: ausblenden und anhalten. Am iPhone hält iOS die PWA im
+   Hintergrund ohnehin an; bei Rückkehr geht es weich weiter. */
 document.addEventListener("visibilitychange", ()=>{
   if(!L) return;
   if(document.visibilityState === "hidden"){
     if(!L.P) return;
-    anhalten(); fader(L.P, 0.0001, 0.25);
+    if(ladeEinst().hintergrund){ L.vorlauf = K.vorlaufHintergrund; tick(); return; }
+    anhalten(); fader(L.P, 0.0001, 0.25); L.ausgeblendet = true;
     clearTimeout(L.pause); L.pause = setTimeout(()=>{ try{ if(L && L.ctx.suspend) L.ctx.suspend(); }catch(_){} }, 320);
     return;
   }
   clearTimeout(L.pause);
+  L.vorlauf = K.vorlauf;
   if(!L.P){ starten(); return; }
   const weiter = ()=>{
     if(!L || !L.P || L.ctx.state !== "running") return false;
     if(L.P.naechste < L.ctx.currentTime) L.P.naechste = L.ctx.currentTime + 0.05;
-    fader(L.P, zielPegel(ladeEinst()), K.zurueck); laufen(); return true;
+    if(L.ausgeblendet){ L.ausgeblendet = false; fader(L.P, zielPegel(ladeEinst()), K.zurueck); }
+    laufen(); return true;
   };
+  if(L.ctx.state === "running"){ weiter(); return; }
   const p = L.ctx.resume ? L.ctx.resume() : null;
   if(p && p.then) p.then(()=>{
     if(weiter()) return;
@@ -433,10 +444,15 @@ function einstellungenHtml(){
       <span class="intro-set-hint musik-vinyl-hint">Rauschen und Knistern wie von alter Platte</span>
     </div>
     <div class="intro-set-row">
+      <span class="intro-set-label">Hintergrund</span>
+      ${chipGroupHtml("musikHintergrund", ["an","aus"], e.hintergrund ? "an" : "aus", { labels:{ an:"Weiterspielen", aus:"Pausieren" } })}
+      <span class="intro-set-hint musik-vinyl-hint">anderer Tab oder Fenster (am PC)</span>
+    </div>
+    <div class="intro-set-row">
       <span class="intro-set-label">Lautstärke</span>
       <input type="range" class="musik-laut" id="musikLaut" min="0" max="100" step="1" value="${Math.round(e.lautstaerke * 100)}" aria-label="Lautstärke der Hintergrundmusik">
     </div>
-    <div class="intro-set-note">Startet nach dem Entsperren (nach dem Intro) weich und pausiert, wenn die App im Hintergrund ist. Am iPhone folgt sie dem Stummschalter. An/Aus auch über den Knopf oben rechts.</div>
+    <div class="intro-set-note">Startet nach dem Entsperren (nach dem Intro) weich. Am iPhone hält iOS die Musik an, sobald die App im Hintergrund ist, und sie folgt dem Stummschalter. An/Aus auch über den Knopf oben rechts.</div>
   </div>`;
 }
 function einstellungenVerdrahten(root){
@@ -447,6 +463,7 @@ function einstellungenVerdrahten(root){
       const g = b.dataset.group, v = b.dataset.value;
       syncChipGroup(b.closest("[data-chipgroup]"), v, false);
       if(g === "musikAn"){ setzeAn(v === "an"); return; }
+      if(g === "musikHintergrund"){ const e = ladeEinst(); e.hintergrund = v === "an"; speichereEinst(e); return; }   // NEU (2026-11-18b)
       if(g === "musikVinyl"){ const e = ladeEinst(); e.vinyl = v === "an"; speichereEinst(e); if(L && L.P) vinylSetzen(L.P, e.vinyl); return; }   // NEU (2026-11-18)
       if(g === "musikStil"){ const e = ladeEinst(); e.stimmung = v; speichereEinst(e); if(L && L.P) L.P.ohneBeat = v === "ruhig"; }
       return;
@@ -465,6 +482,6 @@ function einstellungenVerdrahten(root){
 
 return {
   vorbereiten, starten, umschalten, stoppen, einstellungenHtml, einstellungenVerdrahten, offline,
-  zustand:()=> L ? { ctx:L.ctx.state, spielt:!!L.P, laeuft:!!L.timer, bpm:L.P ? +L.P.bpm.toFixed(1) : null, grund:L.P ? L.P.grund : null } : null
+  zustand:()=> L ? { ctx:L.ctx.state, spielt:!!L.P, laeuft:!!L.timer, bpm:L.P ? +L.P.bpm.toFixed(1) : null, grund:L.P ? L.P.grund : null, vorsprung:L.P ? +(L.P.naechste - L.ctx.currentTime).toFixed(2) : null } : null
 };
 })();
